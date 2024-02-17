@@ -1,6 +1,7 @@
 package bot_package;
 
 import java.util.*;
+import bot_package.Group;
 
 public class Player
 {
@@ -16,10 +17,7 @@ public class Player
 	 * Doesn't need to be accessed outside of this class
 	 */
 	protected static int seatWind_amt = 0;
-	
-	/*
-	 * The player's name as string
-	 */
+
 	public String playerName;
 	
 	/*
@@ -29,10 +27,13 @@ public class Player
 	 * N = 3
 	 */
 	public int seatWind;
-	
+
 	/*
-	 * Keeps track of all the player's tiles that have been dropped
-	 */
+     * Integer to keep track of drawn flowers, will be of magnitude of 10^4
+     * Use seatWind to determine what flower is the player's good flower (10^seatWind)
+     */
+    public int flower;
+    
 	public ArrayList<Integer> dropPile;
 	
 	/*
@@ -63,6 +64,7 @@ public class Player
 		}
 		this.dropPile = new ArrayList<Integer>();
 		this.playerHand = new PlayerHand();
+		this.flower = 0;
 	}
 	
 	/*
@@ -74,21 +76,15 @@ public class Player
 		this.seatWind = clone.seatWind;
 		this.dropPile = new ArrayList<Integer>(clone.dropPile);
 		this.playerHand = new PlayerHand(clone.playerHand);
+		this.flower = clone.flower;
 	}
 	
 	/*
-	 * Used to get the player's current hand, 
-	 * a pre-programmed password is used to restrict the usage of this method
-	 * @return: Returns this player's hand is password is correct
-	 * 			Returns empty 2D ArrayList<Integer> if incorrect
+	 * Used to all details about this instance's hand, includes open/closed decalred groups
 	 */
-	public ArrayList<ArrayList<Integer>> getPlayerHand(String password)
+	public PlayerHand getPlayerHand()
 	{	
-		if(password.equals("ojhwaX9hOczYwTGxI472mVRhGpfhBTFR"))
-		{
-			return this.playerHand.getPlayerHand();
-		}
-		return new ArrayList<ArrayList<Integer>>();
+		return this.playerHand;
 	}
 	
 	public ArrayList<Integer> getPlayerDrops()
@@ -103,50 +99,58 @@ public class Player
 	 */
 	class PlayerHand
 	{
-		private ArrayList<ArrayList<Integer>> currentHand;
+		private ArrayList<Integer> currentHand;
+		public ArrayList<Group> declaredGroups;
 		private String mjSTRhand;
 		
 		public PlayerHand()
 		{
+			this.currentHand = new ArrayList<Integer>();
+			this.declaredGroups = new ArrayList<Group>();
 			this.mjSTRhand = "";
-			this.currentHand = new ArrayList<ArrayList<Integer>>();
-			for(int i = 0; i < 2; i++) this.currentHand.add(new ArrayList<Integer>());
 		}
 		
 		public PlayerHand(PlayerHand clone)
 		{
-			this.currentHand = new ArrayList<ArrayList<Integer>>(clone.getPlayerHand());
-			this.mjSTRhand = new String(clone.getSTRhand());
+			this.currentHand = new ArrayList<Integer>(clone.currentHand);
+			this.declaredGroups = new ArrayList<Group>(clone.declaredGroups);
+			this.mjSTRhand = new String(clone.mjSTRhand);
 		}
 		
-		public PlayerHand(ArrayList<ArrayList<Integer>> in_hand)
+		/*
+		 * Assumes all tiles are concealed
+		 */
+		public PlayerHand(ArrayList<Integer> in_hand)
 		{
+			this.currentHand = new ArrayList<Integer>(in_hand);
+			this.declaredGroups = new ArrayList<Group>();
 			this.mjSTRhand = handto_mjSTR(in_hand);
-			this.currentHand = new ArrayList<ArrayList<Integer>>(in_hand);
+		}
+		
+		public PlayerHand(ArrayList<Integer> in_hand, ArrayList<Group> declared_groups)
+		{
+			this.currentHand = new ArrayList<Integer>(in_hand);
+			this.declaredGroups = new ArrayList<Group>(declared_groups);
+			this.mjSTRhand = handto_mjSTR(in_hand);
 		}
 		
 		public PlayerHand(String in_STRformat)
 		{
+			PlayerHand mjSTR_to_Hand = mjSTRtranslate(in_STRformat);
+			this.currentHand = mjSTR_to_Hand.currentHand;
+			this.declaredGroups = mjSTR_to_Hand.declaredGroups;
 			this.mjSTRhand = new String(in_STRformat);
-			this.currentHand = mjSTRtranslate(in_STRformat);
 		}
 		
-		/*
-		 * 
-		 */
-		private ArrayList<ArrayList<Integer>> getPlayerHand()
+		public ArrayList<Integer> getCurrentHand()
 		{
 			return this.currentHand;
 		}
 		
-		/*
-		 * Private as hand shouldn't 
-		 */
-		private String getSTRhand()
+		public ArrayList<Group> getDeclaredGroup()
 		{
-			return this.mjSTRhand;
+			return this.declaredGroups;
 		}
-		
 		/*
 		 * MJ String presentation (mjSTR format) uses key character to present suits
 		 * For example 
@@ -163,14 +167,16 @@ public class Player
 		 * ArrayList 0 = In hand Tiles
 		 * ArrayList 1 = Open Tiles
 		 */
-		public static ArrayList<ArrayList<Integer>> mjSTRtranslate(String in_mjSTR)
+		public static PlayerHand mjSTRtranslate(String in_mjSTR)
 		{
 			if(in_mjSTR.length() <= 0)
 			{
-				return new ArrayList<ArrayList<Integer>>();
+				return new PlayerHand();
 			}
-			ArrayList<ArrayList<Integer>> returnArray = new ArrayList<ArrayList<Integer>>(2);
-			for(int i = 0; i < 2; i++) returnArray.add(new ArrayList<Integer>());
+			
+			PlayerHand ret_obj = new PlayerHand();
+			ArrayList<Integer> closed_list = new ArrayList<Integer>();
+			ArrayList<Group> declared_list = new ArrayList<Group>();
 			
 			char[] indicators = {'m', 'p', 's', 'z'};
 			int open = 0;
@@ -200,9 +206,9 @@ public class Player
 			return returnArray;
 		}
 		
-		public static String handto_mjSTR(ArrayList<ArrayList<Integer>> in_hand)
+		public static String handto_mjSTR(ArrayList<Integer> in_hand)
 		{
-			if(in_hand.get(0).size() <= 0 || in_hand.size() != 2)
+			if(in_hand.size() <= 0 || in_hand.size() != 2)
 			{
 				return "";
 			}
@@ -236,17 +242,6 @@ public class Player
 				}
 			}
 			return returnSTR;
-		}
-		
-		/*
-		 * Task: Using limbogroup search to search all groups
-		 * Return: 
-		 */
-		public static ArrayList<Group> returnGroups()
-		{
-			ArrayList<Group> returnGroups = new ArrayList<Group>();
-			
-			return returnGroups;
 		}
 	}
 	public static void main(String[] args)
