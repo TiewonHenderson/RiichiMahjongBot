@@ -10,8 +10,20 @@ public class Group extends Scoring
 	public ArrayList<Integer> tile_list = new ArrayList<Integer>();
 	public boolean concealed;
 	
+	public static char[] suit_reference = {'m','p','s','z'};
+	
 	/*
+	 * Default Constructor
+	 */
+	public Group()
+	{
+		this.concealed = false;
+	}
+	
+	/**
 	 * ArrayList<Integer> object Compatible Constructor for Group obj
+	 * @param in_group: A typical 3/4 tile ArrayList<Integer> that represents a tile group
+	 * @param concealed: Declare whether the group is concealed
 	 */
 	public Group(ArrayList<Integer> in_group, boolean concealed)
 	{
@@ -19,8 +31,10 @@ public class Group extends Scoring
 		this.concealed = concealed;
 	}
 	
-	/*
+	/**
 	 * int[] object Compatible Constructor for Group obj
+	 * @param in_group: A typical 3/4 tile int[] that represents a tile group
+	 * @param concealed: Declare whether the group is concealed
 	 */
 	public Group(int[] in_group, boolean concealed)
 	{
@@ -54,7 +68,42 @@ public class Group extends Scoring
 		returnInfo += this.tile_list.get(0)/9;
 		return returnInfo;
 	}
-
+	
+	/**
+	 * 
+	 * @param new_group: An ArrayList<Integer> of tile_values
+	 * @return: sets new group to argument and returns true if new_group.size() < 5 and > 0.
+	 * 			Does nothing returns false if condition is not met.
+	 */
+	public boolean setGroup(ArrayList<Integer> new_group)
+	{
+		if(new_group.size() > 0 && new_group.size() < 5)
+		{
+			this.tile_list = new ArrayList<Integer>(new_group);
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Used to print the string representation of the tile_list
+	 */
+	public String toString()
+	{
+		String return_str = "";
+		for(int tile_value: this.tile_list) 
+		{
+			return_str += Integer.toString(tile_value) + ",";
+		}
+		try
+		{
+			return return_str.substring(0,return_str.length() - 1);
+		}
+		catch(Exception e)
+		{
+			return "";
+		}
+	}
 	/**
 	 * 
 	 * @param in_group: An ArrayList<Integer> of size 3/4 to check if valid group
@@ -171,7 +220,11 @@ public class Group extends Scoring
 		return returnPairs;
 	}
 	
-	
+	/**
+	 * Index 0,1 = pairs/eye, index 2 complete/Waiting/Incomplete, index 3 way groups were search
+	 * @param playHand
+	 * @return
+	 */
 	public static HashMap<String, ArrayList<Group>> getGroups(PlayerHand playHand)
 	{
 		ArrayList<ArrayList<Integer>> suit_list = suitDivide(playHand.getCurrentHand());
@@ -200,32 +253,49 @@ public class Group extends Scoring
 	
 	/**
 	 * 
-	 * @param in_array: ASSUMES this is all in one suit
-	 * @return
+	 * @param in_array: ArrayList<Integer> with any valid tile_value integers as each element
+	 * @return The ArrayList<Integer> representing the play_value of each tile, the play_value
+	 * 		   represents 1-9 in each suit, i.e tile_value = 24 = 7s, play_value = 7
 	 */
-	public static String getGroups(ArrayList<Integer> in_array)
+	public static ArrayList<Integer> tileVal_to_PlayVal(ArrayList<Integer> in_array)
+	{
+		ArrayList<Integer> return_array = new ArrayList<Integer>();
+		for(int tileValue: in_array)
+		{
+			return_array.add((tileValue - ((tileValue / 9) * 9)) + 1);
+		}
+		return return_array;
+	}
+	
+	/**
+	 * 
+	 * @param  in_array: ASSUMES this is all in one suit
+	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
+	 * 		   The String representation is called GroupSN = Group String Notation
+	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
+	 */
+	public static String list_GroupSearch(ArrayList<Integer> in_array)
 	{
 		String return_STR = "";
-		ArrayList<Integer> temp_suit = sortArray(in_array);
+		ArrayList<Integer> temp_suit = tileVal_to_PlayVal(sortArray(in_array));
 		if(in_array.size() <= 0) 
 		{
 			return "";
 		}
 		
 		//Get suit number, minimum in array, maximum in array
-		int suit = temp_suit.get(0)/9;
+		int suit = in_array.get(0)/9;
 		int min = temp_suit.get(0);
 		int max = temp_suit.get(temp_suit.size() - 1);
 		
 		//Convert suit to matrix
 		ArrayList<Integer> matrix = new ArrayList<Integer>();
-		for(int i = 0; i <= max; i++) matrix.add(0);
+		for(int i = 0; i < max; i++) matrix.add(0);
 		for(int i = 0; i < temp_suit.size(); i++)
 		{
 			int tile = temp_suit.get(i) - min;
 			matrix.set(tile, matrix.get(tile) + 1);
 		}
-		
 		//Adding Unique Integers to make enough groups
 		int currentIndex = 0;
 		/*
@@ -247,9 +317,20 @@ public class Group extends Scoring
 			{
 				break;
 			}
+			//Moves if tile cell has no tiles to offer until there is a cell with tiles
 			if(temp_matrix.get(currentIndex) == 0)
 			{
-				currentIndex++;
+				for(int j = currentIndex; j < max; j++)
+				{
+					if(temp_matrix.get(currentIndex) == 0)
+					{
+						currentIndex++;
+					}
+					else
+					{
+						break;
+					}
+				}
 				continue;
 			}
 			
@@ -277,24 +358,37 @@ public class Group extends Scoring
 				}
 				if(temp_matrix.get(increment_index) > 0)
 				{
-					shape.add(m);
+					shape.add(increment_index);
 					temp_matrix.set(increment_index, temp_matrix.get(increment_index) - 1);
 				}
 			}
-			
-			//Since shapes removes duplicates, and i is bounded into 1,2: This only allows sequences
-			for(int tile: shape) temp_str += Integer.toString(tile);
+			//Since pairs are not looked for in above loop, this condition will fill that gap
+			if(shape.size() == 1 && temp_matrix.get(currentIndex) > 0)
+			{
+				int total_copy = temp_matrix.get(currentIndex);
+				//sets remove duplicates, but there is only one element
+				for(int a = 0; a < total_copy + shape.size(); a++) 
+				{
+					temp_str += Integer.toString(shape.getFirst());
+					temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
+				}
+			}
+			else
+			{
+				//Since shapes removes duplicates, and i is bounded into 1,2: This only allows sequences
+				for(int tile: shape) temp_str += Integer.toString(tile);
+			}
 			group_shape_list.add(temp_str);
 			matrix = new ArrayList<Integer>(temp_matrix);
-			System.out.println(shape);
 		}
 		
 		/*
 		 * Format = 
-		 * (Complete Groups)r={Remainder Shapes}[+min]'suitchar'
+		 * (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 		 */
 		for(int i = 3; i >= 1; i--)
 		{
+			//Remainder groups start with size 2
 			if(i == 2)
 			{
 				return_STR += "r={";
@@ -308,29 +402,100 @@ public class Group extends Scoring
 						return_STR += ")";
 				}
 			}	
-			if(i == 2) 
+			//Remainder groups end with size 1
+			if(i == 1) 
 			{
 				return_STR += "}";
 			}
 		}
 		
-		/*
-		 * 
-		 */
-		String[] suit_list = {"m", "p", "s", "z"};
 		return_STR += "[+" + min + "]";
-		return_STR += suit_list[suit];
+		return_STR += Character.toString(suit_reference[suit]);
 		return return_STR;
 	}
 	
-	public static ArrayList<Group> getGroups(String in_tiles)
+	/**
+	 * Description: Reads the GroupSN and returns the group assigned into ArrayList<Group> data type
+	 * @param in_GroupSN: A String representation of all the groups that were searched
+	 * @return: An ArrayList<Group> of all the groups saved into the in_GroupSN
+	 */
+	public static ArrayList<Group> getGroups_asList(String in_GroupSN)
 	{
+		ArrayList<Group> return_list = new ArrayList<Group>();
+		if(in_GroupSN.length() < 8)
+		{
+			return return_list;
+		}
+		//Keeps track if into remainder category of GroupSN
+		boolean comp_groups = true;
 		
+		int suit = 0;
+		//sets suit to integer representation of the suit char in reference of in_GroupSN
+		for(int i = 0; i < suit_reference.length; i++) if(in_GroupSN.charAt(in_GroupSN.length() - 1) == suit_reference[i]){suit = i;}
+		int min_increment = Character.getNumericValue(in_GroupSN.charAt(in_GroupSN.length() - 3));
+		Group new_group = new Group();
+		ArrayList<Integer> group_list = new ArrayList<Integer>(); //Used to setGroup of new_group obj
+		
+		for(int i = 0; i < in_GroupSN.length(); i++)
+		{
+			if(in_GroupSN.charAt(i) == 'r')
+			{
+				i += 2;
+				comp_groups = false;
+				continue;
+			}
+			switch(in_GroupSN.charAt(i))
+			{
+				case '(':
+					
+					// '(' indicates new group
+					if(comp_groups)
+					{
+						/*
+						 * Complete groups are always size 3
+						 * Adds back minimum increment and suit tile_value
+						 * Because of the inconsistent indexing with tile_value to player_value
+						 * tile_value -> play_value = tile_value - (suit * 9) + 1
+						 * *thus*
+						 * play_value -> tile_value = (play_value - 1) + (suit * 9)
+						 */
+						for(int s = 1; s <= 3; s++) group_list.add(
+								(Character.getNumericValue(in_GroupSN.charAt(i + s)) 
+										+ min_increment - 1) 
+										+ (suit * 9));
+						new_group.setGroup(group_list);
+						return_list.add(new_group);
+						i += 4;
+						new_group = new Group();
+						group_list = new ArrayList<Integer>();
+						continue;
+					}
+					//continue
+					
+				case ')':
+					
+					// ')' indicates complete/end group/shape, if group_list.size() == 0, no group is possible
+					if(group_list.size() == 0) {continue;}
+					new_group.setGroup(group_list);
+					return_list.add(new_group);
+					//reset new_group
+					new_group = new Group();
+					group_list = new ArrayList<Integer>();
+					
+				default:
+					if(Character.isDigit(in_GroupSN.charAt(i)))
+					{
+						group_list.add(Character.getNumericValue(in_GroupSN.charAt(i)));
+					}
+			}
+		}
+		return return_list;
 	}
 	public static void main(String[] args)
 	{
-		int[] player_hand = {0,0,1,1,2,2};
+		int[] player_hand = {9,9,10,13,14,15,17,17,17};
 		System.out.println(createArrayList(player_hand));
 		System.out.println(getGroups(sortArray(createArrayList(player_hand))));
+		System.out.println(getGroups_asList(getGroups(sortArray(createArrayList(player_hand)))));
 	}
 }
