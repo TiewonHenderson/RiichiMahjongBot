@@ -66,9 +66,8 @@ public class Scoring
     
     /**
 	 * @param in_hand: Any valid hand input
-	 * @return 4 ArrayList<Integer> within Arraylist<Integer> that represents each suit of a mahjong hand.
-	 * 
-	 * suitDivide should only be used to find the special hands
+	 * @return: 4 ArrayList<Integer> within Arraylist<Integer> that represents each suit of a mahjong hand.
+	 * 			The return tiles in each ArrayList<Integer> contains the TILE_VAL, not PLAY_VAL!
 	 */
 	public static ArrayList<ArrayList<Integer>> suitDivide(ArrayList<Integer> input_hand)
 	{
@@ -80,7 +79,7 @@ public class Scoring
 			{
 				if(tile < ((suit + 1) * 9) && tile >= (suit * 9))
 				{
-					returnSuits.get(suit).add(tile - (suit * 9) + 1);
+					returnSuits.get(suit).add(tile);
 				}
 			}
 		}

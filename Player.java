@@ -87,6 +87,19 @@ public class Player
 		return this.playerHand;
 	}
 	
+	public boolean setPlayerHand(PlayerHand in_playhand)
+	{
+		try
+		{
+			this.playerHand = new PlayerHand(in_playhand);
+			return true;
+		}
+		catch(Exception e)
+		{
+			return false;
+		}
+	}
+	
 	public ArrayList<Integer> getPlayerDrops()
 	{
 		return this.dropPile;
@@ -97,12 +110,15 @@ public class Player
 	 * Used to store currentHand of assigned player
 	 * String representation of current player hand
 	 */
-	class PlayerHand
+	static class PlayerHand
 	{
 		private ArrayList<Integer> currentHand;
 		public ArrayList<Group> declaredGroups;
 		private String mjSTRhand;
 		
+		/**
+		 * Default constructor
+		 */
 		public PlayerHand()
 		{
 			this.currentHand = new ArrayList<Integer>();
@@ -110,6 +126,10 @@ public class Player
 			this.mjSTRhand = "";
 		}
 		
+		/**
+		 * Used to clone a Player's Hand
+		 * @param clone: A PlayerHand wanted to be copy to another instance
+		 */
 		public PlayerHand(PlayerHand clone)
 		{
 			this.currentHand = new ArrayList<Integer>(clone.currentHand);
@@ -124,133 +144,103 @@ public class Player
 		{
 			this.currentHand = new ArrayList<Integer>(in_hand);
 			this.declaredGroups = new ArrayList<Group>();
-			this.mjSTRhand = handto_mjSTR(in_hand);
+//			this.mjSTRhand = handto_mjSTR(in_hand);
 		}
 		
 		public PlayerHand(ArrayList<Integer> in_hand, ArrayList<Group> declared_groups)
 		{
 			this.currentHand = new ArrayList<Integer>(in_hand);
 			this.declaredGroups = new ArrayList<Group>(declared_groups);
-			this.mjSTRhand = handto_mjSTR(in_hand);
+//			this.mjSTRhand = handto_mjSTR(in_hand);
 		}
 		
 		public PlayerHand(String in_STRformat)
 		{
-			PlayerHand mjSTR_to_Hand = mjSTRtranslate(in_STRformat);
-			this.currentHand = mjSTR_to_Hand.currentHand;
-			this.declaredGroups = mjSTR_to_Hand.declaredGroups;
+//			PlayerHand mjSTR_to_Hand = mjSTRtranslate(in_STRformat);
+//			this.currentHand = mjSTR_to_Hand.currentHand;
+//			this.declaredGroups = mjSTR_to_Hand.declaredGroups;
 			this.mjSTRhand = new String(in_STRformat);
 		}
 		
+		/*
+		 * Returns the current ArrayList<Integer> of the Player's inside_hand
+		 */
 		public ArrayList<Integer> getCurrentHand()
 		{
 			return this.currentHand;
 		}
 		
+		/*
+		 * Returns the current ArrayList<Group> that are visible to other players
+		 * This however does include the concealed declared quads that would consider the hand
+		 * still be concealed
+		 */
 		public ArrayList<Group> getDeclaredGroup()
 		{
 			return this.declaredGroups;
 		}
-		/*
-		 * MJ String presentation (mjSTR format) uses key character to present suits
-		 * For example 
-		 * 'm' = mans = character suit
-		 * 'p' = pins = circle suit
-		 * 's' = sous = bamboo suit
-		 * 
-		 * key characters to split closed/open tiles
-		 * 'c' = closed ending the left
-		 * 'o' = open ending the left
-		 * 
-		 * 
-		 * Playerhand are represented as 2 ArrayList<Integer>,
-		 * ArrayList 0 = In hand Tiles
-		 * ArrayList 1 = Open Tiles
+		
+		/**
+		 * If required, set the current Player inside_hand to a new hand
+		 * @param in_newHand: The new hand to be set to this instance
+		 * @return: True if the new inside hand has been set to the PlayerHand, false if error was raised
 		 */
-		public static PlayerHand mjSTRtranslate(String in_mjSTR)
+		public boolean setCurrentHand(ArrayList<Integer> in_newHand)
 		{
-			if(in_mjSTR.length() <= 0)
+			try
 			{
-				return new PlayerHand();
+				this.currentHand = new ArrayList<Integer>(in_newHand);
+				return true;
 			}
-			
-			PlayerHand ret_obj = new PlayerHand();
-			ArrayList<Integer> closed_list = new ArrayList<Integer>();
-			ArrayList<Group> declared_list = new ArrayList<Group>();
-			
-			char[] indicators = {'m', 'p', 's', 'z'};
-			int open = 0;
-			int current_suit = 0;
-			
-			for(int i = 0; i < in_mjSTR.length(); i++)
+			catch(Exception e)
 			{
-				char current_element = Character.toLowerCase(in_mjSTR.charAt(i));
-				if(Character.compare(current_element, indicators[current_suit]) == 0)
-				{
-					current_suit += 1;
-					if(current_suit == 4)
-					{
-						current_suit = 0;
-					}
-				}
-				else if(Character.compare(current_element, 'c') == 0)
-				{
-					open += 1;
-					current_suit = 0;
-				}
-				else if(Character.isDigit(current_element))
-				{
-					returnArray.get(open).add((Character.getNumericValue(current_element) + (9 * current_suit)) - 1);
-				}
+				return false;
 			}
-			return returnArray;
 		}
 		
-		public static String handto_mjSTR(ArrayList<Integer> in_hand)
+		/**
+		 * If required, 
+		 * set the current Player's declared groups to a new ArrayList<Group> of declared Groups
+		 * @param in_newGroups: The new ArrayList<Group> for this PlayerHand instance
+		 * @return: True if the new_groups has been set, false if an error was raised
+		 */
+		public boolean setDeclaredGroup(ArrayList<Group> in_newGroups)
 		{
-			if(in_hand.size() <= 0 || in_hand.size() != 2)
+			try
 			{
-				return "";
+				this.declaredGroups = new ArrayList<Group>(in_newGroups);
+				return true;
 			}
-			String returnSTR = "";
-			int suitnum = in_hand.get(0).get(0)/9;
-			String[] suits = {"m", "p", "s", "z"};
-			
-			
-			for(int i = 0; i < in_hand.size(); i++)
+			catch(Exception e)
 			{
-				suitnum = in_hand.get(i).get(0)/9;
-				for(int j = 0; j < suitnum; j++) returnSTR += suits[j];
-				String[] coDetector = {"c", "o"};
-				for(int j = 0; j < in_hand.get(i).size(); j++)
-				{
-					int current_int = in_hand.get(i).get(j);
-					if(current_int/9 > suitnum)
-					{
-						returnSTR += suits[suitnum];
-						suitnum = in_hand.get(i).get(j)/9;
-					}
-					returnSTR += Integer.toString((current_int - (9 * suitnum) + 1));
-				}
-				for(int j = suitnum; j < suits.length; j++) returnSTR += suits[j];
-				returnSTR += coDetector[i];
-				if(in_hand.get(1).size() == 0)
-				{
-					for(int j = 0; j < suits.length; j++) returnSTR += suits[j];
-					returnSTR += "o";
-					break;
-				}
+				return false;
 			}
-			return returnSTR;
+		}
+		
+		/**
+		 * Used to add new declared groups to unique PlayerHand instance
+		 * @param new_group: SINGULAR group to be added to this instance of PlayerHand
+		 * @return: True if the new Group was added, false if an error was raised
+		 */
+		public boolean addDeclaredGroups(Group new_group)
+		{
+			try
+			{
+				this.declaredGroups.add(new Group(new_group));
+				return true;
+			}
+			catch(Exception e)
+			{
+				return false;
+			}
+		}
+		public static ArrayList<Group> group_from_mjSTR(String in_mjSTR)
+		{
+			
 		}
 	}
 	public static void main(String[] args)
 	{
-		System.out.println(PlayerHand.mjSTRtranslate("mp1112345678999szcmpszo"));
-		System.out.println(PlayerHand.mjSTRtranslate("123m456p789szcmps111zo"));
-		
-		ArrayList<ArrayList<Integer>> expHand = PlayerHand.mjSTRtranslate("123m456p789szcmps111zo");
-		System.out.println(PlayerHand.handto_mjSTR(expHand));
 		
 	}
 }
