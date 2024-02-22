@@ -7,6 +7,6 @@ However, the bot incorporates a nuanced approach where the influence of shape pr
 
 As the price of a tile increases, the impact of shape progress decreases proportionally.
 
-On the other hand, if a shape is identified as a two-sided wait, the shape progress holds significant importance, 
+On the other hand, if a shape is identified as a good shape (i,e two-sided wait), the shape progress holds significant importance, 
 
-This can only be overrided by a one-of-a-kind (only 1 tile is "available", other in drop pile) tile price can supersede this particular group.
+This can only be overrided by an extreme scarce (i.e one-of-a-kind tile = only 1 tile is "available", other in drop pile) tile acceptance.
