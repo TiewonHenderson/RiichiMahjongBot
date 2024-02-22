@@ -1,11 +1,11 @@
 package bot_package;
 
 import java.util.*;
+import java.util.function.*;
 import bot_package.Player;
-
 import bot_package.Player.PlayerHand;
 
-public class Group extends Scoring
+public class Group
 {
 	//Literal list of tile_id
 	public ArrayList<Integer> tile_list = new ArrayList<Integer>();
@@ -95,6 +95,10 @@ public class Group extends Scoring
 		return false;
 	}
 	
+	public ArrayList<Integer> get_groupTiles()
+	{
+		return this.tile_list;
+	}
 	/**
 	 * Used to print the string representation of the tile_list
 	 */
@@ -117,49 +121,90 @@ public class Group extends Scoring
 	/**
 	 * 
 	 * @param in_group: An ArrayList<Integer> of size 3/4 to check if valid group
-	 * @return: The group type of the inputted ArrayList<Integer>, -1/0 = invalid, 1 = sequence, 2 = triplets, 3 = quads
+	 * @return: The group type of the inputted ArrayList<Integer>, 
+	 * -3 = invalid
+	 * -2 = floating
+	 * -1 = incomp sequence
+	 * 0 = pair
+	 * 1 = sequence
+	 * 2 = triplets
+	 * 3 = quads
 	 */
 	public static int validGroup(ArrayList<Integer> in_group)
 	{
-	    if(in_group.size() < 3 || in_group.size() > 4)
+	    if(in_group.size() == 0 || in_group.size() > 4)
 	    {
-	        return -1;
+	        return -3;
 	    }
-	    //checks all the tile are in same suit, and checks if is triplet
-	    boolean isTriplet = true;
-	    for(int i = 0; i < in_group.size() - 1; i++)
+	    //checks if there is only 1 distinct element in ArrayList<Integer>
+	    boolean all_Same = in_group.stream().distinct().count() == 1;
+	    //Checks quads
+	    switch(in_group.size())
 	    {
-	        if(in_group.get(i)/9 != in_group.get(i + 1)/9)
-	        {
-	            return -1;
-	        }
-	        if(in_group.get(i) != in_group.get(i + 1))
-	        {
-	            isTriplet = false;
-	        }
+	    	case 4:
+	    		//check if all the tiles are the same for quads
+	    		if(all_Same)
+	    		{
+	    			return 3;
+	    		}
+	    		return -3;
+	    	case 3:
+	    		//check if all the tiles are the same for triplets
+	    		if(all_Same)
+	    		{
+	    			return 2;
+	    		}
+	    		//check if all the tiles are increments of each other for sequences
+	    		ArrayList<Integer> sortedGroup = sortArray(in_group);
+	    	    for(int i = 0; i < sortedGroup.size() - 1; i++)
+	    	    {
+	    	        if(sortedGroup.get(i) + 1 != sortedGroup.get(i + 1))
+	    	        {
+	    	            return -3;
+	    	        }
+	    	    }
+	    	    return 1;
+	    	case 2:
+	    		//If the two tiles are the same, its a pair
+	    		if(all_Same)
+	    		{
+	    			return 0;
+	    		}
+	    		
+	    		//If the two tiles are in talking distances, -2 -1 +1 +2, then its an incomplete sequence
+	    		if(Math.abs(in_group.get(0) - in_group.get(1)) <= 2)
+	    		{
+	    			return -1;
+	    		}
+	    		return -3;
+	    	case 1:
+	    		//Just 1 tile = floating tile
+	    		return -2;
+	    	default:
+	    		return -3;
 	    }
-	    if(in_group.size() == 4)
-	    {
-	        if(isTriplet)
-	        {
-	            return 3;
-	        }
-	    }
-	    if(isTriplet)
-	    {
-	        return 2;
-	    }
-
-	    //Checks if sequence, returns 0 if passes test
-	    ArrayList<Integer> sortedGroup = sortArray(in_group);
-	    for(int i = 0; i < sortedGroup.size() - 1; i++)
-	    {
-	        if(sortedGroup.get(i) + 1 != sortedGroup.get(i + 1))
-	        {
-	            return -1;
-	        }
-	    }
-	    return 1;
+	}
+	
+    /**
+	 * @param in_hand: Any valid hand input
+	 * @return: 4 ArrayList<Integer> within Arraylist<Integer> that represents each suit of a mahjong hand.
+	 * 			The return tiles in each ArrayList<Integer> contains the TILE_VAL, not PLAY_VAL!
+	 */
+	public static ArrayList<ArrayList<Integer>> suitDivide(ArrayList<Integer> input_hand)
+	{
+		ArrayList<ArrayList<Integer>> returnSuits = new ArrayList<ArrayList<Integer>>();
+		for(int suit = 0; suit < 4; suit++)
+		{
+			returnSuits.add(new ArrayList<Integer>());
+			for(int tile: input_hand)
+			{
+				if(tile < ((suit + 1) * 9) && tile >= (suit * 9))
+				{
+					returnSuits.get(suit).add(tile);
+				}
+			}
+		}
+		return returnSuits;
 	}
 	
 	/**
@@ -191,6 +236,45 @@ public class Group extends Scoring
 		}
 		return returnList;
 	}
+	
+	/**
+	 * Overloading method so default value for reverse_sort = false, sort by minimum to maximum
+	 * @param in_array: A input of an ArrayList<Integer> that needs to be sorted
+	 * @return A sorted ArrayList<Integer> of the original inputted ArrayList<Integer>
+	 */
+	public static ArrayList<Integer> sortArray(ArrayList<Integer> in_array, boolean reverse_sort)
+	{
+		ArrayList<Integer> returnList = new ArrayList<Integer>();
+		ArrayList<Integer> tempList = new ArrayList<Integer>(in_array);
+		int max = in_array.get(0);
+		int index = 0;
+		
+		if(!reverse_sort)
+		{
+			return sortArray(in_array);
+		}
+		else
+		{
+			//Sorting by maximum to minimum when set boolean argument to true
+			for(int i = 0; i < in_array.size(); i++)
+			{
+				max = tempList.get(index);
+				for(int j = 0; j < tempList.size(); j++)
+				{
+					if(tempList.get(j) > max)
+					{
+						max = tempList.get(j);
+						index = j;
+					}
+				}
+				returnList.add(max);
+				tempList.remove(index);
+				index = 0;
+			}
+		}
+		return returnList;
+	}
+	
 	/*
 	 * Used to make an ArrayList<Integer> with int[]
 	 */
@@ -199,36 +283,6 @@ public class Group extends Scoring
 		ArrayList<Integer> return_ArrayList = new ArrayList<Integer>();
 		for(int i = 0; i < in_list.length; i++) return_ArrayList.add(in_list[i]);
 		return return_ArrayList;
-	}
-	
-	/**
-	 * !!!Possibility Deprecated!!!
-	 * @param in_closeHand: Any valid integer ArrayList<Integer>, best case = the playerHand that is closed (excluding quads)
-	 * @return: Returns all integers that appears >= 2 times in the given hand
-	 */
-	public static ArrayList<Integer> getPair(ArrayList<Integer> in_closeHand)
-	{
-		ArrayList<Integer> returnPairs = new ArrayList<Integer>();
-		HashMap<Integer, Integer> tileCounter = new HashMap<Integer, Integer>();
-		for(int i = 0; i < in_closeHand.size(); i++)
-		{
-			if(tileCounter.containsKey(in_closeHand.get(i)))
-			{
-				tileCounter.put(in_closeHand.get(i), 1);
-			}
-			else
-			{
-				tileCounter.replace(in_closeHand.get(i), tileCounter.get(in_closeHand.get(i)) + 1);
-			}
-		}
-		for(int key : tileCounter.keySet())
-		{
-			if(tileCounter.get(key) > 1)
-			{
-				returnPairs.add(key);
-			}
-		}
-		return returnPairs;
 	}
 	
 	/**
@@ -378,38 +432,49 @@ public class Group extends Scoring
 					continue;
 				}
 			}
-			//Reuse ArrayList<ArrayList<Integer>> suit_list = suitDivide(playHand.getCurrentHand());
+			
+			/*
+			 * These will be added to the final return HashMap
+			 * 	groupSN format = 
+			 *	(complete group)(...)r={(incomplete group)(...)}[+min]suit c/o <- C = closed, O = open (no space inbetween)
+			 *	i.e:
+			 *		(012)(123)[+4]m(000)[+8]pr=(0)[+9]sr=(11)(2)[+1]z
+			 *		 012 + 4 + (m =0 * 9) = 456m
+			 *	adding min should account for tile_id -> play_val
+			 */
+			ArrayList<String> groupSN_list = new ArrayList<String>();
+			
+			/*
+			 * 	groupSN_ID formate: 
+			 * 	Eyes [index 0-1 inclusive](single digit tile_id follow by 0, i.e 7m = 06 tile_id): 
+			 * 	C/W/I [index 2 inclusive](complete/Waiting/Incomplete, index 2)
+			 *	LLNP/LLPR/LR.../OSNP... [index 3-6 inclusive](LL = Linear left, LR = Linear right, OS = Outer search, NP = No pairs, PR = pairs removed)
+			 */
+			ArrayList<String> groupSN_ID_list = new ArrayList<String>();
+			
+			//All linear searches are under here
 			for(int key: allPossible_hands.keySet())
 			{
-				/*
-				 * These will be added to the final return HashMap
-				 * 	groupSN format = 
-				 *	(complete group)(...)r={(incomplete group)(...)}[+min]suit c/o <- C = closed, O = open (no space inbetween)
-				 *	i.e:
-				 *		(012)(123)[+4]m(000)[+8]pr=(0)[+9]sr=(11)(2)[+1]z
-				 *		 012 + 4 + (m =0 * 9) = 456m
-				 *	adding min should account for tile_id -> play_val
-				 */
-				String add_groupSN = "";
-				
-				/*
-				 * 	groupSN_ID formate: 
-				 * 	Eyes [index 0-1 inclusive](single digit tile_id follow by 0, i.e 7m = 06 tile_id): 
-				 * 	C/W/I [index 2 inclusive](complete/Waiting/Incomplete, index 2)
-				 *	LLNP/LLPR/LR.../OSNP... [index 3-6 inclusive](LL = Linear left, LR = Linear right, OS = Outer search, NP = No pairs, PR = pairs removed)
-				 */
-				String groupSN_ID = "";
+				String temp_ID = Integer.toString(key);
+				String temp_groupSN = "";
 				
 				suit_list = suitDivide(allPossible_hands.get(key));
-				if(key == -1) //-1 signifies the pair will not be pre-removed
-				{
-					groupSN_ID += key;
-				}
+				//LL = Linear Left to right (index 0 to index size() - 1)
 				for(int suit_index = 0; suit_index < suit_list.size(); suit_index++)
 				{
-					add_groupSN += list_GroupSearch(suit_list.get(suit_index)); //adds GroupSN for each suit
+					temp_groupSN += list_GroupSearch(suit_list.get(suit_index), false); //adds GroupSN for each suit
 				}
-				System.out.println(add_groupSN);
+				System.out.println(temp_groupSN);
+				System.out.println(groupSN_to_ArrayList(temp_groupSN));
+				temp_groupSN = "";
+				temp_ID = Integer.toString(key);
+				//LR = Linear right to left (index size() - 1 to index 0)
+				for(int suit_index = 0; suit_index < suit_list.size(); suit_index++)
+				{
+					temp_groupSN += list_GroupSearch(suit_list.get(suit_index), true); //adds GroupSN for each suit
+				}
+				System.out.println(temp_groupSN);
+				System.out.println(groupSN_to_ArrayList(temp_groupSN));
 			}
 		}
 		else
@@ -548,7 +613,8 @@ public class Group extends Scoring
 		 * 		This rule is after by how complete the group is applied
 		 */
 		for(int i = all_groups.get(0).size() - 1; i >= 0; i--) return_groups.add(all_groups.get(0).get(i));
-		for(int i = all_groups.get(1).size() - 1; i >= 0; i--) return_groups.add(all_groups.get(1).get(i));
+		for(int i = all_groups.get(1).size() - 1; i >= 0; i--) if(all_groups.get(1).get(i).get_groupTiles().size() == 2) {return_groups.add(all_groups.get(1).get(i));}
+		for(int i = all_groups.get(1).size() - 1; i >= 0; i--) if(all_groups.get(1).get(i).get_groupTiles().size() == 1) {return_groups.add(all_groups.get(1).get(i));}
 		return return_groups;
 	}
 	
@@ -603,6 +669,7 @@ public class Group extends Scoring
 		 * Subtracts every element with minimum
 		 * Makes sure its play_val because tile_id can exceed 9
 		 */
+		
 		ArrayList<Integer> temp_suit = tile_id_to_PlayVal(sortArray(in_suitarray));
 		int min = temp_suit.get(0);
 		int max = temp_suit.get(temp_suit.size() - 1);
@@ -622,14 +689,15 @@ public class Group extends Scoring
 	
 	/**
 	 * @param  in_array: ASSUMES this is all in one suit, index out of bounds if not
+	 * @param  reverse_search: Is irrelevant in triplet search since any instance of quantity 3 is taken, order doens't matter
 	 * @param  only_triplets: true if groups should only be triplets, default = false
 	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_GroupSearch(ArrayList<Integer> in_array, boolean only_triplets)
+	public static String list_GroupSearch(ArrayList<Integer> in_array, boolean reverse_search, boolean only_triplets)
 	{
-		if(!only_triplets){return list_GroupSearch(in_array);}
+		if(!only_triplets){return list_GroupSearch(in_array, reverse_search);}
 		
 		String return_STR = "";
 		if(in_array.size() <= 0) 
@@ -719,18 +787,19 @@ public class Group extends Scoring
 		//Finalize groupSN
 		return_STR += "[+" + tile_id_to_PlayVal(sortArray(in_array)).get(0) + "]";
 		return_STR += Character.toString(suit_reference[suit]);
-		return return_STR + "c"; //this takes PlayerHand, so it ALWAYS non-declared tiles
+		return return_STR;
 	}
 	
 	/**
 	 * 
 	 * FUNCTION OVERLOADING WITH DEFAULT PARAMETER "only_triplets" SET TO "false"
 	 * @param  in_array: ASSUMES this is all in one suit
+	 * @param  reverse_search: Whether or not the search the inputted array from index 0 to last element or last element to index 0
 	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_GroupSearch(ArrayList<Integer> in_array)
+	public static String list_GroupSearch(ArrayList<Integer> in_array, boolean reverse_search)
 	{
 		String return_STR = "";
 		if(in_array.size() <= 0) 
@@ -742,18 +811,21 @@ public class Group extends Scoring
 		int suit = in_array.get(0)/9;
 		
 		//If given honors list, return GroupSearch with only_triplets as true
-		if(suit == 3) {return list_GroupSearch(in_array, true);}
+		if(suit == 3) {return list_GroupSearch(in_array, false, true);}
 		
 		ArrayList<Integer> temp_suit = tile_id_to_PlayVal(sortArray(in_array));
 		int total_tiles = temp_suit.size();
-		int min = temp_suit.get(0);
-		int max = temp_suit.get(temp_suit.size() - 1) - 1;
-		
+		int play_val_min = temp_suit.get(0);
+
 		//Convert suit to matrix
 		ArrayList<Integer> matrix = convert_2_matrix(in_array);
 		
-		//Adding Unique Integers to make enough groups
+		//Index that refers to the play_val integer in the matrix (a pointer)
 		int currentIndex = 0;
+		if(reverse_search)
+		{
+			currentIndex = matrix.size() - 1;
+		}
 		/*
 		 * In case the given array doesn't have real groups, 
 		 * temp_matrix is altered to not alter the original matrix
@@ -762,7 +834,7 @@ public class Group extends Scoring
 		 */
 		ArrayList<Integer> temp_matrix = new ArrayList<Integer>(matrix);
 		ArrayList<String> group_shape_list = new ArrayList<String>();
-		
+		boolean absolute_break = false;
 		
 		//There is possibly temp_suit.size() amount of groups if each group is a single tile
 		for(int i = 0; i < temp_suit.size(); i++)
@@ -770,31 +842,64 @@ public class Group extends Scoring
 			String temp_str = "";
 			//Shape as set is how duplicates are not added
 			SortedSet<Integer> shape = new TreeSet<Integer>();
-			
 			//Prevents out of bounds
-			if(currentIndex >= temp_matrix.size() || total_tiles <= 0)
+			if((currentIndex >= temp_matrix.size() && !reverse_search)	||
+			   (currentIndex < 0 && reverse_search)	|| 
+				total_tiles <= 0)
 			{
 				break;
 			}
 			//Moves if tile cell has no tiles to offer until there is a cell with tiles
 			if(temp_matrix.get(currentIndex) <= 0)
 			{
-				for(int j = currentIndex; j < max; j++)
+				if(reverse_search)
 				{
-					if(temp_matrix.get(currentIndex) <= 0)
+					//Reverse search decrement the index, so the minimum index is 0
+					for(int j = currentIndex; j >= 0; j--)
 					{
-						currentIndex++;
-						if(currentIndex >= temp_matrix.size())
+						if(temp_matrix.get(currentIndex) <= 0)
+						{
+							currentIndex--;
+							if(currentIndex < 0)
+							{
+								absolute_break = true;
+								break;
+							}
+						}
+						else
 						{
 							break;
 						}
 					}
-					else
+				}
+				else
+				{
+					//Linear order search increment index, so maximum index is size()-1
+					for(int j = currentIndex; j < temp_matrix.size(); j++)
 					{
-						break;
+						if(temp_matrix.get(currentIndex) <= 0)
+						{
+							currentIndex++;
+							if(currentIndex >= temp_matrix.size())
+							{
+								absolute_break = true;
+								break;
+							}
+						}
+						else
+						{
+							break;
+						}
 					}
 				}
-				continue;
+			}
+			/*
+			 * The above code changes the currentIndex point of the matrix, 
+			 * anything out of bounds will set absolute_break to true to break the for loop 
+			 */
+			if(absolute_break)
+			{
+				break;
 			}
 			
 			//If get(currentIndex) >= 3, it means a triplet can be made from it
@@ -802,6 +907,7 @@ public class Group extends Scoring
 			{
 				for(int n = 0; n < 3; n++) temp_str += Integer.toString(currentIndex);
 				temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 3);
+				total_tiles -= 3;
 				group_shape_list.add(temp_str);
 				continue;
 			}
@@ -809,13 +915,27 @@ public class Group extends Scoring
 			//If triplet cannot be made, add current index
 			shape.add(currentIndex);
 			temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
+			//total_tiles -= 1;
 			
-			//i <= 2 to not exceed the "talking" tiles to currentIndex
-			for(int m = 1; m <= 2; m++)
+			int m = 0;
+			while((m <= 2 && !reverse_search) || (m >= -2 && reverse_search))
 			{
-				//Prevents exceeding max
+				if(!reverse_search)
+				{
+					m++; //first to last requires index search to start at 1
+				}
+				else
+				{
+					m--; //last to first requires index search to start at -1
+				}
+				//Prevents exceeding out of talking tiles
+				if(!(m <= 2 && !reverse_search) && !(m >= -2 && reverse_search))
+				{
+					break;
+				}
+				//Prevents exceeding out of bounds
 				int increment_index = currentIndex + m;
-				if(max - (increment_index) < 0)
+				if(increment_index < 0 || temp_matrix.size() - (increment_index) <= 0)
 				{
 					break;
 				}
@@ -823,8 +943,10 @@ public class Group extends Scoring
 				{
 					shape.add(increment_index);
 					temp_matrix.set(increment_index, temp_matrix.get(increment_index) - 1);
+					total_tiles--;
 				}
 			}
+			
 			//Since pairs are not looked for in above loop, this condition will fill that gap
 			if(shape.size() == 1 && temp_matrix.get(currentIndex) > 0)
 			{
@@ -832,8 +954,9 @@ public class Group extends Scoring
 				//sets remove duplicates, but there is only one element
 				for(int a = 0; a < total_copy + shape.size(); a++) 
 				{
-					temp_str += Integer.toString(shape.getFirst());
+					temp_str += Integer.toString(shape.first());
 					temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
+					total_tiles--;
 				}
 			}
 			else
@@ -843,8 +966,6 @@ public class Group extends Scoring
 			}
 			group_shape_list.add(temp_str);
 			matrix = new ArrayList<Integer>(temp_matrix);
-			//Keeps track of the amount of tiles remaining
-			total_tiles -= shape.size();
 		}
 		
 		/*
@@ -874,9 +995,9 @@ public class Group extends Scoring
 			}
 		}
 		
-		return_STR += "[+" + min + "]";
+		return_STR += "[+" + play_val_min + "]";
 		return_STR += Character.toString(suit_reference[suit]);
-		return return_STR + "c"; //this takes PlayerHand, so it ALWAYS non-declared tiles
+		return return_STR;
 	}
 	
 	/**
@@ -894,9 +1015,11 @@ public class Group extends Scoring
 		
 		System.out.println("example 1: " + single_suit_example);
 		System.out.println("Convert to matrix: " + convert_2_matrix(single_suit_example));
-		System.out.println("Search any group: " + list_GroupSearch(single_suit_example));
-		System.out.println("Search only triplets: " + list_GroupSearch(single_suit_example, true));
-		System.out.println("From groupSN to ArrayList<Group>: " + groupSN_to_ArrayList(list_GroupSearch(single_suit_example)));
+		System.out.println("Search any groupLR: " + list_GroupSearch(single_suit_example, false));
+		System.out.println("Search any groupRL: " + list_GroupSearch(single_suit_example, true));
+		System.out.println("Search only triplets: " + list_GroupSearch(single_suit_example, false, true));
+		System.out.println("Search only triplets: " + list_GroupSearch(single_suit_example, true, true));
+		System.out.println("From groupSN to ArrayList<Group>: " + groupSN_to_ArrayList(list_GroupSearch(single_suit_example, false)));
 		System.out.println(getGroups(example_player.getPlayerHand()) + "\n\n");
 		
 		//segment 2
@@ -910,8 +1033,9 @@ public class Group extends Scoring
 		{
 			System.out.println("Suits: " + suits);
 			System.out.println("Matrices: " + convert_2_matrix(suits));
-			System.out.println("Search any group (groupSN): " + list_GroupSearch(suits));
-			System.out.println("Search only triplets (groupSN): " + list_GroupSearch(suits, true));
+			System.out.println("Search any groupLR (groupSN): " + list_GroupSearch(suits, false));
+			System.out.println("Search any groupRL (groupSN): " + list_GroupSearch(suits, true));
+			System.out.println("Search only triplets (groupSN): " + list_GroupSearch(suits, false, true));
 		}
 		System.out.println(getGroups(example_player.getPlayerHand()) + "\n\n");
 		
@@ -924,18 +1048,17 @@ public class Group extends Scoring
 		{
 			System.out.println("Suits: " + suits);
 			System.out.println("Matrices: " + convert_2_matrix(suits));
-			System.out.println("Search any group (groupSN): " + list_GroupSearch(suits));
-			System.out.println("Search only triplets (groupSN): " + list_GroupSearch(suits, true));
+			System.out.println("Search any groupLR (groupSN): " + list_GroupSearch(suits,false));
+			System.out.println("Search any groupRL (groupSN): " + list_GroupSearch(suits,true));
+			System.out.println("Search only triplets (groupSN): " + list_GroupSearch(suits, false, true));
 		}
 		System.out.println(getGroups(example_player.getPlayerHand()) + "\n\n");
 
 	}
-	class Real_Time_Group extends Group
-	{
-		
-	}
 	public static void main(String[] args)
 	{
+		ArrayList<Integer> lol = new ArrayList<Integer>();
+		lol.get(34);
 		test();
 	}
 }

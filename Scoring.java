@@ -201,4 +201,23 @@ public class Scoring
 		}
 		return points;
 	}
+	/**
+	 * Function:
+	 * Each index would represent the amount there is in the inputed in_groupSN
+	 * 		index 0 = floating tiles
+	 * 		index 1 = incomplete groups (includes pairs)
+	 * 		index 2 = pairs
+	 * 		index 3 = completed groups
+	 * @param in_groupSN: The group string notation that wants to be checked how many groups, completed, incompleted, etc
+	 * @return ArrayList<Integer> where each index represents the quantity the respective item it correlates to
+	 */
+	public static ArrayList<Integer> getGroupInfo(String in_groupSN)
+	{
+		ArrayList<Integer> return_info = new ArrayList<Integer>();
+		ArrayList<Group> allGroups_list = Group.groupSN_to_ArrayList(in_groupSN);
+		for(int i = -2; i <= 1; i++)
+		{
+			
+		}
+	}
 }
