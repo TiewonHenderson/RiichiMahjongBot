@@ -1,12 +1,4 @@
 # CantoMahjongBot
-A Class Based mahjong bot that runs it's predictions based of a tile market system.
+A sophisticated Mahjong bot utilizing a class-based system with predictive capabilities grounded in a dynamic tile market. Each unique tile is assigned a 'price' based on its perceived scarcity, with cheaper tiles being prioritized over more expensive ones during gameplay.
 
-If a certain tile is considered more scarce then another tile, it will be considered more expensive than it.
-
-A "price" will be assigned to each unique tile and the cheaper will be preferred to be used then expensive.
-
-However the shape progress can overrides the tile market system:
-
-As tile price increases, the shape progress impact decreases in proportion to tile price.
-
-However if a shape is considered a two sided wait, the shape progress is extremely high, only a one of kind tile price can override this group.
+However, the bot incorporates a nuanced approach where the influence of shape progress can override the tile market system. As the price of a tile increases, the impact of shape progress decreases proportionally. Notably, if a shape is identified as a two-sided wait, the shape progress holds significant importance, and only a unique, one-of-a-kind tile price can supersede this particular group.
