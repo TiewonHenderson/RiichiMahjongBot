@@ -15,7 +15,7 @@ public class Group extends Scoring
 	 */
 	public Group()
 	{
-		this.concealed = false;
+		this.concealed = true;
 	}
 	
 	/**
@@ -38,6 +38,26 @@ public class Group extends Scoring
 	{
 		for(int i = 0; i < in_group.length; i++) tile_list.add(in_group[i]);
 		this.concealed = concealed;
+	}
+	
+	/**
+	 * Default value for concealed is true
+	 * @param in_group A typical 3/4 tile ArrayList<Integer> that represents a tile group
+	 */
+	public Group(ArrayList<Integer> in_group)
+	{
+		this.tile_list = new ArrayList<Integer>(in_group);
+		this.concealed = true;
+	}
+	
+	/**
+	 * Default value for concealed is true
+	 * @param in_group A typical 3/4 tile int[] that represents a tile group
+	 */
+	public Group(int[] in_group)
+	{
+		for(int i = 0; i < in_group.length; i++) tile_list.add(in_group[i]);
+		this.concealed = true;
 	}
 	
 	/*
@@ -114,6 +134,19 @@ public class Group extends Scoring
 		{
 			return "";
 		}
+	}
+	/**
+	 * 
+	 * @return The String value to typically add into it's total groupSN
+	 */
+	public String to_groupSN(int min)
+	{
+		String return_str = "(";
+		for(int tile_id: this.tile_list) 
+		{
+			return_str += Integer.toString(tileID_to_PlayVal(tile_id) - min);
+		}
+		return return_str + ")";
 	}
 	/**
 	 * 
@@ -207,6 +240,10 @@ public class Group extends Scoring
 	{
 		ArrayList<Integer> returnList = new ArrayList<Integer>();
 		ArrayList<Integer> tempList = new ArrayList<Integer>(in_arraylist);
+		if(in_arraylist.size() == 0)
+		{
+			return returnList;
+		}
 		int min = in_arraylist.get(0);
 		int index = 0;
 		
@@ -410,22 +447,117 @@ public class Group extends Scoring
 	
 	/**
 	 * 
-	 * @param in_arraylist
-	 * @return
+	 * @param in_arraylist this arraylist is meant for all suit included, however it is implemented to be universal
+	 * 					   since it searches for groups, then saves it suit, and adds accordingly.
+	 * @return Returns the groupSN corresponding to the ArrayList<Group>
 	 */
 	public static String ArrayList_to_groupSN(ArrayList<Group> in_arraylist)
 	{
 		String return_str = "";
-		for(int group_status = 3; group_status >= 1; group_status++)
+		ArrayList<Group> temp_groups = new ArrayList<Group>(in_arraylist); //This temp ArrayList allows us to remove elements to sort
+		
+		HashMap<Integer, ArrayList<Group>> suit_groups = new HashMap<Integer, ArrayList<Group>>();
+		for(int i = 0; i <= 3; i++) suit_groups.put(i, new ArrayList<Group>());
+		
+		for(int size = 3; size >= 1; size--)
 		{
-			for(int i = 0; i < in_arraylist.size(); i++) 
+			for(int i = 0; i < temp_groups.size(); i++) 
 			{
-				if(in_arraylist.get(i).tile_list.size() == group_status)
+				Group current_group = temp_groups.get(i);
+				//If somehow a group with no tiles exist, continue
+				if(current_group.get_groupTiles().size() <= 0)
 				{
-					return_str += "(" + tileID_to_PlayVal(in_arraylist.get(i).tile_list).toString() + ")";
+					continue;
+				}
+				//This prioritizes the group_size indicated by the for loop with temp_var size
+				if(current_group.get_groupTiles().size() != size)
+				{
+					continue;
+				}
+				//Add group to corresponding id of HashMap
+				suit_groups.get(current_group.get_groupTiles().get(0)/9).add(current_group);
+			}
+		}
+		
+		/*
+		 * Iterates through keys which represents suit since groupSN is in order
+		 * This algorithm assumes the suits in HashMap is in order
+		 * This algorithm loop is to indicate closed/open groups, 
+		 * Next loop for each suit
+		 * final loop is for each group
+		 */
+		for(int i = 0; i < 2; i++)
+		{
+			int prev_str_length = return_str.length();
+			for(int key: suit_groups.keySet())
+			{
+				//Checks if there are any groups in this suit
+				if(suit_groups.get(key).size() == 0){continue;}
+				
+				temp_groups = new ArrayList<Group>(); //To only contain either concealed or non-concealed groups
+				for(Group given_group: suit_groups.get(key))
+				{
+					if(given_group.concealed && (i == 0)) {temp_groups.add(given_group);}
+					else if(!given_group.concealed && (i == 1)) {temp_groups.add(given_group);}
+				}
+				
+				if(temp_groups.size() == 0) {continue;} //If temp_groups.size() == 0, there is no concealed/non-concealed groups
+				ArrayList<Integer> suit_hand = new ArrayList<Integer>();
+				int min = -1;
+				//Adds all the tiles into one ArrayList
+				for(Group group: temp_groups) for(int tile: group.tile_list) suit_hand.add(tile);
+				
+				min = tileID_to_PlayVal(sortArray(suit_hand).get(0));
+				
+				boolean start_remain = true; //Keeps track of where to add "r={", also helps close remainder segment
+				String suit_string = ""; //The return for one suit, will be added to whole return_string
+
+				for(Group given_group: temp_groups)
+				{
+					if((i == 0 && given_group.concealed) || (i == 1 && !given_group.concealed))
+					{
+						/*
+						 *	The groupSN method will return the play_val-min and set it appropriate to groupSN format 
+						 */
+						if(given_group.get_groupTiles().size() >= 3)
+						{
+							suit_string += given_group.to_groupSN(min);
+						}
+						else if(given_group.get_groupTiles().size() <= 2)
+						{
+							if(start_remain)
+							{
+								start_remain = false;
+								suit_string += "r={";
+							}
+							suit_string += given_group.to_groupSN(min);
+						}
+					}
+				}
+				
+				if(suit_string.length() > 0 && !start_remain)//Checks if remainder was activated to close with }
+				{
+					return_str += suit_string + "}[" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
+				}
+				else if(suit_string.length() > 0)//remainder was not added, only add min and suit
+				{
+					return_str += suit_string + "r={}[" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
+				}
+			}
+			if(return_str.length() - prev_str_length > 0) //Only add close/open if there were even groupSN is begin with
+			{
+				switch(i)
+				{
+					case 0:
+						return_str += "c";
+						break;
+					case 1:
+						return_str += "o";
+						break;
 				}
 			}
 		}
+		return return_str;
 	}
 	
 	/**
@@ -534,6 +666,53 @@ public class Group extends Scoring
 		}
 		return tile_array;
 	}
+	public static Group random_group()
+	{
+		int suit = (int)(Math.random() * 4); //Decides random suit
+		boolean concealed = true;
+		if(Math.random() > 0.5)
+		{
+			concealed = false;
+		}
+		ArrayList<Integer> tile_list = new ArrayList<Integer>();
+		int start = (int)(Math.random() * 9);
+		int selected = (int)(Math.random() * 5);
+		if(suit == 3)
+		{
+			start = (int)(Math.random() * 7);
+			int[] possible_shapes = {0, 2, 4};
+			selected = possible_shapes[(int)(Math.random() * 3)];
+		}
+		/*
+		 * 0 == complete + triplet
+		 * 1 == complete + sequence
+		 * 2 == incomplete + pair
+		 * 3 == incomplete + wait sequence
+		 * 4 == incomplete + floating
+		 */
+		switch(selected) //Decides what group to create
+		{
+			case 0:
+				for(int i = 0; i < 3; i++) tile_list.add(start + (suit * 9));
+				break;
+			case 1:
+				start = (int)(Math.random() * 7);
+				for(int i = 0; i < 3; i++) tile_list.add(start + i + (suit * 9));
+				break;
+			case 2: 
+				for(int i = 0; i < 2; i++) tile_list.add(start + (suit * 9));
+				break;
+			case 3:
+				start = (int)(Math.random() * 8);
+				for(int i = 0; i < 2; i++) tile_list.add(start + i + (suit * 9));
+				break;
+			case 4:
+				tile_list.add(start + (suit * 9));
+				break;
+		}
+		return new Group(tile_list, concealed);
+	}
+	
 	/**
 	 * 
 	 * @return true if compiled, false if wrong
@@ -591,6 +770,21 @@ public class Group extends Scoring
 	}
 	public static void main(String[] args)
 	{
-		test();
+		//Tests translation of ArrayList<Group> <-> groupSN
+//		for(int j = 0; j < 50; j++)
+//		{
+//			ArrayList<Group> random_groups = new ArrayList<Group>();
+//			for(int i = 0; i < 5; i++)
+//			{
+//				Group this_group = random_group();
+//				random_groups.add(this_group);
+//				System.out.println(this_group + " Concealed: " + this_group.concealed);
+//			}
+//			String groupSN = ArrayList_to_groupSN(random_groups);
+//			ArrayList<Group> AL = groupSN_to_ArrayList(groupSN);
+//			System.out.println("AL -> groupSN" + groupSN);
+//			System.out.println("groupSN -> AL" + AL);
+//		}
+//		test();
 	}
 }

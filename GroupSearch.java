@@ -381,7 +381,7 @@ public class GroupSearch extends Group
 	}
 	
 	/**
-	 * *WARNING* outer_search only accepts suited ArrayList<Integer>, every tile_id must fall under the same suit
+	 * *WARNING* outer_search only accepts single suited ArrayList<Integer>, every tile_id must fall under the same suit
 	 * 
 	 * A pseudo-divide and conquer method that searches groups by dividing the list in half
 	 * If the ArrayList input size is odd, the right list gets the extra tile remaining
@@ -391,7 +391,7 @@ public class GroupSearch extends Group
 	 */
 	public static String outer_search(ArrayList<Integer> in_arraylist)
 	{
-		if(in_arraylist.size() < 3)
+		if(in_arraylist.size() <= 3)
 		{
 			return list_GroupSearch(in_arraylist, false);
 		}
@@ -431,6 +431,55 @@ public class GroupSearch extends Group
 		System.out.println("Left Groups: " + left_groups);
 		System.out.println("Right Groups: " + right_groups);
 		
+		//Add complete/incomplete groups to corresponding ArrayList<Group>
+		ArrayList<ArrayList<Group>> categorized_Group = new ArrayList<ArrayList<Group>>();
+		for(int i = 0; i < 2; i++) categorized_Group.add(new ArrayList<Group>());
+		//Iterator to be able to iterator two ArrayList at once
+		Iterator<Group> l_groups = left_groups.iterator();
+		Iterator<Group> r_groups = right_groups.iterator();
+		
+		boolean[] has_next = {true, true};
+		
+		while(has_next[0] || has_next[1])
+		{
+			//hasNext() determines if there is a next element
+			if(has_next[0] && l_groups.hasNext())
+			{
+				Group temp_group = new Group(l_groups.next());
+				if(group_status(temp_group) > 0)
+				{
+					categorized_Group.get(0).add(temp_group);
+				}
+				else
+				{
+					categorized_Group.get(1).add(temp_group);
+				}
+			}
+			if(!l_groups.hasNext())
+			{
+				has_next[0] = false;
+			}
+			if(has_next[1] && r_groups.hasNext())
+			{
+				Group temp_group = new Group(r_groups.next());
+				if(group_status(temp_group) > 0)
+				{
+					categorized_Group.get(0).add(temp_group);
+				}
+				else
+				{
+					categorized_Group.get(1).add(temp_group);
+				}
+			}
+			if(!r_groups.hasNext())
+			{
+				has_next[1] = false;
+			}
+		}
+		
+		ArrayList<Group> temp_all_groups = new ArrayList<Group>();
+		for(ArrayList<Group> groups_list: categorized_Group) for(Group group: groups_list) temp_all_groups.add(group);
+		System.out.println(ArrayList_to_groupSN(temp_all_groups));
 		
 		
 		return null;
@@ -471,6 +520,7 @@ public class GroupSearch extends Group
 	}
 	
 	/**
+	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
 	 * @param  in_arraylist ASSUMES this is all in one suit, index out of bounds if not
 	 * @param  reverse_search Is irrelevant in triplet search since any instance of quantity 3 is taken, order doens't matter
 	 * @param  only_triplets true if groups should only be triplets, default = false
@@ -570,12 +620,13 @@ public class GroupSearch extends Group
 		//Finalize groupSN
 		return_STR += "[+" + tileID_to_PlayVal(sortArray(in_arraylist)).get(0) + "]";
 		return_STR += Character.toString(suit_reference[suit]);
-		return return_STR;
+		return return_STR + "c";
 	}
 	
 	/**
 	 * 
 	 * FUNCTION OVERLOADING WITH DEFAULT PARAMETER "only_triplets" SET TO "false"
+	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
 	 * @param  in_arraylist ASSUMES this is all in one suit
 	 * @param  reverse_search Whether or not the search the inputted array from index 0 to last element or last element to index 0
 	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
@@ -780,15 +831,12 @@ public class GroupSearch extends Group
 		
 		return_STR += "[+" + play_val_min + "]";
 		return_STR += Character.toString(suit_reference[suit]);
-		return return_STR;
+		return return_STR + "c";
 	}
 	
 	public static void main(String[] args)
 	{
-		int[] singlesuit_hand = {9,9,10,13,14,15,17,17,17};
-		System.out.println(tileID_to_PlayVal(singlesuit_hand[3]));
-		ArrayList<Integer> single_suit_example = sortArray(createArrayList(singlesuit_hand));
-		outer_search(single_suit_example);
-//		test();
+		ArrayList<Group> random_groups = new ArrayList<Group>();
+		
 	}
 }
