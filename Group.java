@@ -20,8 +20,8 @@ public class Group extends Scoring
 	
 	/**
 	 * ArrayList<Integer> object Compatible Constructor for Group obj
-	 * @param in_group: A typical 3/4 tile ArrayList<Integer> that represents a tile group
-	 * @param concealed: Declare whether the group is concealed
+	 * @param in_group A typical 3/4 tile ArrayList<Integer> that represents a tile group
+	 * @param concealed Declare whether the group is concealed
 	 */
 	public Group(ArrayList<Integer> in_group, boolean concealed)
 	{
@@ -31,8 +31,8 @@ public class Group extends Scoring
 	
 	/**
 	 * int[] object Compatible Constructor for Group obj
-	 * @param in_group: A typical 3/4 tile int[] that represents a tile group
-	 * @param concealed: Declare whether the group is concealed
+	 * @param in_group A typical 3/4 tile int[] that represents a tile group
+	 * @param concealed Declare whether the group is concealed
 	 */
 	public Group(int[] in_group, boolean concealed)
 	{
@@ -51,7 +51,7 @@ public class Group extends Scoring
 
 	/**
 	 * If any digit = 0, that means the group is invalid/Uncomplete
-	 * @return: Gets information of this instance of group
+	 * @return Gets information of this instance of group
 	 * 			digit 10^1 = group type, i.e 1 = sequence, 2 = triplets, 3 = quads
 	 * 			digit 10^0 = group suit, i.e 1 = mans, 2 = pins, 3 = sous, 4 = honors
 	 */
@@ -69,7 +69,7 @@ public class Group extends Scoring
 	
 	/**
 	 * Used to alter if Group is concealed or not
-	 * @param in_status: The new status of the group, if it's concealed or not
+	 * @param in_status The new status of the group, if it's concealed or not
 	 */
 	public void setDeclareStatus(boolean in_status)
 	{
@@ -78,8 +78,8 @@ public class Group extends Scoring
 	
 	/**
 	 * 
-	 * @param new_group: An ArrayList<Integer> of tile_ids
-	 * @return: sets new group to argument and returns true if new_group.size() < 5 and > 0.
+	 * @param new_group An ArrayList<Integer> of tile_ids
+	 * @return sets new group to argument and returns true if new_group.size() < 5 and > 0.
 	 * 			Does nothing returns false if condition is not met.
 	 */
 	public boolean setGroup(ArrayList<Integer> new_group)
@@ -117,8 +117,8 @@ public class Group extends Scoring
 	}
 	/**
 	 * 
-	 * @param in_group: An ArrayList<Integer> of size 3/4 to check if valid group
-	 * @return: The group type of the inputted ArrayList<Integer>, 
+	 * @param in_group An ArrayList<Integer> of size 3/4 to check if valid group
+	 * @return The group type of the inputted ArrayList<Integer>, 
 	 * -3 = invalid
 	 * -2 = floating
 	 * -1 = incomp sequence
@@ -182,9 +182,9 @@ public class Group extends Scoring
 	    }
 	}
 	/**
-	 * Overloading the group_status(ArrayList<Integer> in_group) method
-	 * @param in_group: A group object to check it's group status
-	 * @return: The group type of the inputted ArrayList<Integer>, 
+	 * @function Overloading the group_status(ArrayList<Integer> in_group) method
+	 * @param in_group A group object to check it's group status
+	 * @return The group type of the inputted ArrayList<Integer>, 
 	 * -3 = invalid
 	 * -2 = floating
 	 * -1 = incomp sequence
@@ -200,17 +200,17 @@ public class Group extends Scoring
 	
 	/**
 	 * 
-	 * @param in_array: A input of an ArrayList<Integer> that needs to be sorted
+	 * @param in_arraylist A input of an ArrayList<Integer> that needs to be sorted
 	 * @return A sorted ArrayList<Integer> of the original inputted ArrayList<Integer>
 	 */
-	public static ArrayList<Integer> sortArray(ArrayList<Integer> in_array)
+	public static ArrayList<Integer> sortArray(ArrayList<Integer> in_arraylist)
 	{
 		ArrayList<Integer> returnList = new ArrayList<Integer>();
-		ArrayList<Integer> tempList = new ArrayList<Integer>(in_array);
-		int min = in_array.get(0);
+		ArrayList<Integer> tempList = new ArrayList<Integer>(in_arraylist);
+		int min = in_arraylist.get(0);
 		int index = 0;
 		
-		for(int i = 0; i < in_array.size(); i++)
+		for(int i = 0; i < in_arraylist.size(); i++)
 		{
 			min = tempList.get(index);
 			for(int j = 0; j < tempList.size(); j++)
@@ -230,24 +230,24 @@ public class Group extends Scoring
 	
 	/**
 	 * Overloading method so default value for reverse_sort = false, sort by minimum to maximum
-	 * @param in_array: A input of an ArrayList<Integer> that needs to be sorted
+	 * @param in_arraylist A input of an ArrayList<Integer> that needs to be sorted
 	 * @return A sorted ArrayList<Integer> of the original inputted ArrayList<Integer>
 	 */
-	public static ArrayList<Integer> sortArray(ArrayList<Integer> in_array, boolean reverse_sort)
+	public static ArrayList<Integer> sortArray(ArrayList<Integer> in_arraylist, boolean reverse_sort)
 	{
 		ArrayList<Integer> returnList = new ArrayList<Integer>();
-		ArrayList<Integer> tempList = new ArrayList<Integer>(in_array);
-		int max = in_array.get(0);
+		ArrayList<Integer> tempList = new ArrayList<Integer>(in_arraylist);
+		int max = in_arraylist.get(0);
 		int index = 0;
 		
 		if(!reverse_sort)
 		{
-			return sortArray(in_array);
+			return sortArray(in_arraylist);
 		}
 		else
 		{
 			//Sorting by maximum to minimum when set boolean argument to true
-			for(int i = 0; i < in_array.size(); i++)
+			for(int i = 0; i < in_arraylist.size(); i++)
 			{
 				max = tempList.get(index);
 				for(int j = 0; j < tempList.size(); j++)
@@ -278,8 +278,8 @@ public class Group extends Scoring
 	
 	/**
 	 * 
-	 * @param in_groupSN: The group string notation of a given PlayerHand, used to provide information of suits of tiles
-	 * @return: ArrayList<Group> of completed and incomplete groups (typically eyes if hand is ready/complete).
+	 * @param in_groupSN The group string notation of a given PlayerHand, used to provide information of suits of tiles
+	 * @return ArrayList<Group> of completed and incomplete groups (typically eyes if hand is ready/complete).
 	 * 			Groups are in tile_id for better view comparing to player hand ArrayList<Integer> of tile_id
 	 */
 	public static ArrayList<Group> groupSN_to_ArrayList(String in_groupSN)
@@ -410,10 +410,30 @@ public class Group extends Scoring
 	
 	/**
 	 * 
-	 * @param in_tile_id: A singular int value to be converted from tile_id to play_val
-	 * @return: The play_val of the inputed integer, note this function only works from 0-26 inclusive
+	 * @param in_arraylist
+	 * @return
 	 */
-	public static int tile_id_to_PlayVal(int in_tile_id)
+	public static String ArrayList_to_groupSN(ArrayList<Group> in_arraylist)
+	{
+		String return_str = "";
+		for(int group_status = 3; group_status >= 1; group_status++)
+		{
+			for(int i = 0; i < in_arraylist.size(); i++) 
+			{
+				if(in_arraylist.get(i).tile_list.size() == group_status)
+				{
+					return_str += "(" + tileID_to_PlayVal(in_arraylist.get(i).tile_list).toString() + ")";
+				}
+			}
+		}
+	}
+	
+	/**
+	 * 
+	 * @param in_tile_id A singular int value to be converted from tile_id to play_val
+	 * @return The play_val of the inputed integer, note this function only works from 0-26 inclusive
+	 */
+	public static int tileID_to_PlayVal(int in_tile_id)
 	{
 		/*
 		 * (in_tile_id / 9) = suit by flooring
@@ -423,33 +443,36 @@ public class Group extends Scoring
 	}
 	/**
 	 * 
-	 * @param in_array: ArrayList<Integer> with any valid tile_id integer as each element
+	 * @param in_arraylist ArrayList<Integer> with any valid tile_id integer as each element
 	 * 					However if the ArrayList<Integer> includes invalid tile_ids, -1 will be added
 	 * @return The ArrayList<Integer> representing the play_value of each tile, the play_value
 	 * 		   represents 1-9 in each suit, i.e tile_id = 24 = 7s, play_value = 7
 	 */
-	public static ArrayList<Integer> tile_id_to_PlayVal(ArrayList<Integer> in_array)
+	public static ArrayList<Integer> tileID_to_PlayVal(ArrayList<Integer> in_arraylist)
 	{
 		ArrayList<Integer> return_array = new ArrayList<Integer>();
-		if(in_array.size() < 0) {return return_array;}
-		for(int tile_id: in_array)
+		if(in_arraylist.size() < 0) {return return_array;}
+		for(int tile_id: in_arraylist)
 		{
 			if(tile_id < 0 || tile_id > 33) //Invalid tile_ids
 			{
 				return_array.add(-1);
 			}
-			return_array.add(tile_id_to_PlayVal(tile_id));
+			return_array.add(tileID_to_PlayVal(tile_id));
 		}
 		return return_array;
 	}
 	
 	/**
-	 * *Warning*, input must be tile_id format, otherwise suit will default -> 0 == "mans"
-	 * *WARNING*, DO NOT PERFORM tile_id_to_PlayVal beforehand for argument in_suitarray, overindex can and will occur
+	 * *Warning*
+	 * Input must be tile_id format, otherwise suit will default -> 0 == "mans"
 	 * 
-	 * @param in_array: Any valid ArrayList<Integer>, use case for a single suited ArrayList of tiles
+	 * *Warning*
+	 * DO NOT PERFORM tile_id_to_PlayVal beforehand for argument in_suitarray, overindex can and will occur
+	 * 
+	 * @param in_arraylist Any valid ArrayList<Integer>, use case for a single suited ArrayList of tiles
 	 *
-	 * @return: A matrix displaying minimum in in_array as index 0 and maximum as index max - min, 
+	 * @return A matrix displaying minimum in in_arraylist as index 0 and maximum as index max - min, 
 	 * 			quantity would be the value of each cell/index
 	 */
 	public static ArrayList<Integer> convert_2_matrix(ArrayList<Integer> in_suitarray)
@@ -460,7 +483,7 @@ public class Group extends Scoring
 		 * Makes sure its play_val because tile_id can exceed 9
 		 */
 		
-		ArrayList<Integer> temp_suit = tile_id_to_PlayVal(sortArray(in_suitarray));
+		ArrayList<Integer> temp_suit = tileID_to_PlayVal(sortArray(in_suitarray));
 		int min = temp_suit.get(0);
 		int max = temp_suit.get(temp_suit.size() - 1);
 		/*
@@ -477,10 +500,43 @@ public class Group extends Scoring
 		return matrix;
 	}
 	
-	
+	/**
+	 * *note* This program will delete any leading zeros and-
+	 * assumes the min is represented at the first occurrence of an index amount > 0
+	 * 
+	 * @param matrix The matrix that represents 1 suit of tiles
+	 * @param suit The suit the matrix represents
+	 * @param min The minimum play_val in the suit of ArrayList<Integer>
+	 * @return The ArrayList<Integer> that represent the tile_ids of each tile
+	 */
+	public static ArrayList<Integer> convert_2_ArrayList(ArrayList<Integer> matrix, int suit, int min)
+	{
+		boolean add_true = false;
+		int true_index = min - 1; //play_val - 1 to align with tile_id
+		ArrayList<Integer> tile_array = new ArrayList<Integer>(); //return type
+		for(int i = 0; i < matrix.size(); i++)
+		{
+			if(matrix.get(i) > 0)
+			{
+				//Adds the amount according to the quantity set in the matrix
+				for(int amt = 0; amt < matrix.get(i); amt++)
+				{
+					tile_array.add(true_index + (suit * 9));
+				}
+				true_index++;
+				add_true = true;
+			}
+			else if(add_true)
+			{
+				//If tile amount was spotted earlier, true_index has to change for filler 0s
+				true_index++;
+			}
+		}
+		return tile_array;
+	}
 	/**
 	 * 
-	 * @return: true if compiled, false if wrong
+	 * @return true if compiled, false if wrong
 	 */
 	public static void test()
 	{

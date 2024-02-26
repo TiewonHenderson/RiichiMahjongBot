@@ -1,6 +1,7 @@
 package bot_package;
 
 import java.util.*;
+import java.util.function.*;
 
 import bot_package.Player.PlayerHand;
 
@@ -25,10 +26,10 @@ public class GroupSearch extends Group
 		}
 		/**
 		 * Hard manual GroupsAndNeededTiles set, usually for mid-game
-		 * @param currentPlayer: Existing player to input for Group Search
-		 * @param confirmedGroups: Groups that contain tile_list.size() >= 3 which usually signifies a completed group
-		 * @param uncompGroups: Any group that tile_list.size() <= 2, this however does not include invalid groups
-		 * @param remainingTiles: Typically floating tiles, but it will most likely be present in incompGroup
+		 * @param currentPlayer Existing player to input for Group Search
+		 * @param confirmedGroups Groups that contain tile_list.size() >= 3 which usually signifies a completed group
+		 * @param uncompGroups Any group that tile_list.size() <= 2, this however does not include invalid groups
+		 * @param remainingTiles Typically floating tiles, but it will most likely be present in incompGroup
 		 */
 		public GroupsAndNeededTiles(Player currentPlayer, ArrayList<Group> confirmedGroups, 
 									ArrayList<Group> incompGroups, ArrayList<Integer> remainingTiles)
@@ -41,7 +42,7 @@ public class GroupSearch extends Group
 		
 		/**
 		 * Cloning constructors
-		 * @param clone: GroupsAndNeededTiles object that wants to be cloned
+		 * @param clone GroupsAndNeededTiles object that wants to be cloned
 		 */
 		public GroupsAndNeededTiles(GroupsAndNeededTiles clone)
 		{
@@ -55,8 +56,8 @@ public class GroupSearch extends Group
 	
 	/**
 	 * 
-	 * @param in_groupSN: The in_groupSN of the player's hand, searched in any way
-	 * @return: A double score that corresponds to the list of group's status
+	 * @param in_groupSN The in_groupSN of the player's hand, searched in any way
+	 * @return A double score that corresponds to the list of group's status
 	 * 			digit 10^3 = amount of completed groups
 	 * 			digit 10^2 = amount of pairs
 	 * 			digit 10^1 = amount of incompleted groups (counts pairs)
@@ -130,7 +131,7 @@ public class GroupSearch extends Group
 	}
 	
 	/**
-	 * @Function:
+	 * @function
 	 * 		Given a Player's PlayerHand, this method 
 	 *		
 	 * 		Search methods
@@ -138,8 +139,8 @@ public class GroupSearch extends Group
 	 * 			Linear search (from left to right && right to left)
 	 * 			Outside in search (Left out, right out, left in, right in)
 	 * 		
-	 * @param playHand: A new PlayerHand object to search for potential groups
-	 * @return: A HashMap<String, String> where the String key gives information on how the Groups were searched
+	 * @param playHand A new PlayerHand object to search for potential groups
+	 * @return A HashMap<String, String> where the String key gives information on how the Groups were searched
 	 * 			String format: Index 0,1 = pairs/eye, index 2 complete/Waiting/Incomplete, index 3 way groups were search
 	 * 			String: A group_SN to give information about the group
 	 */
@@ -380,27 +381,117 @@ public class GroupSearch extends Group
 	}
 	
 	/**
-	 * @param  in_array: ASSUMES this is all in one suit, index out of bounds if not
-	 * @param  reverse_search: Is irrelevant in triplet search since any instance of quantity 3 is taken, order doens't matter
-	 * @param  only_triplets: true if groups should only be triplets, default = false
+	 * *WARNING* outer_search only accepts suited ArrayList<Integer>, every tile_id must fall under the same suit
+	 * 
+	 * A pseudo-divide and conquer method that searches groups by dividing the list in half
+	 * If the ArrayList input size is odd, the right list gets the extra tile remaining
+	 * 
+	 * @param in_arraylist An ArrayList<Integer> that represents tile_id of a certain hand that wants to be searched over
+	 * @return The String groupSN
+	 */
+	public static String outer_search(ArrayList<Integer> in_arraylist)
+	{
+		if(in_arraylist.size() < 3)
+		{
+			return list_GroupSearch(in_arraylist, false);
+		}
+		
+		ArrayList<Integer> matrix = convert_2_matrix(new ArrayList<Integer>(in_arraylist));
+		
+		int half_index = matrix.size()/2;
+		
+		int suit = in_arraylist.get(0)/9;
+		
+		//Keeps track of the split matrices
+		ArrayList<Integer> left_matrix = sub_ArrayList(matrix, 0, half_index);
+		ArrayList<Integer> right_matrix = sub_ArrayList(matrix, half_index, matrix.size());
+		
+		//Keeps track of minimums for both matrices
+		ArrayList<Integer> minimums = new ArrayList<Integer>();
+		
+		//Left matrix minimum is always the first tile
+		minimums.add(tileID_to_PlayVal(in_arraylist.get(0)));
+		
+		/*
+		 * BECAUSE convert_2_ArrayList method in Group.java will assume the minimum is the first occurrence
+		 * This for loop will find the first occurrence that isn't 0
+		 */
+		for(int i = 0; i < right_matrix.size(); i++) 
+		{
+			if(right_matrix.get(i) > 0) 
+			{
+				minimums.add(tileID_to_PlayVal(in_arraylist.get(0) + half_index + i));
+			};
+		}
+		
+		
+		ArrayList<Group> left_groups  = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(left_matrix, suit, minimums.get(0)), false));
+		ArrayList<Group> right_groups = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(right_matrix, suit , minimums.get(1)) , false));
+		
+		System.out.println("Left Groups: " + left_groups);
+		System.out.println("Right Groups: " + right_groups);
+		
+		
+		
+		return null;
+	}
+	/**
+	 * *warning* In order to not go out of bounds, if inputs are invalid, the original ArrayList is returned
+	 * *warning* if end_index > start_index, then start_index will be set to end_index and vice versa
+	 * 
+	 * @param <T> Generic data type, preferred to be a valid standard variable data type.
+	 * @param in_arraylist Any ArrayList of generic data type (i.e integer, double).
+	 * @param start_index Where the sub-ArrayList should start inclusively.
+	 * @param end_index Where the sub-ArrayList should end exclusively.
+	 * @return A sub-ArrayList of anything inputed ArrayList data type
+	 * starting at the lower index inclusive (assuming start_index) to upper index (assuming end_index) exclusive.
+	 */
+	public static <T> ArrayList<T> sub_ArrayList(ArrayList<T> in_arraylist, int start_index, int end_index)
+	{
+		ArrayList<T> return_arraylist = new ArrayList<T>(); //The return data type
+		
+		//Avoids Index out of bounds
+		if(start_index >= in_arraylist.size() || end_index > in_arraylist.size() || 
+		   start_index < 0 || end_index < 0)
+		{
+			return in_arraylist;
+		}
+		int min = start_index;
+		int max = end_index;
+		if(start_index > end_index)
+		{
+			min = end_index;
+			max = start_index;
+		}
+		for(int i = min; i < max; i++)
+		{
+			return_arraylist.add(in_arraylist.get(i));
+		}
+		return return_arraylist;
+	}
+	
+	/**
+	 * @param  in_arraylist ASSUMES this is all in one suit, index out of bounds if not
+	 * @param  reverse_search Is irrelevant in triplet search since any instance of quantity 3 is taken, order doens't matter
+	 * @param  only_triplets true if groups should only be triplets, default = false
 	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_GroupSearch(ArrayList<Integer> in_array, boolean reverse_search, boolean only_triplets)
+	public static String list_GroupSearch(ArrayList<Integer> in_arraylist, boolean reverse_search, boolean only_triplets)
 	{
-		if(!only_triplets){return list_GroupSearch(in_array, reverse_search);}
+		if(!only_triplets){return list_GroupSearch(in_arraylist, reverse_search);}
 		
 		String return_STR = "";
-		if(in_array.size() <= 0) 
+		if(in_arraylist.size() <= 0) 
 		{
 			return "";
 		}
 		
-		int suit = in_array.get(0)/9;
+		int suit = in_arraylist.get(0)/9;
 		
 		//Convert suit to matrix
-		ArrayList<Integer> matrix = convert_2_matrix(in_array);
+		ArrayList<Integer> matrix = convert_2_matrix(in_arraylist);
 		
 		//Adds all the complete/incomplete groups into this ArrayList<String>
 		ArrayList<String> group_shape_list = new ArrayList<String>();
@@ -477,7 +568,7 @@ public class GroupSearch extends Group
 			}
 		}
 		//Finalize groupSN
-		return_STR += "[+" + tile_id_to_PlayVal(sortArray(in_array)).get(0) + "]";
+		return_STR += "[+" + tileID_to_PlayVal(sortArray(in_arraylist)).get(0) + "]";
 		return_STR += Character.toString(suit_reference[suit]);
 		return return_STR;
 	}
@@ -485,32 +576,32 @@ public class GroupSearch extends Group
 	/**
 	 * 
 	 * FUNCTION OVERLOADING WITH DEFAULT PARAMETER "only_triplets" SET TO "false"
-	 * @param  in_array: ASSUMES this is all in one suit
-	 * @param  reverse_search: Whether or not the search the inputted array from index 0 to last element or last element to index 0
+	 * @param  in_arraylist ASSUMES this is all in one suit
+	 * @param  reverse_search Whether or not the search the inputted array from index 0 to last element or last element to index 0
 	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_GroupSearch(ArrayList<Integer> in_array, boolean reverse_search)
+	public static String list_GroupSearch(ArrayList<Integer> in_arraylist, boolean reverse_search)
 	{
 		String return_STR = "";
-		if(in_array.size() <= 0) 
+		if(in_arraylist.size() <= 0) 
 		{
 			return "";
 		}
 		
 		//Get suit number, minimum in array, maximum in array
-		int suit = in_array.get(0)/9;
+		int suit = in_arraylist.get(0)/9;
 		
 		//If given honors list, return GroupSearch with only_triplets as true
-		if(suit == 3) {return list_GroupSearch(in_array, false, true);}
+		if(suit == 3) {return list_GroupSearch(in_arraylist, false, true);}
 		
-		ArrayList<Integer> temp_suit = tile_id_to_PlayVal(sortArray(in_array));
+		ArrayList<Integer> temp_suit = tileID_to_PlayVal(sortArray(in_arraylist));
 		int total_tiles = temp_suit.size();
 		int play_val_min = temp_suit.get(0);
 
 		//Convert suit to matrix
-		ArrayList<Integer> matrix = convert_2_matrix(in_array);
+		ArrayList<Integer> matrix = convert_2_matrix(in_arraylist);
 		
 		//Index that refers to the play_val integer in the matrix (a pointer)
 		int currentIndex = 0;
@@ -694,6 +785,10 @@ public class GroupSearch extends Group
 	
 	public static void main(String[] args)
 	{
-		test();
+		int[] singlesuit_hand = {9,9,10,13,14,15,17,17,17};
+		System.out.println(tileID_to_PlayVal(singlesuit_hand[3]));
+		ArrayList<Integer> single_suit_example = sortArray(createArrayList(singlesuit_hand));
+		outer_search(single_suit_example);
+//		test();
 	}
 }

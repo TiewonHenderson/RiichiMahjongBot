@@ -65,8 +65,8 @@ public class Scoring
 	}	
     
     /**
-	 * @param in_hand: Any valid hand input
-	 * @return: 4 ArrayList<Integer> within Arraylist<Integer> that represents each suit of a mahjong hand.
+	 * @param in_hand Any valid hand input
+	 * @return 4 ArrayList<Integer> within Arraylist<Integer> that represents each suit of a mahjong hand.
 	 * 			The return tiles in each ArrayList<Integer> contains the TILE_VAL, not PLAY_VAL!
 	 */
 	public static ArrayList<ArrayList<Integer>> suitDivide(ArrayList<Integer> input_hand)
@@ -123,44 +123,25 @@ public class Scoring
 	
 	/**
 	 * 
-	 * @param in_array: A 1 Dimensional Array that wants to be search through
-	 * @param wantedInt: The integer that wants to be searched for in the in_array
-	 * @return An ArrayList<Integer> of indexes that wantedInt occurs in in_array
+	 * @param in_arraylist A 1 Dimensional Array that wants to be search through
+	 * @param wantedObj The Object that wants to be searched for in the in_arraylist
+	 * @return An ArrayList<Integer> of indexes that wantedObj occurs in in_arraylist
 	 */
-	public static ArrayList<Integer> getOnlyInt1D(ArrayList<Integer> in_array, int wantedInt)
+	public static <T> ArrayList<Integer> search_element(ArrayList<T> in_arraylist, T wantedObj)
 	{
 		ArrayList<Integer> returnArray = new ArrayList<Integer>();
-		for(int index = 0; index < in_array.size(); index++)
+		for(int index = 0; index < in_arraylist.size(); index++)
 		{
-			if(in_array.get(index) == wantedInt)
+			if(in_arraylist.get(index) == wantedObj)
 			{
 				returnArray.add(index);
 			}
 		}
 		return returnArray;
 	}
-	
 	/**
 	 * 
-	 * @param in_array: A 2 Dimensional Array that wants to be search through
-	 * @param wantedInt: The integer that wants to be searched for in the in_array
-	 * @return An ArrayList<Integer> of indexes that wantedInt occurs in in_array
-	 */
-	public static ArrayList<Integer> getOnlyInt2D(ArrayList<ArrayList<Integer>> in_array, int wantedInt)
-	{
-		ArrayList<Integer> returnArray = new ArrayList<Integer>();
-		for(int index = 0; index < in_array.size(); index++)
-		{
-			for(int items: getOnlyInt1D(in_array.get(index), wantedInt))
-			{
-				returnArray.add(items);
-			}
-		}
-		return returnArray;
-	}
-	/**
-	 * 
-	 * @param in_hand: The current hand of the player to make AI predictions
+	 * @param in_hand The current hand of the player to make AI predictions
 	 * @return A decimal score representation of how many dragon points attainable
 	 */
 	public static double checkDragons(ArrayList<Integer> in_hand)
