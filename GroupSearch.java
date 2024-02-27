@@ -102,11 +102,11 @@ public class GroupSearch extends Group
 			 * 2 = triplets
 			 * 3 = quads
 			 * 
-			 * -3: doesn't add anything
-			 * -2: adds 0.001
-			 * -1: adds 0.01
-			 * 0: adds 0.11
-			 * >=1: adds 1.0
+			 * -3: 	doesn't add anything
+			 * -2: 	adds 1
+			 * -1: 	adds 10
+			 * 0: 	adds 110
+			 * >=1: adds 1000
 			 */
 			switch(group_status)
 			{
@@ -130,6 +130,36 @@ public class GroupSearch extends Group
 		return progress_score;
 	}
 	
+	/**
+	 * "C" = Complete
+	 * "W" = Waiting
+	 * "I" = Incomplete
+	 * 
+	 * @param in_groupSN The input groupSN to see how the hand is progressing
+	 * @return A string representation of the progress of the hand
+	 */
+	public static String get_hand_status(String in_groupSN)
+	{
+		//Used to loop for detection instead of multiple if else statements
+		int[] detect_progressid = {4110, 4001, 3220, 3120};
+		String[] add_progressid = {"C", "W", "W", "W"};
+		
+		int progress_score = progress_score(in_groupSN);
+		System.out.println(progress_score);
+		for(int id_index = 0; id_index < detect_progressid.length; id_index++)
+		{
+			if(progress_score == detect_progressid[id_index])
+			{
+				return add_progressid[id_index];
+			}
+			//If progress_score not equal to any case of detect_progressid, it is 99.99% incomplete for a normal hand
+			if(id_index == detect_progressid.length - 1)
+			{
+				return "I";
+			}
+		}
+		return "I"; //If nothing was detected, THE HAND IS PROBABLY NOT COMPLETE
+	}
 	/**
 	 * @function
 	 * 		Given a Player's PlayerHand, this method 
@@ -228,10 +258,6 @@ public class GroupSearch extends Group
 				if(isPair) {pairs += tile_str + ",";}
 			}
 		}
-
-		/**
-		 * Linear Search
-		 */
 		
 		//Where the hands gets pairs removed/ no pairs removed
 		HashMap<Integer, ArrayList<Integer>> allPossible_hands = new HashMap<Integer, ArrayList<Integer>>();
@@ -279,21 +305,17 @@ public class GroupSearch extends Group
 			 *		(012)(123)[+4]m(000)[+8]pr=(0)[+9]sr=(11)(2)[+1]z
 			 *		 012 + 4 + (m =0 * 9) = 456m
 			 *	adding min should account for tile_id -> play_val
-			 */
-			ArrayList<String> groupSN_list = new ArrayList<String>();
-			
-			/*
+			 *
 			 * 	groupSN_ID formate: 
 			 * 	Eyes [index 0-1 inclusive](single digit tile_id follow by 0, i.e 7m = 06 tile_id): 
 			 * 	C/W/I [index 2 inclusive](complete/Waiting/Incomplete, index 2)
 			 *	LL/LL/LR.../OS... [index 3-4 inclusive](LL = Linear left, LR = Linear right, OS = Outer search)
 			 */
-			ArrayList<String> groupSN_ID_list = new ArrayList<String>();
 			
 			//The returning data of HashMap<groupSN_ID, groupSN>
 			HashMap<String, String> return_data = new HashMap<String, String>();
 			
-			//All linear searches are under here
+			//All searches are under here, Where each ISOLATE pair are removed
 			for(int pair_remove_key: allPossible_hands.keySet())
 			{
 				//Start LL = Linear Left to right (index 0 to index size() - 1)
@@ -306,71 +328,41 @@ public class GroupSearch extends Group
 					temp_groupSN += list_GroupSearch(suit, false); //adds GroupSN for each suit
 				}
 				temp_ID += "LL"; //Indicates Linear left to right
-				groupSN_list.add(temp_groupSN);
-				groupSN_ID_list.add(temp_ID);
+				return_data.put(temp_ID, temp_groupSN); //Put the result into HashMap
 				
-				//Used to loop for detection instead of multiple if else statements
-				int[] detect_progressid = {4110, 4001, 3220, 3120};
-				String[] add_progressid = {"C", "W", "W", "W"};
-				
-				int progress_score = progress_score(temp_groupSN);
-				
-				for(int id_index = 0; id_index < detect_progressid.length; id_index++)
-				{
-					if(progress_score == detect_progressid[id_index])
-					{
-						temp_ID += add_progressid[id_index];
-						break;
-					}
-					//If progress_score not equal to any case of detect_progressid, it is 99.99% incomplete for a normal hand
-					if(id_index == detect_progressid.length - 1)
-					{
-						temp_ID += "I";
-						break;
-					}
-				}
+				temp_ID += get_hand_status(temp_groupSN); //Will add the index that represents progress status
 				
 				//Start LR = Linear right to left (index size() - 1 to index 0)
 				temp_groupSN = "";
-				temp_ID = Integer.toString(pair_remove_key);
+				temp_ID = addInt(pair_remove_key);
 				for(ArrayList<Integer> suit: suit_list)
 				{
 					temp_groupSN += list_GroupSearch(suit, true); //adds GroupSN for each suit
 				}
 				
-				progress_score = progress_score(temp_groupSN);
+				temp_ID += get_hand_status(temp_groupSN);
 				
-				for(int id_index = 0; id_index < detect_progressid.length; id_index++)
-				{
-					if(progress_score == detect_progressid[id_index])
-					{
-						temp_ID += add_progressid[id_index];
-						break;
-					}
-					//If progress_score not equal to any case of detect_progressid, it is 99.99% incomplete for a normal hand
-					if(id_index == detect_progressid.length - 1)
-					{
-						temp_ID += "I";
-						break;
-					}
-				}
 				temp_ID += "LR"; //Indicates Linear right to left
-				groupSN_list.add(temp_groupSN);
-				groupSN_ID_list.add(temp_ID);
-				
+				return_data.put(temp_ID, temp_groupSN); //Put the result into HashMap
 				
 				/*
 				 * Outside search doesn't matter for order, Left outside, right outside, left inside, right inside 
 				 * This only applies to each suit, since you can create Groups in different suits
 				 * is the universal order for outside search and it shouldn't matter if otherwise (Perhaps in EXTREMELY RARE SITAUTIONS)
+				 * 
+				 * Its debatable whether to recurse this method as many groups could be left out with only
+				 * 1 iteration of divide and conquer
 				 */
 				temp_groupSN = "";
-				temp_ID = Integer.toString(pair_remove_key);
+				temp_ID = addInt(pair_remove_key);
 				for(ArrayList<Integer> suit: suit_list)
 				{
-					
+					temp_groupSN += outer_search(suit);
 				}
 				
+				temp_ID += get_hand_status(temp_groupSN);
+				temp_ID += "OS";
+				return_data.put(temp_ID, temp_groupSN); //Put the result into HashMap
 			}
 		}
 		else
@@ -378,6 +370,120 @@ public class GroupSearch extends Group
 			
 		}
 		return null;
+	}
+	
+	/**
+	 * @Function How this program works is by perform two linear searches and one "binary" search
+	 * 			 The two linear search involves searchings in two orders, index 0 -> size() - 1, size() - 1 -> index 0
+	 * 			 The "binary" search will cut the ArrayList<Integer> into 2 searches in two given arrays
+	 * @param pair What pair was removed, if input is -1, then the algorithm assumes no pairs were removed
+	 * @param given_hand The updated hand either pair is removed not
+	 * @return An ArrayList<ArrayList<String>> where each element ArrayList<String> has two index, the index 0 is the 
+	 * 		   groupSN_ID to represent index 2 which would be the groupSN
+	 */
+	public static ArrayList<ArrayList<String>> search_groups(int pair, ArrayList<Integer> given_hand)
+	{
+		ArrayList<ArrayList<String>> return_array = new ArrayList<ArrayList<String>>();
+		ArrayList<Integer> remove_tile = new ArrayList<Integer>(); //Adds pair if it needs to be removed
+		for(int i = 0; i < 2; i++) remove_tile.add(pair);
+		
+		//Start LL = Linear Left to right (index 0 to index size() - 1)
+		String temp_ID = addInt(pair);
+		String temp_groupSN = "";
+		
+		ArrayList<ArrayList<Integer>> suit_list = suitDivide(given_hand);
+		ArrayList<String> add_groupSN = new ArrayList<String>();
+		for(ArrayList<Integer> suit: suit_list)
+		{
+			temp_groupSN += list_GroupSearch(suit, false); //adds GroupSN for each suit
+		}
+		temp_ID += get_hand_status(temp_groupSN); //Will add the index that represents progress status
+		temp_ID += "LL"; //Indicates Linear left to right
+		add_groupSN.add(temp_ID);
+		add_groupSN.add(addItemTo_groupSN(temp_groupSN, remove_tile));
+		return_array.add(add_groupSN); //Put the result return_array
+		
+		
+		//Start LR = Linear right to left (index size() - 1 to index 0)
+		add_groupSN = new ArrayList<String>();
+		temp_groupSN = "";
+		temp_ID = addInt(pair);
+		for(ArrayList<Integer> suit: suit_list)
+		{
+			temp_groupSN += list_GroupSearch(suit, true); //adds GroupSN for each suit
+		}
+		
+		temp_ID += get_hand_status(temp_groupSN);
+		temp_ID += "LR"; //Indicates Linear right to left
+		add_groupSN.add(temp_ID);
+		add_groupSN.add(addItemTo_groupSN(temp_groupSN, remove_tile));
+		return_array.add(add_groupSN); //Put the result return_array
+		
+		/*
+		 * Outside search doesn't matter for order, Left outside, right outside, left inside, right inside 
+		 * This only applies to each suit, since you can create Groups in different suits
+		 * is the universal order for outside search and it shouldn't matter if otherwise (Perhaps in EXTREMELY RARE SITAUTIONS)
+		 * 
+		 * Its debatable whether to recurse this method as many groups could be left out with only
+		 * 1 iteration of divide and conquer
+		 */
+		add_groupSN = new ArrayList<String>();
+		temp_groupSN = "";
+		temp_ID = addInt(pair);
+		for(ArrayList<Integer> suit: suit_list)
+		{
+			temp_groupSN += outer_search(suit);
+		}
+		
+		temp_ID += get_hand_status(temp_groupSN);
+		temp_ID += "OS";
+		add_groupSN.add(temp_ID);
+		add_groupSN.add(addItemTo_groupSN(temp_groupSN, remove_tile));
+		return_array.add(add_groupSN); //Put the result return_array
+		
+		return return_array;
+	}
+	
+	/**
+	 * NEED HEAVY OPTIMIZATION WITH STRING MANIPUTATION
+	 */
+	public static String addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles, boolean concealed)
+	{
+		//Will check if there no tiles to add into, or if the tile is invalid by being < 0 or > 33
+		if(new_tiles.size() <= 0) {return group_sn;}
+		for(int i = 0; i < new_tiles.size(); i++) if(new_tiles.get(i) < 0 || new_tiles.get(i) > 33) {return group_sn;}
+		
+		ArrayList<Group> temp_groups = groupSN_to_ArrayList(group_sn);
+		temp_groups.add(new Group(new_tiles, concealed));
+		return ArrayList_to_groupSN(temp_groups);
+	}
+	
+	/**
+	 * NEED HEAVY OPTIMIZATION WITH STRING MANIPUTATION
+	 * Overloading the addItemTo_groupSN to make boolean concealed to be defaulted to true
+	 */
+	public static String addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles)
+	{
+		return addItemTo_groupSN(group_sn, new_tiles, true);
+	}
+	
+	/**
+	 * 
+	 * @param in_integer A given Integer that wants to be added to groupSN ID, this would mean the integer needs to at minimum
+	 * be 2 digits long. The number cannot be negative, if pair wasn't remove, just add -1 to String
+	 * @return A string value with two index that represents a number, returns -1 for any negative numbers
+	 */
+	public static String addInt(int in_integer)
+	{
+		if(in_integer < -1)
+		{
+			return "-1";
+		}
+		if(in_integer/10 == 0)
+		{
+			return "0" + Integer.toString(in_integer);
+		}
+		return Integer.toString(in_integer);
 	}
 	
 	/**
@@ -428,9 +534,6 @@ public class GroupSearch extends Group
 		ArrayList<Group> left_groups  = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(left_matrix, suit, minimums.get(0)), false));
 		ArrayList<Group> right_groups = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(right_matrix, suit , minimums.get(1)) , false));
 		
-		System.out.println("Left Groups: " + left_groups);
-		System.out.println("Right Groups: " + right_groups);
-		
 		//Add complete/incomplete groups to corresponding ArrayList<Group>
 		ArrayList<ArrayList<Group>> categorized_Group = new ArrayList<ArrayList<Group>>();
 		for(int i = 0; i < 2; i++) categorized_Group.add(new ArrayList<Group>());
@@ -479,10 +582,8 @@ public class GroupSearch extends Group
 		
 		ArrayList<Group> temp_all_groups = new ArrayList<Group>();
 		for(ArrayList<Group> groups_list: categorized_Group) for(Group group: groups_list) temp_all_groups.add(group);
-		System.out.println(ArrayList_to_groupSN(temp_all_groups));
 		
-		
-		return null;
+		return ArrayList_to_groupSN(temp_all_groups);
 	}
 	/**
 	 * *warning* In order to not go out of bounds, if inputs are invalid, the original ArrayList is returned

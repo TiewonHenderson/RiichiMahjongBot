@@ -715,6 +715,18 @@ public class Group extends Scoring
 	
 	/**
 	 * 
+	 * @param in_array The ArrayList<Type> that wants to remove the first instance of input item
+	 * @param rm_item The input item that wants to be remove (not completely, only once)
+	 * @return ArrayList<Type> where the first instance of rm_item is removed, returns same array if item not present
+	 */
+	public static <T> ArrayList<T> rm_first_instance(ArrayList<T> in_array, T rm_item)
+	{
+		for(int i = 0; i < in_array.size(); i++) if(in_array.get(i) == rm_item) {in_array.remove(i); break;};
+		return in_array;
+	}
+	
+	/**
+	 * 
 	 * @return true if compiled, false if wrong
 	 */
 	public static void test()
@@ -785,6 +797,18 @@ public class Group extends Scoring
 //			System.out.println("AL -> groupSN" + groupSN);
 //			System.out.println("groupSN -> AL" + AL);
 //		}
+		
+		int[] temp = {0,1,2,6,6,6,12,13,14,32,32,33,33};
+		ArrayList<Integer> random_hand = new ArrayList<Integer>();
+		for(int i = 0; i < temp.length; i++) random_hand.add(temp[i]);
+		
+		rm_first_instance(random_hand, 6);
+		rm_first_instance(random_hand, 6);
+		
+		for(ArrayList<String> print_stuff: GroupSearch.search_groups(6, random_hand))
+		{
+			System.out.println(print_stuff);
+		}
 //		test();
 	}
 }
