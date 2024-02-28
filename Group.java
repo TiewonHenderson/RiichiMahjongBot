@@ -537,11 +537,11 @@ public class Group extends Scoring
 				
 				if(suit_string.length() > 0 && !start_remain)//Checks if remainder was activated to close with }
 				{
-					return_str += suit_string + "}[" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
+					return_str += suit_string + "}[+" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
 				}
 				else if(suit_string.length() > 0)//remainder was not added, only add min and suit
 				{
-					return_str += suit_string + "r={}[" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
+					return_str += suit_string + "r={}[+" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
 				}
 			}
 			if(return_str.length() - prev_str_length > 0) //Only add close/open if there were even groupSN is begin with
@@ -762,9 +762,13 @@ public class Group extends Scoring
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits, true));
 			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_GroupSearch(suits, false, true));
 		}
-		System.out.println(GroupSearch.search_all_groupSN(example_player.getPlayerHand()) + "\n\n");
+		HashMap<String, String> all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
+		for(String key: all_groupSearch.keySet())
+		{
+			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
+		}
 		
-		int[] completed_groups = {0,0,0,1,2,3,5,6,7,8,8,8};
+		int[] completed_groups = {0,0,0,1,2,3,4,5,6,7,8,8,8};
 		ArrayList<Integer> completeGroup_example = sortArray(createArrayList(completed_groups));
 		example_player.getPlayerHand().setCurrentHand(completeGroup_example);
 		System.out.println(completeGroup_example);
@@ -777,12 +781,16 @@ public class Group extends Scoring
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits,true));
 			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_GroupSearch(suits, false, true));
 		}
-		System.out.println(GroupSearch.search_all_groupSN(example_player.getPlayerHand()) + "\n\n");
+		all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
+		for(String key: all_groupSearch.keySet())
+		{
+			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
+		}
 
 	}
 	public static void main(String[] args)
 	{
-		//Tests translation of ArrayList<Group> <-> groupSN
+//		Tests translation of ArrayList<Group> <-> groupSN
 //		for(int j = 0; j < 50; j++)
 //		{
 //			ArrayList<Group> random_groups = new ArrayList<Group>();
@@ -797,18 +805,18 @@ public class Group extends Scoring
 //			System.out.println("AL -> groupSN" + groupSN);
 //			System.out.println("groupSN -> AL" + AL);
 //		}
-		
-		int[] temp = {0,1,2,6,6,6,12,13,14,32,32,33,33};
-		ArrayList<Integer> random_hand = new ArrayList<Integer>();
-		for(int i = 0; i < temp.length; i++) random_hand.add(temp[i]);
-		
-		rm_first_instance(random_hand, 6);
-		rm_first_instance(random_hand, 6);
-		
-		for(ArrayList<String> print_stuff: GroupSearch.search_groups(6, random_hand))
-		{
-			System.out.println(print_stuff);
-		}
-//		test();
+//		
+//		int[] temp = {0,1,2,6,6,6,12,13,14,32,32,33,33};
+//		ArrayList<Integer> random_hand = new ArrayList<Integer>();
+//		for(int i = 0; i < temp.length; i++) random_hand.add(temp[i]);
+//		
+//		rm_first_instance(random_hand, 6);
+//		rm_first_instance(random_hand, 6);
+//		
+//		for(ArrayList<String> print_stuff: GroupSearch.search_groups(6, random_hand))
+//		{
+//			System.out.println(print_stuff);
+//		}
+		test();
 	}
 }

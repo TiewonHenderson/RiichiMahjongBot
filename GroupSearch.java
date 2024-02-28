@@ -145,7 +145,6 @@ public class GroupSearch extends Group
 		String[] add_progressid = {"C", "W", "W", "W"};
 		
 		int progress_score = progress_score(in_groupSN);
-		System.out.println(progress_score);
 		for(int id_index = 0; id_index < detect_progressid.length; id_index++)
 		{
 			if(progress_score == detect_progressid[id_index])
@@ -174,7 +173,7 @@ public class GroupSearch extends Group
 	 * 			String format: Index 0,1 = pairs/eye, index 2 complete/Waiting/Incomplete, index 3 way groups were search
 	 * 			String: A group_SN to give information about the group
 	 */
-	public static HashMap<String, String> search_all_groupSN(PlayerHand playHand)
+	public static HashMap<String, String> search_all_groupSN(PlayerHand playHand, boolean only_isolatePair)
 	{
 		ArrayList<ArrayList<Integer>> suit_list = suitDivide(playHand.getCurrentHand());
 		
@@ -212,10 +211,10 @@ public class GroupSearch extends Group
 			
 			int min = suit_list.get(suit).get(0) - (suit * 9);
 			
-			boolean isolate = true;
-			boolean isPair = true;
 			for(int tile_index = 0; tile_index < suit_matrix.size(); tile_index++)
 			{
+				boolean isolate = true;
+				boolean isPair = true;
 				/*
 				 * 1 is not a pair, 4 is almost always never a pair
 				 */
@@ -263,8 +262,11 @@ public class GroupSearch extends Group
 		HashMap<Integer, ArrayList<Integer>> allPossible_hands = new HashMap<Integer, ArrayList<Integer>>();
 		allPossible_hands.put(-1, new ArrayList<Integer>(playHand.getCurrentHand())); //No pairs removed
 		
+		//The returning data of HashMap<groupSN_ID, groupSN>
+		HashMap<String, String> return_data = new HashMap<String, String>();
+		
 		//If pairs are removed, removes isolate pairs first
-		if(isolatePairs.length() > 0)
+		if(isolatePairs.length() > 0 && only_isolatePair)
 		{
 			int start_index = 0;
 			for(int i = 0; i < isolatePairs.length(); i++)
@@ -312,64 +314,71 @@ public class GroupSearch extends Group
 			 *	LL/LL/LR.../OS... [index 3-4 inclusive](LL = Linear left, LR = Linear right, OS = Outer search)
 			 */
 			
-			//The returning data of HashMap<groupSN_ID, groupSN>
-			HashMap<String, String> return_data = new HashMap<String, String>();
-			
 			//All searches are under here, Where each ISOLATE pair are removed
 			for(int pair_remove_key: allPossible_hands.keySet())
 			{
-				//Start LL = Linear Left to right (index 0 to index size() - 1)
-				String temp_ID = Integer.toString(pair_remove_key);
-				String temp_groupSN = "";
-				
-				suit_list = suitDivide(allPossible_hands.get(pair_remove_key));
-				for(ArrayList<Integer> suit: suit_list)
-				{
-					temp_groupSN += list_GroupSearch(suit, false); //adds GroupSN for each suit
-				}
-				temp_ID += "LL"; //Indicates Linear left to right
-				return_data.put(temp_ID, temp_groupSN); //Put the result into HashMap
-				
-				temp_ID += get_hand_status(temp_groupSN); //Will add the index that represents progress status
-				
-				//Start LR = Linear right to left (index size() - 1 to index 0)
-				temp_groupSN = "";
-				temp_ID = addInt(pair_remove_key);
-				for(ArrayList<Integer> suit: suit_list)
-				{
-					temp_groupSN += list_GroupSearch(suit, true); //adds GroupSN for each suit
-				}
-				
-				temp_ID += get_hand_status(temp_groupSN);
-				
-				temp_ID += "LR"; //Indicates Linear right to left
-				return_data.put(temp_ID, temp_groupSN); //Put the result into HashMap
-				
-				/*
-				 * Outside search doesn't matter for order, Left outside, right outside, left inside, right inside 
-				 * This only applies to each suit, since you can create Groups in different suits
-				 * is the universal order for outside search and it shouldn't matter if otherwise (Perhaps in EXTREMELY RARE SITAUTIONS)
-				 * 
-				 * Its debatable whether to recurse this method as many groups could be left out with only
-				 * 1 iteration of divide and conquer
-				 */
-				temp_groupSN = "";
-				temp_ID = addInt(pair_remove_key);
-				for(ArrayList<Integer> suit: suit_list)
-				{
-					temp_groupSN += outer_search(suit);
-				}
-				
-				temp_ID += get_hand_status(temp_groupSN);
-				temp_ID += "OS";
-				return_data.put(temp_ID, temp_groupSN); //Put the result into HashMap
+				ArrayList<ArrayList<String>> add_searched = search_groups(pair_remove_key, allPossible_hands.get(pair_remove_key));
+				for(ArrayList<String> searched_info: add_searched) return_data.put(searched_info.get(0), searched_info.get(1));
 			}
+			return return_data;
+		}
+		else if(isolatePairs.length() == 0 && only_isolatePair)
+		{
+			return new HashMap<String, String>();
 		}
 		else
 		{
-			
+			//Copied from isolate pair, see above for reference
+			int start_index = 0;
+			for(int i = 0; i < pairs.length(); i++)
+			{
+				if(pairs.charAt(i) == ',')
+				{
+					int remove_pair = Integer.parseInt(pairs.substring(start_index,i));
+					int remove_counter = 0;
+					ArrayList<Integer> temp_hand = new ArrayList<Integer>(playHand.getCurrentHand());
+					for(int j = 0; j < temp_hand.size(); j++)
+					{
+						if(remove_counter == 2)
+						{
+							break;
+						}
+						if(temp_hand.get(j) == remove_pair)
+						{
+							temp_hand.remove(j);
+							remove_counter++;
+							j--;
+						}
+					}
+					if(remove_counter == 2)
+					{
+						allPossible_hands.put(remove_pair, temp_hand);
+					}
+					start_index = i + 1;
+					continue;
+				}
+			}
+			for(int pair_remove_key: allPossible_hands.keySet())
+			{
+				ArrayList<ArrayList<String>> add_searched = search_groups(pair_remove_key, allPossible_hands.get(pair_remove_key));
+				for(ArrayList<String> searched_info: add_searched) return_data.put(searched_info.get(0), searched_info.get(1));
+			}
+			return return_data;
 		}
-		return null;
+	}
+	
+	/**
+	 * OVERLOADED Function where default search_all_groupSN parameter "only_isolatePair" is true
+	 * If we search groups only with isolate pair removed since they can contribute nothing else then become a triplet
+	 * It can save resources instead of searching all pairs removed
+	 * @param playHand A new PlayerHand object to search for potential groups
+	 * @return A HashMap<String, String> where the String key gives information on how the Groups were searched
+	 * 			String format: Index 0,1 = pairs/eye, index 2 complete/Waiting/Incomplete, index 3 way groups were search
+	 * 			String: A group_SN to give information about the group
+	 */
+	public static HashMap<String, String> search_all_groupSN(PlayerHand playHand)
+	{
+		return search_all_groupSN(playHand, true);
 	}
 	
 	/**
@@ -379,7 +388,7 @@ public class GroupSearch extends Group
 	 * @param pair What pair was removed, if input is -1, then the algorithm assumes no pairs were removed
 	 * @param given_hand The updated hand either pair is removed not
 	 * @return An ArrayList<ArrayList<String>> where each element ArrayList<String> has two index, the index 0 is the 
-	 * 		   groupSN_ID to represent index 2 which would be the groupSN
+	 * 		   groupSN_ID to represent index 1 which would be the groupSN
 	 */
 	public static ArrayList<ArrayList<String>> search_groups(int pair, ArrayList<Integer> given_hand)
 	{
@@ -445,6 +454,118 @@ public class GroupSearch extends Group
 	}
 	
 	/**
+	 * TO-DO if needed optimized addItemTo_groupSN
+	 * 	task:
+	 * 		- Add in remainder if remainder group IN ORDER
+	 * 		- Create suit if doesn't exist and add into it, same for remainder
+	 * 
+	 * *Note* this function assumes the new_tiles are all in the same suit
+	 * Use suit divide in order to all variant tiles in a ArrayList<Integer>
+	 * 
+	 * @param group_sn The current group_SN that wants to be updated
+	 * @param new_tiles New tiles that wanted to be added into groupSN
+	 * @param concealed Whether the new tiles being added will be concealed or not
+	 * @return The new groupSN that has updated tiles, with additional information as parameter values
+	 */
+	public static String future_addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles, boolean concealed)
+	{
+		if(new_tiles.size() <= 0) {return group_sn;} //No tiles to add
+		String[] char_indicator = {"m", "p", "s", "z"}; //Used to indicate what suit the new tiles are in
+		String this_charneeds = char_indicator[new_tiles.get(0)/9];
+		
+		//How the new tiles will be added
+		String add_as = "(";
+		for(int tile: new_tiles) add_as += Integer.toString(tile);
+		add_as += ")";
+		
+		
+		ArrayList<String> all_indicator_index = new ArrayList<String>();
+		boolean is_concealed = false;
+		
+		
+		//Checks if the concealed/suit even exist in the inputed groupSN
+		for(int i = group_sn.length() - 1; i >= 0; i--)
+		{
+			if(group_sn.charAt(i) == 'c')
+			{
+				is_concealed = true;
+				continue;
+			}
+			for(String indicator: char_indicator)
+			{
+				if(group_sn.substring(i, i+1) == indicator)
+				{
+					//If min == -1, then character was not a number, will add -1 as min which means error was occured
+					int min = Character.getNumericValue(group_sn.charAt(i - 2));
+					//To get the String representation of the indicator index
+					String index = Integer.toString(i);
+					if(i <= 9) {index = "0" + index;}
+					
+					//Adds "c" if concealed was pass through, if not adds "o" with the suit index follows
+					if(is_concealed){all_indicator_index.add("c" + indicator + index + "L" + Integer.toString(min));}
+					else {all_indicator_index.add("o" + indicator + index + "L" + Integer.toString(min));}
+				}
+			}
+			
+		}
+		
+		String temp_groupSN = new String(group_sn); //New return groupSN
+		String concealed_string = "c";
+		if(!concealed) {concealed_string = "o";}
+		
+		for(String indicators: all_indicator_index)
+		{
+			/*
+			 * indicators follows the pattern:
+			 * index = 0 -> c/o
+			 * index = 1 -> suit
+			 * index = 2,3 -> indicator index
+			 * index = 4 -> "L" to indicate LowerBound (m could be confused as mans suit)
+			 * index = 5 -> minimum (represented as LowerBound "L")
+			 */
+			
+			int start = Integer.parseInt(indicators.substring(2,4));
+			int min = Integer.parseInt(indicators.substring(5,6));
+			if(indicators.substring(0, 2) == (concealed_string + this_charneeds))
+			{
+				//Adding algorithm with existing starts here
+				if(group_status(new_tiles) >= 1) //1+ means the group is completed
+				{
+					for(int i = start; i >= 0; i--)
+					{
+						/*
+						 * If the suit exist, then there should be a remainder category
+						 * Otherwise this segment will not function properly
+						 */
+						if(temp_groupSN.charAt(i) == 'r')
+						{
+							//substring ends exclusively, adds behind r which would be remainder
+							return temp_groupSN.substring(0, i) + add_as + temp_groupSN.substring(i);
+						}
+					}
+				}
+				else //Anything less then 1 should be added into remainder category
+				{
+					for(int i = start; i >= 0; i--)
+					{
+						/*
+						 * If the suit exist, then there should be a remainder category
+						 * Otherwise this segment will not function properly
+						 */
+						if(temp_groupSN.charAt(i) == '}')
+						{
+							//substring ends exclusively, adds behind r which would be remainder
+							return temp_groupSN.substring(0, i) + add_as + temp_groupSN.substring(i);
+						}
+					}
+				}
+			}
+		}
+		//Adding algorithm with non-existing suit starts here
+		return null;
+	}
+	
+	/**
 	 * NEED HEAVY OPTIMIZATION WITH STRING MANIPUTATION
 	 */
 	public static String addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles, boolean concealed)
@@ -475,7 +596,7 @@ public class GroupSearch extends Group
 	 */
 	public static String addInt(int in_integer)
 	{
-		if(in_integer < -1)
+		if(in_integer <= -1)
 		{
 			return "-1";
 		}
@@ -484,6 +605,100 @@ public class GroupSearch extends Group
 			return "0" + Integer.toString(in_integer);
 		}
 		return Integer.toString(in_integer);
+	}
+	
+	/**
+	 * !!!WIP!!!
+	 * *Note* Assumes the in_arraylist is all in 1 suit
+	 * @param in_arraylist The ArrayList<Integer> of tiles that wanted to be search "binaurally" for groups
+	 * @return A groupSN with groups search from outside towards inside
+	 */
+	public static String new_outer_search(ArrayList<Integer> in_arraylist)
+	{
+		if(in_arraylist.size() <= 3)
+		{
+			return list_GroupSearch(in_arraylist, false);
+		}
+		
+		/*
+		 * matrix = What will be iterated through to check groups
+		 * all_groups = where all the satisfied groups will be stored
+		 * suit = the suit of the tiles
+		 * min = what to add back for groupSN minimum category
+		 * total_tileamt = keep tracks of usable tiles remaining
+		 * left_index = keeps track of the left search index
+		 * right_index = keeps track of the right search index
+		 */
+		ArrayList<Integer> matrix = convert_2_matrix(new ArrayList<Integer>(in_arraylist));
+		ArrayList<Group> all_groups = new ArrayList<Group>();
+		int suit = in_arraylist.get(0)/9;
+		int min = in_arraylist.get(0);
+		int total_tileamt = in_arraylist.size();
+		int left_index = 0;
+		int right_index = matrix.size();
+		
+		while(total_tileamt >= 3)
+		{
+			ArrayList<Integer> temp_group = new ArrayList<Integer>();
+			//Search from out Left
+			switch(matrix.get(left_index))
+			{
+				case 0:
+					continue;
+				case 3:
+					for(int i = 0; i < 3; i++) temp_group.add(left_index);
+					all_groups.add(new Group(temp_group));
+					matrix.set(left_index, matrix.get(left_index) - 3);
+					left_index++;
+					continue;
+				case 4:
+					for(int i = 0; i < 3; i++) temp_group.add(left_index);
+					all_groups.add(new Group(temp_group));
+					matrix.set(left_index, matrix.get(left_index) - 3);
+					continue;
+				default:
+					ArrayList<Integer> future_amts = new ArrayList<Integer>();
+					boolean can_seq = true;
+					for(int i = 1; i <= 2; i++)
+					{
+						if((left_index + i) >= matrix.size())
+						{
+							can_seq = false;
+							break;
+						}
+						future_amts.add(matrix.get(left_index + i));
+					}
+					if(future_amts.size() == 0 || !can_seq)
+					{
+						//TO-DO, MAKE ALGORITHM SEARCH SEQ/ INCOMPLETE GROUPS FROM LEFT
+					}
+					
+			}
+			//Add to check sequence
+			
+			//Add if triplet in any index +1,+2
+			
+			//Add incomplete sequence
+			
+			//Add Pair
+			
+			//Add Floating Tile
+			
+			//Search from out Right
+			
+			//If triplet in any index -0 (-1,-2 indirectly)
+			
+			//Add to check sequence
+			
+			//Add if triplet in any index -1,-2
+			
+			//Add incomplete sequence
+			
+			//Add Pair
+			
+			//Add Floating Tile
+		}
+		
 	}
 	
 	/**
@@ -512,6 +727,9 @@ public class GroupSearch extends Group
 		ArrayList<Integer> left_matrix = sub_ArrayList(matrix, 0, half_index);
 		ArrayList<Integer> right_matrix = sub_ArrayList(matrix, half_index, matrix.size());
 		
+		System.out.println("Left matrix: " + left_matrix);
+		System.out.println("Right matrix: " + right_matrix);
+		
 		//Keeps track of minimums for both matrices
 		ArrayList<Integer> minimums = new ArrayList<Integer>();
 		
@@ -532,7 +750,7 @@ public class GroupSearch extends Group
 		
 		
 		ArrayList<Group> left_groups  = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(left_matrix, suit, minimums.get(0)), false));
-		ArrayList<Group> right_groups = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(right_matrix, suit , minimums.get(1)) , false));
+		ArrayList<Group> right_groups = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(right_matrix, suit , minimums.get(1)) , true));
 		
 		//Add complete/incomplete groups to corresponding ArrayList<Group>
 		ArrayList<ArrayList<Group>> categorized_Group = new ArrayList<ArrayList<Group>>();
@@ -842,6 +1060,7 @@ public class GroupSearch extends Group
 			{
 				for(int n = 0; n < 3; n++) temp_str += Integer.toString(currentIndex);
 				temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 3);
+				matrix = new ArrayList<Integer>(temp_matrix);
 				total_tiles -= 3;
 				group_shape_list.add(temp_str);
 				continue;
@@ -853,6 +1072,8 @@ public class GroupSearch extends Group
 			//total_tiles -= 1;
 			
 			int m = 0;
+			boolean can_sequence = true;
+			ArrayList<Integer> forwardTile_amt = new ArrayList<Integer>();
 			while((m <= 2 && !reverse_search) || (m >= -2 && reverse_search))
 			{
 				if(!reverse_search)
@@ -874,31 +1095,119 @@ public class GroupSearch extends Group
 				{
 					break;
 				}
-				if(temp_matrix.get(increment_index) > 0)
+				forwardTile_amt.add(temp_matrix.get(increment_index));
+			}
+			/*
+			 * This exception typically means there's no more tiles to search through,
+			 * Whatever is remained will become the incomplete group
+			 */
+			if(forwardTile_amt.size() == 0)
+			{
+				if(temp_matrix.get(currentIndex) > 0)
 				{
-					shape.add(increment_index);
-					temp_matrix.set(increment_index, temp_matrix.get(increment_index) - 1);
-					total_tiles--;
+					int total_copy = temp_matrix.get(currentIndex);
+					//sets remove duplicates, but there is only one element
+					for(int a = 0; a < total_copy + shape.size(); a++) 
+					{
+						temp_str += Integer.toString(shape.first());
+						temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
+						total_tiles--;
+					}
+					group_shape_list.add(temp_str);
+					matrix = new ArrayList<Integer>(temp_matrix);
+				}
+				else
+				{
+					for(int tile: shape) temp_str += Integer.toString(tile);
+					group_shape_list.add(temp_str);
+					matrix = new ArrayList<Integer>(temp_matrix);
+				}
+				continue;
+			}
+			/*
+			 * If matrix would allow sequence or not, This will ensure that remainder shapes
+			 * will not take triplets if they are presents in talking tile range
+			 */
+			for(int k = 0; k < forwardTile_amt.size(); k++)
+			{
+				if(forwardTile_amt.get(k) <= 0 || forwardTile_amt.size() < 2)
+				{
+					can_sequence = false;
 				}
 			}
-			
-			//Since pairs are not looked for in above loop, this condition will fill that gap
-			if(shape.size() == 1 && temp_matrix.get(currentIndex) > 0)
+			if(can_sequence)
 			{
-				int total_copy = temp_matrix.get(currentIndex);
-				//sets remove duplicates, but there is only one element
-				for(int a = 0; a < total_copy + shape.size(); a++) 
+				m = 0;
+				for(int k = 0; k < forwardTile_amt.size(); k++)
 				{
-					temp_str += Integer.toString(shape.first());
-					temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
+					//Decrement if reverse search, increment otherwise
+					if(reverse_search) {m--;} else if(!reverse_search) {m++;}
+					
+					//Adds sequence to the group_shape_list
+					shape.add(currentIndex + m);
+					temp_matrix.set(currentIndex + m, temp_matrix.get(currentIndex + m) - 1);
 					total_tiles--;
 				}
-			}
-			else
-			{
-				//Since shapes removes duplicates, and i is bounded into 1,2: This only allows sequences
 				for(int tile: shape) temp_str += Integer.toString(tile);
+				group_shape_list.add(temp_str);
+				matrix = new ArrayList<Integer>(temp_matrix);
+				continue;
 			}
+			//Since pairs are not looked for in above loop, this condition will fill that gap
+			if(shape.size() == 1 && !can_sequence)
+			{
+				//Checks to make sure no talking tiles can be triplets, no triplets == make remainder shape
+				m = 0;
+				for(int k = 0; k < forwardTile_amt.size(); k++)
+				{
+					if(reverse_search) {m--;} else if(!reverse_search) {m++;}
+					switch(forwardTile_amt.get(k))
+					{
+						case 3: //No seq == only triplet
+							if(temp_matrix.get(currentIndex) > 0)
+							{						
+								int total_copy = temp_matrix.get(currentIndex);
+								//sets remove duplicates, but there is only one element
+								for(int a = 0; a < total_copy + shape.size(); a++) 
+								{
+									temp_str += Integer.toString(shape.first());
+									temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
+									total_tiles--;
+								}
+							}
+							break;
+						case 0: //Cannot include in defualt as cannot add no existing tiles
+							if(temp_matrix.get(currentIndex) > 0)
+							{
+								int total_copy = temp_matrix.get(currentIndex);
+								//sets remove duplicates, but there is only one element
+								for(int a = 0; a < total_copy + shape.size(); a++) 
+								{
+									temp_str += Integer.toString(shape.first());
+									temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
+									total_tiles--;
+								}
+								group_shape_list.add(temp_str);
+								matrix = new ArrayList<Integer>(temp_matrix);
+								break;
+							}
+							break;
+						default: //Overflow of single tile, can make incomplete seq group
+							shape.add(currentIndex + m);
+							temp_matrix.set(currentIndex + m, temp_matrix.get(currentIndex + m) - 1);
+							total_tiles--;
+							break;
+					}
+					if(forwardTile_amt.get(k) == 0)
+					{
+						group_shape_list.add(temp_str);
+						matrix = new ArrayList<Integer>(temp_matrix);
+						continue;
+					}
+				}
+			}
+			//Any other possible case are false, this would be a hovering tile
+			for(int tile: shape) temp_str += Integer.toString(tile);
 			group_shape_list.add(temp_str);
 			matrix = new ArrayList<Integer>(temp_matrix);
 		}
