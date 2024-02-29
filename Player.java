@@ -105,17 +105,243 @@ public class Player
 		return this.dropPile;
 	}
 	
+	/**
+	 *
+	 * Prioritized indicators
+	 * "m", "p", "s", "z" to add respective tile_id for the group/tiles
+	 * ^^^ Refer to Group.suit_reference
+     *  "c", "k", and "o" to determine which ArrayList to add into
+     *  
+	 * @param mjSTR The string that represents a player's mahjong Hand as a String value
+	 * @return A PlayerHand object that contains two ArrayList, the concealed hand and declared groups
+	 */
+	public static PlayerHand convert_mjSTR(String mjSTR)
+	{
+		ArrayList<Integer> close_segment = new ArrayList<Integer>();
+		ArrayList<Group> declared_segment = new ArrayList<Group>();
+		
+		
+		int suit = 3; //Used to track the suit_index
+		
+		/*
+		 * add_mode == 2 -> add as open declared groups
+		 * add_mode == 1 -> add as concealed declared kongs/kans
+		 * add_mode == 0 -> add as concealed in hand tiles
+		 */
+		int add_mode = 2;
+		
+		for(int i = mjSTR.length() - 1; i >= 0; i--)
+		{
+			char current_char = mjSTR.charAt(i);
+			
+			//Used to compare suits, the suit_index corresponding will add to translating to tile_id
+			for(int suit_index = 0; suit_index < Group.suit_reference.length; suit_index++)
+			{
+				if(current_char == Group.suit_reference[suit_index])
+				{
+					suit = suit_index;
+					continue;
+				}
+					
+			}
+			// 'c' is prioritized to make sure the tiles are added correctly
+			if(current_char == 'c')
+			{
+				add_mode = 0;
+				continue;
+			}
+			else if(current_char == 'k')
+			{
+				add_mode = 1;
+				continue;
+			}
+			
+			if(Character.isDigit(current_char)) //Checks if the character is a number
+			{
+				int index = i; //Need to decrement as starting index was at STR.length - 1
+				ArrayList<Integer> temp_tiles = new ArrayList<Integer>();
+				switch(add_mode)
+				{
+					case 2: //Add to open groups ArrayList
+						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() < 3)
+						{
+							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
+							System.out.println("Open groups: " + mjSTR.charAt(index) + "temp_tile size: " + temp_tiles.size());
+							index--;
+						}
+						if(Group.group_status(temp_tiles) >= 1) //Re-confirms the tiles added is a group
+						{
+							declared_segment.add(new Group(temp_tiles, false));
+						}
+						break;
+					case 1: //Add to open groups but set to concealed and is quad
+						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() != 4)
+						{
+							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
+							System.out.println("Closed Quads: " + mjSTR.charAt(index) + "temp_tile size: " + temp_tiles.size());
+							index--;
+						}
+						if(Group.group_status(temp_tiles) == 3)
+						{
+							declared_segment.add(new Group(temp_tiles, true));
+						}
+						break;
+					case 0: //Add to concealed hand ArrayList
+						close_segment.add(Character.getNumericValue(mjSTR.charAt(i)) + (suit * 9) - 1);
+						break;
+				}
+				i = index;
+			}
+		}
+		return new PlayerHand(close_segment, declared_segment, mjSTR);
+	}
+	
+	/**
+	 * Overload function of convert_PlayerHand to be able to accept the PlayerHand object itself
+	 * or accept the 2 important ArrayList
+	 * @param playerhand The PlayerHand object that wants to be represented as a mjSTR string
+	 * @return A mjSTR as a String to represent the "PlayerHand" being inputed
+	 */
+	public static String convert_PlayerHand(PlayerHand playerhand)
+	{
+		return convert_PlayerHand(playerhand.getCurrentHand(), playerhand.getDeclaredGroup());
+	}
+	
+	/**
+	 * 
+	 * @param concealed_hand The concealed non declared part of the entire PlayerHand
+	 * @param declared_groups The typically open (with exception to closed quads) declared groups
+	 * @return A mjSTR as a String to represent the "PlayerHand" being inputed
+	 */
+	public static String convert_PlayerHand(ArrayList<Integer> concealed_hand, ArrayList<Group> declared_groups)
+	{
+		ArrayList<ArrayList<Integer>> close_suitedlist = new ArrayList<ArrayList<Integer>>(Group.suitDivide(concealed_hand));
+		ArrayList<Group> declared_list = new ArrayList<Group>();
+		String ret_string = "o";
+		
+		if(concealed_hand.size() == 0) //A concealed hand that is empty cannot exist
+		{
+			return "";
+		}
+		
+		/*
+		 * The best Attempt to set declared_list in reverse order of suits (honors, sous, pins, mans)
+		 */
+		if(declared_groups.size() > 1)
+		{
+			/*
+			 * group_index = ArrayList of original suit for each index in DeclaredGroup ArrayList
+			 * sorted_groupindex = The suits are sorted, but now the index for groups are mixed up
+			 * 
+			 * Will loop through in order sorted_groupindex to see if group_index has that suit
+			 * adds to declared_list and removed in group_index
+			 */
+			ArrayList<Integer> group_index = new ArrayList<Integer>();
+			ArrayList<Integer> sorted_groupindex;
+			for(Group declared_group: declared_groups) if(declared_group.getGroupInfo()[1] != -1) {group_index.add(declared_group.getGroupInfo()[1]);}
+			sorted_groupindex = Group.sortArray(group_index);
+			
+			if(group_index.size() != sorted_groupindex.size())
+			{
+				return "Invalid_hand (Error: Called groups contained invalid tiles)";
+			}
+			
+			for(int i = sorted_groupindex.size() - 1; i >= 0; i--) //Only sorted list matter for adding groups in reverse
+			{
+				for(int k = 0; k < group_index.size(); k++)
+				{
+					if(sorted_groupindex.get(i) == group_index.get(k))
+					{
+						declared_list.add(declared_groups.get(k));
+						group_index.set(k, -1); //ensures the same suit is not kept
+					}
+				}
+			}
+		}
+		else
+		{
+			//If size() = 1, it will add, if size() == 0, the for loop wont run
+			for(int i = 0; i < declared_groups.size(); i++) declared_list.add(declared_groups.get(i));
+		}
+		
+		/*
+		 * Groups are sorted in reverse, so String end starts at beginning
+		 * The return String will also be in reverse, and is mirrored at the end
+		 */
+		for(int rev_groupi = 0; rev_groupi < declared_list.size(); rev_groupi++)
+		{
+			Group group = declared_list.get(rev_groupi);
+			ArrayList<Integer> temp_list = group.get_groupTiles();
+			if(group.getGroupInfo()[1] == -1 || group.get_groupTiles().size() < 3) //Don't add invalid/incomplete groups
+			{
+				declared_list.remove(rev_groupi); //Removed invalid groups
+				rev_groupi--;
+				continue;
+			}
+			if(group.getGroupInfo()[0] == 3  && group.concealed) //Dont add concealed declared quads, add in future
+			{continue;}
+			
+			//(String cast) -> (char[] suit_list) -> (declared_group suit index in getGroupInfo())
+			ret_string += Character.toString(Group.suit_reference[group.getGroupInfo()[1]]);
+			
+			for(int i = temp_list.size() - 1; i >= 0; i--)
+			{
+				ret_string += Integer.toString(Group.tileID_to_PlayVal(temp_list.get(i)));
+			}
+			declared_list.remove(rev_groupi); //Removed means successfully added, this will allow only concealed quads to remain
+			rev_groupi--;
+		}
+		
+		//Where concealed declared quads are added
+		ret_string += "k";
+		
+		for(int remain_groupi = 0; remain_groupi < declared_list.size(); remain_groupi++) //Assumes all invalid groups are removed above
+		{
+			Group group = declared_list.get(remain_groupi);
+			ArrayList<Integer> temp_list = group.get_groupTiles();
+			ret_string += Character.toString(Group.suit_reference[group.getGroupInfo()[1]]);
+			
+			for(int i = temp_list.size() - 1; i >= 0; i--)
+			{
+				ret_string += Integer.toString(Group.tileID_to_PlayVal(temp_list.get(i)));
+			}
+			declared_list.remove(remain_groupi); //Removed means successfully added, this will allow only concealed quads to remain
+			remain_groupi--;
+		}
+		
+		//Where the concealed in hand tiles will be
+		ret_string += "c";
+		
+		for(int suit_i = close_suitedlist.size() - 1; suit_i >= 0; suit_i--)
+		{
+			if(close_suitedlist.get(suit_i).size() > 0)
+			{
+				ret_string += Character.toString(Group.suit_reference[suit_i]); //Add suit String from char[] suit_reference from Group
+				ArrayList<Integer> temp_sort = close_suitedlist.get(suit_i); //Sort tiles within
+				for(int tile_i = temp_sort.size() - 1; tile_i >= 0; tile_i--)
+				{
+					// (String cast) -> (Play_val conversion) -> (Tile_ID) -> (reverse increment of temp_sort)
+					ret_string += Integer.toString(Group.tileID_to_PlayVal(temp_sort.get(tile_i)));
+				}
+			}
+		}
+		
+		String filp_STR = "";
+		for(int i = ret_string.length() - 1; i >= 0; i--) filp_STR += Character.toString(ret_string.charAt(i));
+		return filp_STR;
+	}
+	
 	/*
-	 * Local class:
+	 * Local class
 	 * Used to store currentHand of assigned player
 	 * String representation of current player hand
 	 */
-	static class PlayerHand
+	static class PlayerHand extends Player
 	{
 		private ArrayList<Integer> currentHand;
 		public ArrayList<Group> declaredGroups;
 		private String mjSTRhand;
-		private ArrayList<String> groupSN_list;
+		private ArrayList<String> groupSN_list = new ArrayList<String>();
 		
 		
 		
@@ -131,37 +357,62 @@ public class Player
 		
 		/**
 		 * Used to clone a Player's Hand
-		 * @param clone: A PlayerHand wanted to be copy to another instance
+		 * @param clone A PlayerHand wanted to be copy to another instance
 		 */
 		public PlayerHand(PlayerHand clone)
 		{
 			this.currentHand = new ArrayList<Integer>(clone.currentHand);
 			this.declaredGroups = new ArrayList<Group>(clone.declaredGroups);
 			this.mjSTRhand = new String(clone.mjSTRhand);
+			this.groupSN_list = new ArrayList<String>(clone.groupSN_list);
 		}
 		
-		/*
-		 * Assumes all tiles are concealed
+		/**
+		 * A concealed hand only PlayerHand Constructor
+		 * @param in_hand The only part of the ENTIRE player's hand and is complete concealed
 		 */
 		public PlayerHand(ArrayList<Integer> in_hand)
 		{
 			this.currentHand = new ArrayList<Integer>(in_hand);
 			this.declaredGroups = new ArrayList<Group>();
-//			this.mjSTRhand = handto_mjSTR(in_hand);
+			this.mjSTRhand = convert_PlayerHand(in_hand, this.declaredGroups);
 		}
 		
+		/**
+		 * A custom hand inputed PlayerHand Constructor
+		 * @param in_hand The current concealed hand of the desired PlayerHand
+		 * @param declared_groups The current Declared Groups of the desired PlayerHand, can include concealed declared quads
+		 */
 		public PlayerHand(ArrayList<Integer> in_hand, ArrayList<Group> declared_groups)
 		{
 			this.currentHand = new ArrayList<Integer>(in_hand);
 			this.declaredGroups = new ArrayList<Group>(declared_groups);
-//			this.mjSTRhand = handto_mjSTR(in_hand);
+			this.mjSTRhand = convert_PlayerHand(in_hand, declared_groups);
 		}
 		
+		/**
+		 * A custom hand inputed PlayerHand Constructor
+		 * @param in_hand The current concealed hand of the desired PlayerHand
+		 * @param declared_groups The current Declared Groups of the desired PlayerHand, can include concealed declared quads
+		 * @param mjSTR The mjSTR of the PlayerHand, this constructor is typically used to save resources
+		 */
+		public PlayerHand(ArrayList<Integer> in_hand, ArrayList<Group> declared_groups, String mjSTR)
+		{
+			this.currentHand = new ArrayList<Integer>(in_hand);
+			this.declaredGroups = new ArrayList<Group>(declared_groups);
+			this.mjSTRhand = mjSTR;
+		}
+		
+		/**
+		 * STRING CONSTRUCTOR
+		 * @param in_STRformat Input as mjSTR, will be translated to concealed hand and declared groups
+		 */
 		public PlayerHand(String in_STRformat)
 		{
-//			PlayerHand mjSTR_to_Hand = mjSTRtranslate(in_STRformat);
-//			this.currentHand = mjSTR_to_Hand.currentHand;
-//			this.declaredGroups = mjSTR_to_Hand.declaredGroups;
+			PlayerHand temp_obj = convert_mjSTR(in_STRformat);
+			
+			this.currentHand = temp_obj.getCurrentHand();
+			this.declaredGroups = temp_obj.getDeclaredGroup();
 			this.mjSTRhand = new String(in_STRformat);
 		}
 		
@@ -185,8 +436,8 @@ public class Player
 		
 		/**
 		 * If required, set the current Player inside_hand to a new hand
-		 * @param in_newHand: The new hand to be set to this instance
-		 * @return: True if the new inside hand has been set to the PlayerHand, false if error was raised
+		 * @param in_newHand The new hand to be set to this instance
+		 * @return True if the new inside hand has been set to the PlayerHand, false if error was raised
 		 */
 		public boolean setCurrentHand(ArrayList<Integer> in_newHand)
 		{
@@ -204,8 +455,8 @@ public class Player
 		/**
 		 * If required, 
 		 * set the current Player's declared groups to a new ArrayList<Group> of declared Groups
-		 * @param in_newGroups: The new ArrayList<Group> for this PlayerHand instance
-		 * @return: True if the new_groups has been set, false if an error was raised
+		 * @param in_newGroups The new ArrayList<Group> for this PlayerHand instance
+		 * @return True if the new_groups has been set, false if an error was raised
 		 */
 		public boolean setDeclaredGroup(ArrayList<Group> in_newGroups)
 		{
@@ -222,8 +473,8 @@ public class Player
 		
 		/**
 		 * Used to add new declared groups to unique PlayerHand instance
-		 * @param new_group: SINGULAR group to be added to this instance of PlayerHand
-		 * @return: True if the new Group was added, false if an error was raised
+		 * @param new_group SINGULAR group to be added to this instance of PlayerHand
+		 * @return True if the new Group was added, false if an error was raised
 		 */
 		public boolean addDeclaredGroups(Group new_group)
 		{
@@ -238,9 +489,71 @@ public class Player
 			}
 		}
 		
+		public String toString()
+		{
+			String ret_string = "Concealed Hand: (";
+			try
+			{
+				int uni_index = 0;
+				while(uni_index < this.getCurrentHand().size())
+				{
+					if(uni_index == this.getCurrentHand().size() - 1)
+					{
+						ret_string += this.getCurrentHand().get(uni_index) + ")\n";
+						break;
+					}
+					ret_string += this.getCurrentHand().get(uni_index) + ", ";
+					uni_index++;
+				}
+				
+				ret_string += "Declared Groups: ";
+				uni_index = 0;
+				while(uni_index < this.getDeclaredGroup().size())
+				{
+					ret_string += this.getDeclaredGroup().get(uni_index);
+				}
+				ret_string += "\nmjSTR format: " + this.mjSTRhand;
+				return ret_string;
+			}
+			catch(Exception e) {return "A variable most likely has not been initialized";}
+		}
+		
+		/**
+		 * 
+		 * @param new_tile The new tile that assumes is newly drawn to the hand, can be discarded
+		 * @return True if the current groups are updated to fit the new_tile inputed,
+		 * 		   False if the tile either doesn't fit (groups didn't alter in anyway) or error was raised
+		 */
+		public boolean refreshGroups(int new_tile)
+		{
+			return false;
+		}
+		
 	}
 	public static void main(String[] args)
 	{
+		ArrayList<Group> declared_groups = new ArrayList<Group>();
+		for(int i = 0; i < 2; i++) 
+		{
+			Group temp_group = Group.random_group(true, false);
+			System.out.println("Added Group: " + temp_group);
+			declared_groups.add(temp_group);
+			if(declared_groups.get(declared_groups.size() - 1).tile_list.size() == 4)
+			{
+				declared_groups.get(declared_groups.size() - 1).setDeclareStatus(true); //Makes all declared quads concealed
+			}
+			else
+			{
+				declared_groups.get(declared_groups.size() - 1).setDeclareStatus(false); //Makes sure declared non quad groups are not concealed
+			}
+		}
+		int[] add_tiles = {0,0,0,5,6,7,7};
+		ArrayList<Integer> fake_hand = new ArrayList<Integer>();
+		for(int i = 0; i < add_tiles.length; i++) fake_hand.add(add_tiles[i]);
 		
+		System.out.println(convert_PlayerHand(fake_hand, declared_groups));
+		System.out.println(convert_mjSTR(convert_PlayerHand(fake_hand, declared_groups)));
+		
+		PlayerHand example_obj = convert_mjSTR(convert_PlayerHand(fake_hand, declared_groups));
 	}
 }

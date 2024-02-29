@@ -71,20 +71,31 @@ public class Group extends Scoring
 
 	/**
 	 * If any digit = 0, that means the group is invalid/Uncomplete
-	 * @return Gets information of this instance of group
-	 * 			digit 10^1 = group type, i.e 1 = sequence, 2 = triplets, 3 = quads
-	 * 			digit 10^0 = group suit, i.e 1 = mans, 2 = pins, 3 = sous, 4 = honors
+	 * @return Gets information of this instance of group as integer list
+	 * 			index 0 = group type, i.e 1 = sequence, 2 = triplets, 3 = quads
+	 * 			index 1 = group suit, i.e -1 = invalid/mixed, 0 = mans, 1 = pins, 2 = sous, 3 = honors
 	 */
-	public String getGroupInfo()
+	public int[] getGroupInfo()
 	{
-		int groupType = group_status(this.tile_list);
-		if(groupType <= 0) 
+		int[] return_data = {-3, -1};
+		if(this.tile_list.size() <= 0)
 		{
-			return "00";
+			return return_data;
 		}
-		String returnInfo = Integer.toString(groupType);
-		returnInfo += this.tile_list.get(0)/9;
-		return returnInfo;
+		int groupType = group_status(this.tile_list);
+		return_data[0] = groupType;
+		int suit = this.tile_list.get(0)/9;
+		for(int index = 0; index < this.tile_list.size() - 1; index++)
+		{
+			if(this.tile_list.get(index)/9 != this.tile_list.get(index + 1)/9)
+			{
+				suit = -1;
+				break;
+			}
+		}
+		return_data[1] = suit;
+		return return_data;
+		
 	}
 	
 	/**
@@ -666,47 +677,66 @@ public class Group extends Scoring
 		}
 		return tile_array;
 	}
-	public static Group random_group()
+	
+	/**
+	 * @Function Just creates random groups for better testing experience
+	 * @param is_complete Whether the group should always be complete or not, false = include incomplete
+	 * @param is_concealed Whether the group should always be concealed, false = include opened
+	 * @return A random Group of the desired choice given the parameter values
+	 */ 
+	public static Group random_group(boolean is_complete, boolean is_concealed)
 	{
 		int suit = (int)(Math.random() * 4); //Decides random suit
 		boolean concealed = true;
-		if(Math.random() > 0.5)
+		if(Math.random() > 0.5 && !concealed)
 		{
 			concealed = false;
 		}
 		ArrayList<Integer> tile_list = new ArrayList<Integer>();
 		int start = (int)(Math.random() * 9);
-		int selected = (int)(Math.random() * 5);
+		int selected = (int)(Math.random() * 6);
 		if(suit == 3)
 		{
 			start = (int)(Math.random() * 7);
-			int[] possible_shapes = {0, 2, 4};
-			selected = possible_shapes[(int)(Math.random() * 3)];
+			int[] possible_shapes = {0, 1, 3, 5};
+			selected = possible_shapes[(int)(Math.random() * 4)];
+		}
+		if(is_complete)
+		{
+			selected = (int)(Math.random() * 3);
+			if(suit == 3)
+			{
+				selected = (int)(Math.random() * 2);
+			}
 		}
 		/*
-		 * 0 == complete + triplet
-		 * 1 == complete + sequence
-		 * 2 == incomplete + pair
-		 * 3 == incomplete + wait sequence
-		 * 4 == incomplete + floating
+		 * 0 == complete + quad
+		 * 1 == complete + triplet
+		 * 2 == complete + sequence
+		 * 3 == incomplete + pair
+		 * 4 == incomplete + wait sequence
+		 * 5 == incomplete + floating
 		 */
 		switch(selected) //Decides what group to create
 		{
 			case 0:
-				for(int i = 0; i < 3; i++) tile_list.add(start + (suit * 9));
+				for(int i = 0; i < 4; i++) tile_list.add(start + (suit * 9));
 				break;
 			case 1:
+				for(int i = 0; i < 3; i++) tile_list.add(start + (suit * 9));
+				break;
+			case 2:
 				start = (int)(Math.random() * 7);
 				for(int i = 0; i < 3; i++) tile_list.add(start + i + (suit * 9));
 				break;
-			case 2: 
+			case 3: 
 				for(int i = 0; i < 2; i++) tile_list.add(start + (suit * 9));
 				break;
-			case 3:
+			case 4:
 				start = (int)(Math.random() * 8);
 				for(int i = 0; i < 2; i++) tile_list.add(start + i + (suit * 9));
 				break;
-			case 4:
+			case 5:
 				tile_list.add(start + (suit * 9));
 				break;
 		}
@@ -795,7 +825,7 @@ public class Group extends Scoring
 //			ArrayList<Group> random_groups = new ArrayList<Group>();
 //			for(int i = 0; i < 5; i++)
 //			{
-//				Group this_group = random_group();
+//				Group this_group = random_group(false, false);
 //				random_groups.add(this_group);
 //				System.out.println(this_group + " Concealed: " + this_group.concealed);
 //			}
