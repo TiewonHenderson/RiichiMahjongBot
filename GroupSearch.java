@@ -635,9 +635,6 @@ public class GroupSearch extends Group
 		ArrayList<Integer> left_matrix = sub_ArrayList(matrix, 0, half_index);
 		ArrayList<Integer> right_matrix = sub_ArrayList(matrix, half_index, matrix.size());
 		
-		System.out.println("Left matrix: " + left_matrix);
-		System.out.println("Right matrix: " + right_matrix);
-		
 		//Keeps track of minimums for both matrices
 		ArrayList<Integer> minimums = new ArrayList<Integer>();
 		
@@ -1001,7 +998,7 @@ public class GroupSearch extends Group
 			//If triplet cannot be made, add current index
 			shape.add(currentIndex);
 			temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
-			//total_tiles -= 1;
+			total_tiles--;
 			
 			int m = 0;
 			boolean can_sequence = true;
@@ -1023,7 +1020,7 @@ public class GroupSearch extends Group
 				}
 				//Prevents exceeding out of bounds
 				int increment_index = currentIndex + m;
-				if(increment_index < 0 || temp_matrix.size() - (increment_index) <= 0)
+				if(increment_index < 0 || increment_index >= temp_matrix.size())
 				{
 					break;
 				}
@@ -1031,20 +1028,19 @@ public class GroupSearch extends Group
 			}
 			/*
 			 * This exception typically means there's no more tiles to search through,
-			 * Whatever is remained will become the incomplete group
+			 * Whatever is remained will becomes the incomplete group
 			 */
 			if(forwardTile_amt.size() == 0)
 			{
 				if(temp_matrix.get(currentIndex) > 0)
 				{
-					int total_copy = temp_matrix.get(currentIndex);
-					//sets remove duplicates, but there is only one element
-					for(int a = 0; a < total_copy + shape.size(); a++) 
+					while(temp_matrix.get(currentIndex) > 0)
 					{
-						temp_str += Integer.toString(shape.first());
+						temp_str += Integer.toString(currentIndex);
 						temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
 						total_tiles--;
 					}
+					for(int tile: shape) temp_str += Integer.toString(tile);
 					group_shape_list.add(temp_str);
 					matrix = new ArrayList<Integer>(temp_matrix);
 				}
@@ -1065,6 +1061,7 @@ public class GroupSearch extends Group
 				if(forwardTile_amt.get(k) <= 0 || forwardTile_amt.size() < 2)
 				{
 					can_sequence = false;
+					break;
 				}
 			}
 			if(can_sequence)
@@ -1085,8 +1082,7 @@ public class GroupSearch extends Group
 				matrix = new ArrayList<Integer>(temp_matrix);
 				continue;
 			}
-			//Since pairs are not looked for in above loop, this condition will fill that gap
-			if(shape.size() == 1 && !can_sequence)
+			else //Since pairs are not looked for in above loop, this condition will fill that gap
 			{
 				//Checks to make sure no talking tiles can be triplets, no triplets == make remainder shape
 				m = 0;
@@ -1101,10 +1097,6 @@ public class GroupSearch extends Group
 							break;
 						case 0: //Cannot include in default as cannot add no existing tiles
 							//Couldn't make sequence, so shape.size() == 2 is in theory best incomplete group status
-							if(shape.size() == 2)
-							{
-								continue;
-							}
 							if(temp_matrix.get(currentIndex) > 0) //There are more tiles in same index, as group as pair instead
 							{
 								break_loop = true;
@@ -1133,6 +1125,7 @@ public class GroupSearch extends Group
 								}
 								//However if there cannot create group in currentIndex + m, then it can be used for incomplete group
 							}
+							break;
 						/*
 						 * Only runs if 
 						 * 1,1,0
@@ -1149,13 +1142,12 @@ public class GroupSearch extends Group
 					}
 					if(break_loop)
 					{
-						if(temp_matrix.get(currentIndex) > 0)
+						if(shape.size() == 1 && temp_matrix.get(currentIndex) > 0)
 						{						
-							int total_copy = temp_matrix.get(currentIndex);
 							//sets remove duplicates, but there is only one element
-							for(int a = 0; a < total_copy + shape.size(); a++) 
+							while(temp_matrix.get(currentIndex) > 0)
 							{
-								temp_str += Integer.toString(shape.first());
+								temp_str += currentIndex;
 								temp_matrix.set(currentIndex, temp_matrix.get(currentIndex) - 1);
 								total_tiles--;
 							}
@@ -1169,7 +1161,6 @@ public class GroupSearch extends Group
 			group_shape_list.add(temp_str);
 			matrix = new ArrayList<Integer>(temp_matrix);
 		}
-		
 		/*
 		 * Format = 
 		 * (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
@@ -1204,7 +1195,7 @@ public class GroupSearch extends Group
 	
 	public static void main(String[] args)
 	{
-		ArrayList<Group> random_groups = new ArrayList<Group>();
+		test();
 		
 	}
 }
