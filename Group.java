@@ -25,7 +25,7 @@ public class Group extends Scoring
 	 */
 	public Group(ArrayList<Integer> in_group, boolean concealed)
 	{
-		this.tile_list = new ArrayList<Integer>(in_group);
+		this.tile_list = sortArray(in_group);
 		this.concealed = concealed;
 	}
 	
@@ -46,7 +46,7 @@ public class Group extends Scoring
 	 */
 	public Group(ArrayList<Integer> in_group)
 	{
-		this.tile_list = new ArrayList<Integer>(in_group);
+		this.tile_list = sortArray(in_group);
 		this.concealed = true;
 	}
 	
@@ -57,6 +57,7 @@ public class Group extends Scoring
 	public Group(int[] in_group)
 	{
 		for(int i = 0; i < in_group.length; i++) tile_list.add(in_group[i]);
+		this.tile_list = sortArray(this.tile_list);
 		this.concealed = true;
 	}
 	
