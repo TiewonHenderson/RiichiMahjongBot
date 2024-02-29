@@ -173,6 +173,7 @@ public class Player
 						{
 							declared_segment.add(new Group(temp_tiles, false));
 						}
+						i = index + 1;
 						break;
 					case 1: //Add to open groups but set to concealed and is quad
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() != 4)
@@ -185,12 +186,12 @@ public class Player
 						{
 							declared_segment.add(new Group(temp_tiles, true));
 						}
+						i = index + 1;
 						break;
 					case 0: //Add to concealed hand ArrayList
 						close_segment.add(Character.getNumericValue(mjSTR.charAt(i)) + (suit * 9) - 1);
 						break;
 				}
-				i = index;
 			}
 		}
 		return new PlayerHand(close_segment, declared_segment, mjSTR);
@@ -336,7 +337,7 @@ public class Player
 	 * Used to store currentHand of assigned player
 	 * String representation of current player hand
 	 */
-	static class PlayerHand extends Player
+	static class PlayerHand
 	{
 		private ArrayList<Integer> currentHand;
 		public ArrayList<Group> declaredGroups;
@@ -494,23 +495,25 @@ public class Player
 			String ret_string = "Concealed Hand: (";
 			try
 			{
-				int uni_index = 0;
-				while(uni_index < this.getCurrentHand().size())
+				for(int i = 0; i < this.getCurrentHand().size(); i++)
 				{
-					if(uni_index == this.getCurrentHand().size() - 1)
+					if(i == this.getCurrentHand().size() - 1)
 					{
-						ret_string += this.getCurrentHand().get(uni_index) + ")\n";
+						ret_string += this.getCurrentHand().get(i) + ")\n";
 						break;
 					}
-					ret_string += this.getCurrentHand().get(uni_index) + ", ";
-					uni_index++;
+					ret_string += this.getCurrentHand().get(i) + ", ";
 				}
 				
 				ret_string += "Declared Groups: ";
-				uni_index = 0;
-				while(uni_index < this.getDeclaredGroup().size())
+				for(int i = 0; i < this.getDeclaredGroup().size(); i++)
 				{
-					ret_string += this.getDeclaredGroup().get(uni_index);
+					if(i == this.getCurrentHand().size() - 1)
+					{
+						ret_string += this.getDeclaredGroup().get(i) + ")\n";
+						break;
+					}
+					ret_string += this.getDeclaredGroup().get(i) + ", ";
 				}
 				ret_string += "\nmjSTR format: " + this.mjSTRhand;
 				return ret_string;
@@ -526,6 +529,7 @@ public class Player
 		 */
 		public boolean refreshGroups(int new_tile)
 		{
+			
 			return false;
 		}
 		
@@ -553,7 +557,5 @@ public class Player
 		
 		System.out.println(convert_PlayerHand(fake_hand, declared_groups));
 		System.out.println(convert_mjSTR(convert_PlayerHand(fake_hand, declared_groups)));
-		
-		PlayerHand example_obj = convert_mjSTR(convert_PlayerHand(fake_hand, declared_groups));
 	}
 }
