@@ -115,6 +115,9 @@ public class Player
 		private ArrayList<Integer> currentHand;
 		public ArrayList<Group> declaredGroups;
 		private String mjSTRhand;
+		private ArrayList<String> groupSN_list;
+		
+		
 		
 		/**
 		 * Default constructor
@@ -234,10 +237,7 @@ public class Player
 				return false;
 			}
 		}
-		public static ArrayList<Group> group_from_mjSTR(String in_mjSTR)
-		{
-			
-		}
+		
 	}
 	public static void main(String[] args)
 	{

@@ -786,7 +786,6 @@ public class Group extends Scoring
 		{
 			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
 		}
-
 	}
 	public static void main(String[] args)
 	{
