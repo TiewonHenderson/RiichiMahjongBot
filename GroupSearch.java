@@ -6,54 +6,9 @@ import java.util.function.*;
 import bot_package.Player.PlayerHand;
 
 
+
 public class GroupSearch extends Group
 {
-	class GroupsAndNeededTiles
-	{
-		public Player currentPlayer;
-		public ArrayList<Group> confirmedGroups = new ArrayList<Group>();
-		public ArrayList<Group> incompGroups = new ArrayList<Group>();
-		public ArrayList<Integer> remainingTiles = new ArrayList<Integer>();
-		
-		/**
-		 * New game Constructor:
-		 * This constructor acts as a new 
-		 * @param inPlayer = new Player input
-		 */
-		public GroupsAndNeededTiles(Player inPlayer)
-		{
-			this.currentPlayer = inPlayer;
-		}
-		/**
-		 * Hard manual GroupsAndNeededTiles set, usually for mid-game
-		 * @param currentPlayer Existing player to input for Group Search
-		 * @param confirmedGroups Groups that contain tile_list.size() >= 3 which usually signifies a completed group
-		 * @param uncompGroups Any group that tile_list.size() <= 2, this however does not include invalid groups
-		 * @param remainingTiles Typically floating tiles, but it will most likely be present in incompGroup
-		 */
-		public GroupsAndNeededTiles(Player currentPlayer, ArrayList<Group> confirmedGroups, 
-									ArrayList<Group> incompGroups, ArrayList<Integer> remainingTiles)
-		{
-			this.currentPlayer = new Player(currentPlayer);
-			this.confirmedGroups = new ArrayList<Group>(confirmedGroups);
-			this.incompGroups = new ArrayList<Group>(incompGroups);
-			this.remainingTiles = new ArrayList<Integer>(remainingTiles);
-		}
-		
-		/**
-		 * Cloning constructors
-		 * @param clone GroupsAndNeededTiles object that wants to be cloned
-		 */
-		public GroupsAndNeededTiles(GroupsAndNeededTiles clone)
-		{
-			this.currentPlayer = new Player(clone.currentPlayer);
-			this.confirmedGroups = new ArrayList<Group>(clone.confirmedGroups);
-			this.incompGroups = new ArrayList<Group>(clone.incompGroups);
-			this.remainingTiles = new ArrayList<Integer>(clone.remainingTiles);
-		}
-		
-	}
-	
 	/**
 	 * 
 	 * @param in_groupSN The in_groupSN of the player's hand, searched in any way
