@@ -1,7 +1,6 @@
 package bot_package;
 
 import java.util.*;
-import bot_package.Group;
 
 public class Player
 {
@@ -339,10 +338,71 @@ public class Player
 	 */
 	static class PlayerHand
 	{
+		/*
+		 * The ArrayList<Integer> representation of the PlayerHand
+		 * Integer values should only range from [0,33]
+		 */
 		private ArrayList<Integer> currentHand;
-		public ArrayList<Group> declaredGroups;
-		private String mjSTRhand;
-		private ArrayList<String> groupSN_list = new ArrayList<String>();
+		
+		/*
+		 * The String representation of PlayerHand
+		 * A use for this String could be Logging, Display, Saved as starting hand indicator
+		 */
+		private String mjSTRhand; 
+		
+		/*
+		 * The declaredGroups of this PlayerHand, what PlayerHand represents is not just
+		 * the concealed part of what the Player is playing on, but the Entire hand
+		 */
+		public ArrayList<Group> declaredGroups; 
+		
+		/*
+		 * 	update_Groups itself represents ArrayList<ArrayList<Group>> for each groupSN case, 
+		 *	ArrayList<ArrayList<Group>> will represent 4 ArrayList<Group> for each suit, regardless if its empty
+		 * 	
+		 * 
+		 * 	Scoring reference:
+		 * 	Completed Groups 	= 10 (Exponentially grows as more complete/called groups are formed) (peaks at 2)
+		 * 	Incomp Groups 		= 4	 (Linearly grows as more complete/called groups are formed) (peaks at 2)
+		 * 	Pair				= 5	 (remains the same) (peaks at 3)
+		 * 	Floating Tile		= 1	 (remains the same) (peaks at 4)
+		 * 
+		 * 	What update_Groups prioritizes:
+		 * 		ArrayList<Group> of only completed groups:
+		 * 			prioritize only 2 completed groups over 3 Pairs despite lower score
+		 * 	
+		 * 		ArrayList<Group> of as many incomplete groups
+		 * 			prioritize 2 incomplete groups over 2 pairs with complete groups <= 2
+		 * 			prioritize 2 pairs over 2 incomplete groups with complete groups == 3
+		 * 
+		 * 		Pairs > floating Tiles
+		 * 			Any situation
+		 * 
+		 * 		Empty ArrayList<Group>
+		 * 			Only floating tile suits are better off empty if complete groups >= 2
+		 * 			Untouched if 									 complete groups <= 1
+		 * 
+		 * 	*note* Japanese MJ terms:
+		 * 		"Tsumogiri" = throwing the tile you just drew
+		 * 		"Tedashi" 	= throwing the tile you have in your hand, accepting the tile drawn
+		 * 
+		 * 	Two Situations:
+		 * 
+		 * 		The Tile is kept into the hand == Tedashi?:
+		 * 			Three(pseudo Four) nested Situations:
+		 * 
+		 * 				The Tile completes a group:
+		 * 					
+		 * 				The Tile builds a group:
+		 * 
+		 * 				The Tile harms a group:
+		 * 
+		 * 				Pseudo Fourth == Throw the same tile in your hand:
+		 * 					
+		 * 		The Tile is thrown out == Tsumogiri:
+		 * 			update_Groups == update_Groups (no groups are altered)
+		 */
+		private HashMap<String, ArrayList<ArrayList<Group>>> update_Groups = new HashMap<String, ArrayList<ArrayList<Group>>>();
 		
 		
 		
@@ -365,7 +425,7 @@ public class Player
 			this.currentHand = new ArrayList<Integer>(clone.currentHand);
 			this.declaredGroups = new ArrayList<Group>(clone.declaredGroups);
 			this.mjSTRhand = new String(clone.mjSTRhand);
-			this.groupSN_list = new ArrayList<String>(clone.groupSN_list);
+			this.update_Groups = new HashMap<String, ArrayList<ArrayList<Group>>>(clone.update_Groups);
 		}
 		
 		/**
@@ -490,6 +550,9 @@ public class Player
 			}
 		}
 		
+		/**
+		 * Only to print test, not for actual use
+		 */
 		public String toString()
 		{
 			String ret_string = "Concealed Hand: (";
@@ -522,15 +585,48 @@ public class Player
 		}
 		
 		/**
-		 * 
+		 * *Warning* Should only run when this.update_Groups is empty, otherwise waste of resources
 		 * @param new_tile The new tile that assumes is newly drawn to the hand, can be discarded
 		 * @return True if the current groups are updated to fit the new_tile inputed,
 		 * 		   False if the tile either doesn't fit (groups didn't alter in anyway) or error was raised
 		 */
-		public boolean refreshGroups(int new_tile)
+		public boolean refresh_GroupSN()
 		{
+			try
+			{
+				HashMap<String, String> groupSN_map = GroupSearch.search_all_groupSN(this, false);
+				for(String key: groupSN_map.keySet())
+				{
+					// (sort_suitedGroups) -> (Convert groupSN to ArrayList<Group>) -> (keyed groupSN of groupSN_map)
+					this.update_Groups.put(key, sort_suitedGroups(Group.groupSN_to_ArrayList(groupSN_map.get(key))));;
+				}
+				return true;
+			}
+			catch(Exception e)
+			{
+				return false;
+			}
+		}
+		
+		/**
+		 * 
+		 * @param in_groups The ArrayList of Groups that wants to be sorted into a 2D ArrayList depending on it's suit
+		 * @return A 2D ArrayList that has groups depending on the suit index
+		 */
+		public static ArrayList<ArrayList<Group>> sort_suitedGroups(ArrayList<Group> in_groups)
+		{
+			ArrayList<ArrayList<Group>> return_ArrayList = new ArrayList<ArrayList<Group>>();
+			for(int i = 0; i < 4; i++) return_ArrayList.add(new ArrayList<Group>());
 			
-			return false;
+			for(Group group: in_groups)
+			{
+				if(Group.group_status(group) != -3 && group.getGroupInfo()[1] != -1) //To re-confirm the Group/suit is not invalid
+				{
+					//group.getGroupInfo()[1] == suit index
+					return_ArrayList.get(group.getGroupInfo()[1]).add(group);
+				}
+			}
+			return return_ArrayList;
 		}
 		
 	}
