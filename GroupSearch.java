@@ -726,14 +726,12 @@ public class GroupSearch extends Group
 	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
 	 * @param  in_arraylist ASSUMES this is all in one suit, index out of bounds if not
 	 * @param  reverse_search Is irrelevant in triplet search since any instance of quantity 3 is taken, order doens't matter
-	 * @param  only_triplets true if groups should only be triplets, default = false
 	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_GroupSearch(ArrayList<Integer> in_arraylist, boolean reverse_search, boolean only_triplets)
+	public static String list_tripletSearch(ArrayList<Integer> in_arraylist)
 	{
-		if(!only_triplets){return list_GroupSearch(in_arraylist, reverse_search);}
 		
 		String return_STR = "";
 		if(in_arraylist.size() <= 0) 
@@ -826,9 +824,182 @@ public class GroupSearch extends Group
 		return return_STR + "c";
 	}
 	
+	public static String list_seqSearch(ArrayList<Integer> in_arraylist, boolean reverse_search)
+	{
+		String return_STR = "";
+		if(in_arraylist.size() <= 0) 
+		{
+			return "";
+		}
+		
+		//Get suit number, minimum in array, maximum in array
+		int suit = in_arraylist.get(0)/9;
+		
+		//If given honors list, return tripletSearch (Cannot make sequences with honors)
+		if(suit == 3) {return list_tripletSearch(in_arraylist);}
+		
+		ArrayList<Integer> temp_suit = tileID_to_PlayVal(sortArray(in_arraylist));
+		int total_tiles = temp_suit.size();
+		int play_val_min = temp_suit.get(0);
+		
+		//Convert suit to matrix
+		ArrayList<Integer> matrix = convert_2_matrix(in_arraylist);
+		
+		int search_multiplier = 1; //Used to search either L -> R or R -> L
+		
+		//Index that refers to the play_val integer in the matrix (a pointer)
+		int currentIndex = -1;
+		if(reverse_search)
+		{
+			search_multiplier = -1;
+			currentIndex = matrix.size();
+		}
+		
+		/*
+		 * Search in increment 1 but every 3 cells to check if sequence is possible
+		 * Rules:
+		 * if index 2 == 0, you can make incomplete sequences with index 0,1 
+		 * (since index 2 is need to complete sequence in next index)
+		 * 
+		 * if index 2 > 0 and index 1 == 0, 
+		 * 		if(index 3 < matrix.size()) check if index 3 > 0, 
+		 * 			true = index 0 float (dont form trips/pairs)
+		 * 			false = form incomplete sequence with index 2
+		 * 
+		 * if index 0 == 0, i++
+		 * 
+		 * i.e [2,3,0,1,1,1,1,1,1]
+		 * 2,3,0 -> (01) (01) (1)
+		 * 
+		 * 1,1,1 -> (345)
+		 */
+		String remainder_groups = "{(";
+		for(int z = 0; z < matrix.size() - 3; z++)
+		{
+			currentIndex += search_multiplier;											//Pre-updates currentIndex (IS NEEDED)
+			if(matrix.get(currentIndex) == 0) 											//If this current index == 0, just skip index
+			{
+				continue;
+			}
+			
+			//Search sequence starts here
+			boolean possible_seq = true;
+			for(int i = 0; i < 3; i++) 
+			{
+				//if 0 tiles to offer, cannot make sequence
+				if(matrix.get(currentIndex + (i * search_multiplier)) == 0){possible_seq = false;}
+			}
+			
+			ArrayList<Integer> temp_group = new ArrayList<Integer>();
+			if(possible_seq)
+			{
+				//Adds the confirmed group
+				return_STR += "(";
+				for(int i = 0; i < 3; i++) 
+				{
+					//Decrements the cell by 1
+					matrix.set(currentIndex + (i * search_multiplier), matrix.get(currentIndex + (i * search_multiplier)) - 1);
+					temp_group.add(currentIndex + (i * search_multiplier));
+				}
+				//To prevent reverse sort from adding the tiles backward
+				temp_group = sortArray(temp_group);
+				for(int i = 0; i < temp_group.size(); i++) return_STR += Integer.toString(temp_group.get(i));
+				return_STR += ")";
+				continue;
+			}
+			else
+			{
+				if(matrix.get(currentIndex + (2 * search_multiplier)) == 0)
+				{
+					int interval_tile_amt = matrix.get(currentIndex) + matrix.get(currentIndex + search_multiplier); 												//Total tiles in the 3 interval cells
+					while(matrix.get(currentIndex) > 0 && interval_tile_amt > 0)
+					{
+						/*
+						 * Since index 2 == 0, only check index 0,1
+						 * This ensures best 0,1 shape, but overflow for index 1 could be used for 1,3 instead of it being floating
+						 */
+						for(int i = 0; i < 2; i++)
+						{
+							if(matrix.get(currentIndex + (i * search_multiplier)) > 0) 									//Checks cell for tiles
+							{
+								temp_group.add(currentIndex + (i * search_multiplier));
+								matrix.set(currentIndex + (i * search_multiplier), matrix.get(currentIndex + (i * search_multiplier)) - 1);
+								interval_tile_amt--;
+							}
+						}
+						//Add into remainder String
+						temp_group = sortArray(temp_group);
+						for(int i = 0; i < temp_group.size(); i++) remainder_groups += Integer.toString(temp_group.get(i));
+						remainder_groups += ")(";
+						temp_group = new ArrayList<Integer>();
+					}
+				}
+				else
+				{
+					/*
+					 * If index 2 amt == 0, then index 1 amt must > 0 otherwise possible_seq should be true
+					 * Two cases
+					 * If the further indexes are out of bounds
+					 * Or The further indexes has no tiles to offer
+					 */
+					if( ((currentIndex + 3) >= matrix.size() || (currentIndex - 3) < 0) ||
+						 matrix.get(currentIndex + (3 * search_multiplier)) == 0)
+					{
+						//Total tiles in the 3 interval cells
+						int interval_tile_amt = matrix.get(currentIndex) + matrix.get(currentIndex + (2 * search_multiplier));
+						while(matrix.get(currentIndex) > 0 && interval_tile_amt > 0)
+						{
+							for(int i = 0; i < 3; i++)
+							{
+								if(matrix.get(currentIndex + (i * search_multiplier)) > 0) //Checks cell for tiles
+								{
+									temp_group.add(currentIndex + (i * search_multiplier));
+									//Decrements the cell by 1
+									matrix.set(currentIndex + (i * search_multiplier), matrix.get(currentIndex + (i * search_multiplier)) - 1);
+									interval_tile_amt--;
+								}
+							}
+							temp_group = sortArray(temp_group);
+							for(int i = 0; i < temp_group.size(); i++) remainder_groups += Integer.toString(temp_group.get(i));
+							remainder_groups += ")(";
+							temp_group = new ArrayList<Integer>();
+						}
+					}
+					else if(matrix.get(currentIndex + (3 * search_multiplier)) > 0)
+					{
+						/*
+						 * Consider this case
+						 * ...1,0,3,1...
+						 *	Its clear if matrix(index + 3) > 0, but there will be overflowing tiles from index + 2
+						 *	index + 3 < index + 2, so max sequence possible in that interval is index + 2
+						 *
+						 *	instead we can create an incomplete group with the overflowing tile at index + 2
+						 */
+						int amt_overflow = matrix.get(currentIndex + (2 * search_multiplier)) - matrix.get(currentIndex + (3 * search_multiplier));
+						while(amt_overflow > 0 && matrix.get(currentIndex) > 0) 					//Need at index to have tiles to add
+						{
+							for(int i = 0; i < 3; i++)
+							{
+								if(matrix.get(currentIndex + (i * search_multiplier)) > 0) 								//Checks cell for tiles
+								{
+									temp_group.add(currentIndex + (i * search_multiplier));
+									matrix.set(currentIndex + (i * search_multiplier), matrix.get(currentIndex + (i * search_multiplier)) - 1); 		//Decrements the cell by 1
+								}
+							}
+							temp_group = sortArray(temp_group);
+							for(int i = 0; i < temp_group.size(); i++) remainder_groups += Integer.toString(temp_group.get(i));
+							remainder_groups += ")(";
+							temp_group = new ArrayList<Integer>();
+							amt_overflow = matrix.get(currentIndex + (2 * search_multiplier)) - matrix.get(currentIndex + (3 * search_multiplier));   //Updates overflow difference
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	/**
 	 * 
-	 * FUNCTION OVERLOADING WITH DEFAULT PARAMETER "only_triplets" SET TO "false"
 	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
 	 * @param  in_arraylist ASSUMES this is all in one suit
 	 * @param  reverse_search Whether or not the search the inputted array from index 0 to last element or last element to index 0
@@ -847,8 +1018,8 @@ public class GroupSearch extends Group
 		//Get suit number, minimum in array, maximum in array
 		int suit = in_arraylist.get(0)/9;
 		
-		//If given honors list, return GroupSearch with only_triplets as true
-		if(suit == 3) {return list_GroupSearch(in_arraylist, false, true);}
+		//If given honors list, return tripletSearch
+		if(suit == 3) {return list_tripletSearch(in_arraylist);}
 		
 		ArrayList<Integer> temp_suit = tileID_to_PlayVal(sortArray(in_arraylist));
 		int total_tiles = temp_suit.size();

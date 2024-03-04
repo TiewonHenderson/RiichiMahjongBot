@@ -627,8 +627,7 @@ public class Player
 				}
 			}
 			return return_ArrayList;
-		}
-		
+		}	
 	}
 	public static void main(String[] args)
 	{

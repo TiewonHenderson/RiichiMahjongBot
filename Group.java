@@ -773,8 +773,8 @@ public class Group extends Scoring
 		System.out.println("Convert to matrix: " + convert_2_matrix(single_suit_example));
 		System.out.println("Search any groupLR: " + GroupSearch.list_GroupSearch(single_suit_example, false));
 		System.out.println("Search any groupRL: " + GroupSearch.list_GroupSearch(single_suit_example, true));
-		System.out.println("Search only triplets: " + GroupSearch.list_GroupSearch(single_suit_example, false, true));
-		System.out.println("Search only triplets: " + GroupSearch.list_GroupSearch(single_suit_example, true, true));
+		System.out.println("Search only triplets: " + GroupSearch.list_tripletSearch(single_suit_example, false));
+		System.out.println("Search only triplets: " + GroupSearch.list_tripletSearch(single_suit_example, true));
 		System.out.println("From groupSN to ArrayList<Group>: " + groupSN_to_ArrayList(GroupSearch.list_GroupSearch(single_suit_example, false)));
 		System.out.println(GroupSearch.search_all_groupSN(example_player.getPlayerHand()) + "\n\n");
 		
@@ -791,7 +791,7 @@ public class Group extends Scoring
 			System.out.println("Matrices: " + convert_2_matrix(suits));
 			System.out.println("Search any groupLR (groupSN): " + GroupSearch.list_GroupSearch(suits, false));
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits, true));
-			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_GroupSearch(suits, false, true));
+			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_tripletSearch(suits, false));
 		}
 		HashMap<String, String> all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
 		for(String key: all_groupSearch.keySet())
@@ -810,7 +810,7 @@ public class Group extends Scoring
 			System.out.println("Matrices: " + convert_2_matrix(suits));
 			System.out.println("Search any groupLR (groupSN): " + GroupSearch.list_GroupSearch(suits,false));
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits,true));
-			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_GroupSearch(suits, false, true));
+			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_tripletSearch(suits, false));
 		}
 		all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
 		for(String key: all_groupSearch.keySet())
