@@ -165,7 +165,6 @@ public class Player
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() < 3)
 						{
 							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
-							System.out.println("Open groups: " + mjSTR.charAt(index) + "temp_tile size: " + temp_tiles.size());
 							index--;
 						}
 						if(Group.group_status(temp_tiles) >= 1) //Re-confirms the tiles added is a group
@@ -178,7 +177,6 @@ public class Player
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() != 4)
 						{
 							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
-							System.out.println("Closed Quads: " + mjSTR.charAt(index) + "temp_tile size: " + temp_tiles.size());
 							index--;
 						}
 						if(Group.group_status(temp_tiles) == 3)
@@ -193,7 +191,7 @@ public class Player
 				}
 			}
 		}
-		return new PlayerHand(close_segment, declared_segment, mjSTR);
+		return new PlayerHand(Group.sortArray(close_segment), declared_segment, mjSTR);
 	}
 	
 	/**
