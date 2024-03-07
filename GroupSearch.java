@@ -724,16 +724,289 @@ public class GroupSearch extends Group
 	
 	/**
 	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
+	 * *Warning* Not functional with honor suit since you cannot have honor sequences
 	 * @param  in_arraylist ASSUMES this is all in one suit, index out of bounds if not
-	 * @param  reverse_search Is irrelevant in triplet search since any instance of quantity 3 is taken, order doens't matter
-	 * @param  only_triplets true if groups should only be triplets, default = false
-	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
+	 * @return A String representation of completed Sequences, remainder incomplete sequences or floating tiles, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_GroupSearch(ArrayList<Integer> in_arraylist, boolean reverse_search, boolean only_triplets)
+	public static String list_SequenceSearch(ArrayList<Integer> in_arraylist, boolean reverse_search)
 	{
-		if(!only_triplets){return list_GroupSearch(in_arraylist, reverse_search);}
+		String return_String = "";
+		if(in_arraylist.size() <= 0) 
+		{
+			return "";
+		}
+		
+		//Get suit number, minimum in array, maximum in array
+		int suit = in_arraylist.get(0)/9;
+		
+		//If given honors list, return GroupSearch with only_triplets as true
+		if(suit == 3) {return list_TripletSearch(in_arraylist);}
+		
+		ArrayList<Integer> temp_suit = Group.tileID_to_PlayVal(Group.sortArray(in_arraylist));
+		int total_tiles = temp_suit.size();
+		int play_val_min = temp_suit.get(0);
+
+		//Convert suit to matrix
+		ArrayList<Integer> matrix = Group.convert_2_matrix(in_arraylist);
+		
+		//Index that refers to the play_val integer in the matrix (a pointer)
+		int currentIndex = 0;
+		int direction_search = 1;
+		if(reverse_search)
+		{
+			currentIndex = matrix.size() - 1;
+			direction_search = -1;
+		}
+		
+		String remainder_groups = "r={"; //To add to last return_String
+		ArrayList<ArrayList<Integer>> incomp_group_list = new ArrayList<ArrayList<Integer>>(); //To sort the incomplete groups in order
+		while(total_tiles > 0)
+		{
+			//How the while loop increments/decrements
+			if(matrix.get(currentIndex) == 0)
+			{
+				currentIndex += direction_search;
+			}
+			
+			if(currentIndex >= matrix.size() || currentIndex < 0) {break;} //Out of bounds
+			if(matrix.get(currentIndex) == 0) {continue;} //No tiles to offer
+			
+			int seq_case = 1;
+			ArrayList<Integer> temp_list = new ArrayList<Integer>();
+			for(int i = 0; i < 3; i++)
+			{
+				//Condition for out of bounds
+				if(currentIndex + (direction_search * i) >= matrix.size() || currentIndex + (direction_search * i) < 0)
+				{
+					switch(temp_list.size())
+					{
+						case 1:
+							seq_case = 5;
+							break;
+						case 2:
+							seq_case = 4;
+							break;
+					}
+					break;
+				}
+				//Index out of bounds override these seq_case values since no cell > no tiles to offer (in term of importance)
+				if(matrix.get(currentIndex + (direction_search * i)) == 0)
+				{
+					switch(i)
+					{
+						case 1:
+							seq_case = 3;
+							break;
+						case 2:
+							if(seq_case == 3) {seq_case = 5; break;} //This indicates 100, which would have floating tile
+							seq_case = 2;
+							break;
+					}
+				}
+				temp_list.add(matrix.get(currentIndex + (direction_search * i))); //Adds tile amount into temp_list
+			}
+			
+			//111 assigned as 1
+			
+			//110 assigned as 2
+			
+			//101 assigned as 3, extend in here
+				
+			//10end assigned as 4
+			
+			//1end assigned as 5
+			SortedSet<Integer> sorted_index = new TreeSet<Integer>();
+			switch (seq_case)
+			{
+				case 1:
+					return_String += "(";
+					for(int i = 0; i < 3; i++) 
+					{
+						/*
+						 * This specific function as long as index is not out of bounds or sorted_index set is not invalid or already added
+						 * will return 1 to signify the tile was added, and decrement total_tiles
+						 * Will return 0 if otherwise and no tile is removed
+						 */
+						total_tiles -= tile_exchange_manager(matrix, sorted_index, currentIndex + (direction_search * i));
+					}
+					if(sorted_index.size() == 3)
+					{
+						for(int tile: sorted_index) return_String += tile;
+						return_String += ")";
+					}
+					break;
+				case 2:
+					while(matrix.get(currentIndex) > 0)
+					{
+						for(int i = 0; i < 2; i++)
+						{
+							if(matrix.get(currentIndex + (direction_search * i)) > 0)
+							{
+								total_tiles -= tile_exchange_manager(matrix, sorted_index, currentIndex + (direction_search * i));
+							}
+						}
+						if(sorted_index.size() > 0)
+						{
+							incomp_group_list.add(new ArrayList<Integer>(sorted_index));
+							sorted_index = new TreeSet<Integer>();
+						}
+					}
+					break;
+				case 3:
+					//101end
+					if(currentIndex + (direction_search * 3) >= matrix.size() || currentIndex + (direction_search * 3) < 0)
+					{
+						int remaining_tiles = 0;
+						for(int i = 0; i < 3; i++) remaining_tiles += matrix.get(currentIndex + (i * direction_search));
+						while(remaining_tiles > 0)
+						{
+							for(int i = 0; i < 3; i++)
+							{
+								if(matrix.get(currentIndex + (direction_search * i)) > 0)
+								{
+									if(tile_exchange_manager(matrix, sorted_index, currentIndex + (direction_search * i)) == 1)
+									{
+										remaining_tiles--;
+										total_tiles--;
+									}
+								}
+							}
+							//Makes sure to add a list that actually has tiles within
+							if(sorted_index.size() > 0)
+							{
+								incomp_group_list.add(new ArrayList<Integer>(sorted_index));
+								sorted_index = new TreeSet<Integer>();
+							}
+						}
+						
+					}
+					else
+					{
+						//1012, should not use the outer tile as middle wait (prefer next double sided wait at worst)
+						if(matrix.get(currentIndex + (direction_search * 3)) >= matrix.get(currentIndex + (direction_search * 2)))
+						{
+							while(matrix.get(currentIndex) > 0)
+							{
+								total_tiles -= tile_exchange_manager(matrix, sorted_index, currentIndex);
+								if(sorted_index.size() > 0)
+								{
+									incomp_group_list.add(new ArrayList<Integer>(sorted_index));
+									sorted_index = new TreeSet<Integer>();
+								}
+							}
+						}
+						//1021
+						else
+						{
+							int difference = matrix.get(currentIndex + (direction_search * 2)) - matrix.get(currentIndex + (direction_search * 3));
+							while(difference > 0)
+							{
+								difference = matrix.get(currentIndex + (direction_search * 2)) - matrix.get(currentIndex + (direction_search * 3));
+								//No current tiles to offer, break possible infinite loop
+								if(matrix.get(currentIndex) <= 0 || matrix.get(currentIndex + (direction_search * 2)) <= 0)
+								{
+									break;
+								}
+								//No need for loop as index 1 is guaranteed amt == 0
+								total_tiles -= tile_exchange_manager(matrix, sorted_index, currentIndex);
+								total_tiles -= tile_exchange_manager(matrix, sorted_index, currentIndex + (direction_search * 2));
+								if(sorted_index.size() > 0)
+								{
+									incomp_group_list.add(new ArrayList<Integer>(sorted_index));
+									sorted_index = new TreeSet<Integer>();
+								}
+							}
+						}
+					}
+					break;
+				case 4:
+					int remaining_tiles = 0;
+					for(int i = 0; i < 2; i++) remaining_tiles += matrix.get(currentIndex + (i * direction_search));
+					while(remaining_tiles > 0)
+					{
+						for(int i = 0; i < 2; i++)
+						{
+							if(matrix.get(currentIndex + (i * direction_search)) > 0)
+							{
+								total_tiles -= tile_exchange_manager(matrix, sorted_index, currentIndex + (direction_search * i));
+								remaining_tiles--;
+							}
+						}
+						if(sorted_index.size() > 0)
+						{
+							incomp_group_list.add(new ArrayList<Integer>(sorted_index));
+							sorted_index = new TreeSet<Integer>();
+						}
+					}
+					break;
+				case 5:
+					while(matrix.get(currentIndex) > 0)
+					{
+						total_tiles -= tile_exchange_manager(matrix, sorted_index, currentIndex);
+						if(sorted_index.size() > 0)
+						{
+							incomp_group_list.add(new ArrayList<Integer>(sorted_index));
+							sorted_index = new TreeSet<Integer>();
+						}
+					}
+					break;
+			}
+		}
+		for(int i = 2; i > 0; i--)
+		{
+			for(int j = 0; j < incomp_group_list.size(); j++)
+			{
+				if(incomp_group_list.get(j).size() == i)
+				{
+					String temp_str = "(";
+					for(int tile: incomp_group_list.get(j))
+					{
+						temp_str += Integer.toString(tile);
+					}
+					temp_str += ")";
+					remainder_groups += temp_str;
+				}
+			}
+		}
+		return return_String + remainder_groups + "}[" + play_val_min + "]" + Group.suit_reference[suit];
+	}
+	
+	/**
+	 * 
+	 * @param in_matrix This input matrix of single suit ArrayList<Integer> will be altered (remove tile at index)
+	 * @param in_set This input set will be altered to add the index being removed from matrix
+	 * @param in_index The index (reference to tile) that wants to be added to set and removed from matrix
+	 * @return returns 1 if removed + added successfully, returns 0 if already in set or out of bounds or set size exceeds normal shape
+	 */
+	public static int tile_exchange_manager(ArrayList<Integer> in_matrix, SortedSet<Integer> in_set, int in_index)
+	{
+		if(in_index < 0 || in_index >= in_matrix.size() || in_set.size() > 3)
+		{
+			return 0;
+		}
+		for(int index: in_set)
+		{
+			if(in_index == index)
+			{
+				return 0;
+			}
+		}
+		in_set.add(in_index);
+		in_matrix.set(in_index, in_matrix.get(in_index) - 1);
+		return 1;
+	}
+	
+	/**
+	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
+	 * @param  in_arraylist ASSUMES this is all in one suit, index out of bounds if not
+	 * @return A String representation of completed triplets, remainder pairs/floating tiles, increment minimum, and the suit
+	 * 		   The String representation is called GroupSN = Group String Notation
+	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
+	 */
+	public static String list_TripletSearch(ArrayList<Integer> in_arraylist)
+	{
 		
 		String return_STR = "";
 		if(in_arraylist.size() <= 0) 
@@ -828,7 +1101,6 @@ public class GroupSearch extends Group
 	
 	/**
 	 * 
-	 * FUNCTION OVERLOADING WITH DEFAULT PARAMETER "only_triplets" SET TO "false"
 	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
 	 * @param  in_arraylist ASSUMES this is all in one suit
 	 * @param  reverse_search Whether or not the search the inputted array from index 0 to last element or last element to index 0
@@ -848,7 +1120,7 @@ public class GroupSearch extends Group
 		int suit = in_arraylist.get(0)/9;
 		
 		//If given honors list, return GroupSearch with only_triplets as true
-		if(suit == 3) {return list_GroupSearch(in_arraylist, false, true);}
+		if(suit == 3) {return list_TripletSearch(in_arraylist);}
 		
 		ArrayList<Integer> temp_suit = tileID_to_PlayVal(sortArray(in_arraylist));
 		int total_tiles = temp_suit.size();
