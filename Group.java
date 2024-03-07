@@ -864,29 +864,32 @@ public class Group extends Scoring
 		ArrayList<Integer> single_suit_example = sortArray(createArrayList(singlesuit_hand));
 		example_player.getPlayerHand().setCurrentHand(single_suit_example);
 		
-		System.out.println("example 1: " + single_suit_example);
-		System.out.println("Convert to matrix: " + convert_2_matrix(single_suit_example));
+//		System.out.println("example 1: " + single_suit_example);
+//		System.out.println("Convert to matrix: " + convert_2_matrix(single_suit_example));
 		System.out.println("Search any groupLR: " + GroupSearch.list_GroupSearch(single_suit_example, false));
 		System.out.println("Search any groupRL: " + GroupSearch.list_GroupSearch(single_suit_example, true));
-		System.out.println("Search only triplets: " + GroupSearch.list_GroupSearch(single_suit_example, false, true));
-		System.out.println("Search only triplets: " + GroupSearch.list_GroupSearch(single_suit_example, true, true));
+		System.out.println("Search only SequencesLR: " + GroupSearch.list_SequenceSearch(single_suit_example, false));
+		System.out.println("Search only SequencesRL: " + GroupSearch.list_SequenceSearch(single_suit_example, true));
+		System.out.println("Search only triplets: " + GroupSearch.list_TripletSearch(single_suit_example));
 		System.out.println("From groupSN to ArrayList<Group>: " + groupSN_to_ArrayList(GroupSearch.list_GroupSearch(single_suit_example, false)));
-		System.out.println(GroupSearch.search_all_groupSN(example_player.getPlayerHand()) + "\n\n");
+		System.out.println("search_all_groupSN of Playerhand: " + GroupSearch.search_all_groupSN(example_player.getPlayerHand()) + "\n\n");
 		
 		//segment 2
 		int[] complex_hand = {0,0,1,3,7,7,15,15,16,16,17,27,27};
 		ArrayList<Integer> complex_example = sortArray(createArrayList(complex_hand));
 		example_player.getPlayerHand().setCurrentHand(complex_example);
 		
-		System.out.println(complex_example);
+		System.out.println("Complex example hand: " + complex_example);
 		ArrayList<ArrayList<Integer>> suit_list = suitDivide(complex_example);
 		for(ArrayList<Integer> suits : suit_list)
 		{
-			System.out.println("Suits: " + suits);
-			System.out.println("Matrices: " + convert_2_matrix(suits));
+//			System.out.println("Suits: " + suits);
+//			System.out.println("Matrices: " + convert_2_matrix(suits));
 			System.out.println("Search any groupLR (groupSN): " + GroupSearch.list_GroupSearch(suits, false));
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits, true));
-			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_GroupSearch(suits, false, true));
+			System.out.println("Search only SequencesLR: " + GroupSearch.list_SequenceSearch(suits, false));
+			System.out.println("Search only SequencesRL: " + GroupSearch.list_SequenceSearch(suits, true));
+			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_TripletSearch(suits));
 		}
 		HashMap<String, String> all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
 		for(String key: all_groupSearch.keySet())
@@ -897,15 +900,17 @@ public class Group extends Scoring
 		int[] completed_groups = {0,0,0,1,2,3,4,5,6,7,8,8,8};
 		ArrayList<Integer> completeGroup_example = sortArray(createArrayList(completed_groups));
 		example_player.getPlayerHand().setCurrentHand(completeGroup_example);
-		System.out.println(completeGroup_example);
+		System.out.println("CompleteGroups example: " + completeGroup_example);
 		suit_list = suitDivide(completeGroup_example);
 		for(ArrayList<Integer> suits : suit_list)
 		{
-			System.out.println("Suits: " + suits);
-			System.out.println("Matrices: " + convert_2_matrix(suits));
+//			System.out.println("Suits: " + suits);
+//			System.out.println("Matrices: " + convert_2_matrix(suits));
 			System.out.println("Search any groupLR (groupSN): " + GroupSearch.list_GroupSearch(suits,false));
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits,true));
-			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_GroupSearch(suits, false, true));
+			System.out.println("Search only SequencesLR: " + GroupSearch.list_SequenceSearch(suits, false));
+			System.out.println("Search only SequencesRL: " + GroupSearch.list_SequenceSearch(suits, true));
+			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_TripletSearch(suits));
 		}
 		all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
 		for(String key: all_groupSearch.keySet())

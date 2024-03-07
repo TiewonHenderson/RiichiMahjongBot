@@ -631,7 +631,6 @@ public class Player
 			}
 			return return_ArrayList;
 		}
-		
 	}
 	public static void main(String[] args)
 	{
@@ -650,7 +649,7 @@ public class Player
 				declared_groups.get(declared_groups.size() - 1).setDeclareStatus(false); //Makes sure declared non quad groups are not concealed
 			}
 		}
-		int[] add_tiles = {0,0,1,5,6,7,7,20,21,31};
+		int[] add_tiles = {0,0,1,5,6,7,7,18,19,31};
 		ArrayList<Integer> fake_hand = new ArrayList<Integer>();
 		for(int i = 0; i < add_tiles.length; i++) fake_hand.add(add_tiles[i]);
 		
