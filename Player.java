@@ -165,7 +165,6 @@ public class Player
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() < 3)
 						{
 							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
-							System.out.println("Open groups: " + mjSTR.charAt(index) + "temp_tile size: " + temp_tiles.size());
 							index--;
 						}
 						if(Group.group_status(temp_tiles) >= 1) //Re-confirms the tiles added is a group
@@ -178,7 +177,6 @@ public class Player
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() != 4)
 						{
 							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
-							System.out.println("Closed Quads: " + mjSTR.charAt(index) + "temp_tile size: " + temp_tiles.size());
 							index--;
 						}
 						if(Group.group_status(temp_tiles) == 3)
@@ -193,7 +191,7 @@ public class Player
 				}
 			}
 		}
-		return new PlayerHand(close_segment, declared_segment, mjSTR);
+		return new PlayerHand(Group.sortArray(close_segment), declared_segment, mjSTR);
 	}
 	
 	/**
@@ -358,7 +356,8 @@ public class Player
 		
 		/*
 		 * 	update_Groups itself represents ArrayList<ArrayList<Group>> for each groupSN case, 
-		 *	ArrayList<ArrayList<Group>> will represent 4 ArrayList<Group> for each suit, regardless if its empty
+		 *	String Key will represent the groupID
+		 *	String Assigned groupSN
 		 * 	
 		 * 
 		 * 	Scoring reference:
@@ -402,7 +401,7 @@ public class Player
 		 * 		The Tile is thrown out == Tsumogiri:
 		 * 			update_Groups == update_Groups (no groups are altered)
 		 */
-		private HashMap<String, ArrayList<ArrayList<Group>>> update_Groups = new HashMap<String, ArrayList<ArrayList<Group>>>();
+		private HashMap<String, String> update_Groups = new HashMap<String, String>();
 		
 		
 		
@@ -425,7 +424,7 @@ public class Player
 			this.currentHand = new ArrayList<Integer>(clone.currentHand);
 			this.declaredGroups = new ArrayList<Group>(clone.declaredGroups);
 			this.mjSTRhand = new String(clone.mjSTRhand);
-			this.update_Groups = new HashMap<String, ArrayList<ArrayList<Group>>>(clone.update_Groups);
+			this.update_Groups = new HashMap<String, String>(clone.update_Groups);
 		}
 		
 		/**
@@ -550,6 +549,11 @@ public class Player
 			}
 		}
 		
+		protected HashMap<String, String> get_currentGroups()
+		{
+			return this.update_Groups;
+		}
+		
 		/**
 		 * Only to print test, not for actual use
 		 */
@@ -596,10 +600,7 @@ public class Player
 			{
 				HashMap<String, String> groupSN_map = GroupSearch.search_all_groupSN(this, false);
 				for(String key: groupSN_map.keySet())
-				{
-					// (sort_suitedGroups) -> (Convert groupSN to ArrayList<Group>) -> (keyed groupSN of groupSN_map)
-					this.update_Groups.put(key, sort_suitedGroups(Group.groupSN_to_ArrayList(groupSN_map.get(key))));;
-				}
+					this.update_Groups.put(key, groupSN_map.get(key));
 				return true;
 			}
 			catch(Exception e)
@@ -627,7 +628,7 @@ public class Player
 				}
 			}
 			return return_ArrayList;
-		}	
+		}
 	}
 	public static void main(String[] args)
 	{
@@ -646,11 +647,25 @@ public class Player
 				declared_groups.get(declared_groups.size() - 1).setDeclareStatus(false); //Makes sure declared non quad groups are not concealed
 			}
 		}
-		int[] add_tiles = {0,0,0,5,6,7,7};
+		int[] add_tiles = {0,0,1,5,6,7,7,18,19,31};
 		ArrayList<Integer> fake_hand = new ArrayList<Integer>();
 		for(int i = 0; i < add_tiles.length; i++) fake_hand.add(add_tiles[i]);
 		
 		System.out.println(convert_PlayerHand(fake_hand, declared_groups));
 		System.out.println(convert_mjSTR(convert_PlayerHand(fake_hand, declared_groups)));
+		
+		PlayerHand test_PHand = new PlayerHand(fake_hand, declared_groups);
+		
+		System.out.println(test_PHand.getDeclaredGroup());
+		System.out.println(test_PHand.getCurrentHand());
+		System.out.println("Refresh groupSN" + test_PHand.refresh_GroupSN());
+		for(String key: test_PHand.get_currentGroups().keySet())
+		{
+			System.out.println(GroupSearch.groupSN_to_ArrayList(test_PHand.get_currentGroups().get(key)));
+			for(Group group: GroupSearch.groupSN_to_ArrayList(test_PHand.get_currentGroups().get(key)))
+			{
+				System.out.println("Talking tiles: " + Group.get_talkingTiles(group));
+			}
+		}
 	}
 }

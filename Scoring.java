@@ -40,30 +40,6 @@ import bot_package.Player.PlayerHand;
 
 public class Scoring 
 {
-	/**
-	 *  @param Winner player that won
-	 *  @return integer score
-	 */
-	public static int final_score(Player winner) {
-		if (
-			/* 	
-				the hand is a max hand 
-				or
-				the completed variable in grouping is true	
-			*/ 
-		) {
-			int points;
-			ArrayList<ArrayList<Integer>> suit_sorted = suitDivide(winner.getPlayerHand());
-			
-			// ArrayList<ArrayList<Integer>> group_sorted = getGroups();
-
-			points += checkFlowers(winner.flower, winner.seatWind);
-			points += checkHonors(sorted.get(3));
-		} else {
-			//pay out everyone
-		}
-	}	
-    
     /**
 	 * @param in_hand Any valid hand input
 	 * @return 4 ArrayList<Integer> within Arraylist<Integer> that represents each suit of a mahjong hand.
@@ -85,101 +61,98 @@ public class Scoring
 		}
 		return returnSuits;
 	}
-    
-	/**
-	 * @param flower_count integer of magnitude 10^4, represents drawn flowers
-	 * @param seat integer 0-3, tells which seat the player is in
-	 * Converts a flower integer into a string 
-	 * then returns the number of points based upon the number of flowers the winner has 
-	 */
-	public static int checkFlowers(int flower_count, int seat) 
+	public static void main(String[] args)
 	{
-		if(flower_count == 0) {
-			// if you don't have any flowers
-			return 1;
-		} else {
-			int good_flower = flower_str.charAt(seat)
-			return good_flower;
-		}
-	}	
-
-	/**
-	 * @param hand hand will be already grouped
-	 * @return points gotten from honor tiles
-	 * Checks for All Honors, Seat Wind, Rotation Wind, Dragon Triplets, 3 Big Dragons
-	 */
-	public static int checkHonors(Array<integer> hand) 
-	{
-		int points = 0;
-		
-		if (hand.length() == 14) {
-			points += 5; //not sure about point total
-		}
-		PlayerHand honors = PlayerHand(hand);
-		Group sorted_honors = getGroups(honors);
-		
-	}
-	
-	
-	/**
-	 * 
-	 * @param in_arraylist A 1 Dimensional Array that wants to be search through
-	 * @param wantedObj The Object that wants to be searched for in the in_arraylist
-	 * @return An ArrayList<Integer> of indexes that wantedObj occurs in in_arraylist
-	 */
-	public static <T> ArrayList<Integer> search_element(ArrayList<T> in_arraylist, T wantedObj)
-	{
-		ArrayList<Integer> returnArray = new ArrayList<Integer>();
-		for(int index = 0; index < in_arraylist.size(); index++)
-		{
-			if(in_arraylist.get(index) == wantedObj)
-			{
-				returnArray.add(index);
-			}
-		}
-		return returnArray;
-	}
-	/**
-	 * 
-	 * @param in_hand The current hand of the player to make AI predictions
-	 * @return A decimal score representation of how many dragon points attainable
-	 */
-	public static double checkDragons(ArrayList<Integer> in_hand)
-	{
-		//Dragons = 31, 32, 33
-		ArrayList<ArrayList<Integer>> temp_2DArray = suitDivide(in_hand);
-		ArrayList<Integer> temp_honors = temp_2DArray.get(temp_2DArray.size() - 1);
-		
-		
-		temp_2DArray = new ArrayList<ArrayList<Integer>>();
-		for(int i = 0; i < 3; i++) temp_2DArray.add(new ArrayList<Integer>());
-		for(int index = 0; index < temp_honors.size(); index++)
-		{
-			if(temp_honors.get(index) >= 31)
-			{
-				temp_2DArray.get(temp_honors.get(index) - 31).add(temp_honors.get(index));
-			}
-		}
-		//In theory, this should return [31...],[32...],[33...]
-		
-		
 		/*
-		 * Points <= 2.0, 2 drag points
-		 * Points == 2.5, 3 small drag
-		 * Points == 3.0, 3 big drag
+		 * 	1: Dragon Groups -> 1													
+			2: Small 3 Dragons -> 3													
+			3: Big 3 Dragons -> 5 													
+			4: Rotation Wind -> 1 (from gamestatus)									
+			5: Seat Wind -> 1 (from player seatwind + 1) 							
+			6: Kongs -> 1				
+			7: Concealed -> 1																																			
+			8: All Seq -> 1														
+			9: All Pon -> 3														
+			10: Mix Suit -> 3 														
+			11: All Terms/Honors -> 2 (5 - 3; from pung game)						
+			12: Full Suit -> 6 		
+			-------------------------------------
+			13: All Terminals -> 5 (10 - 2 - 3; all term/honors, from pung game)	
+			14: All Honors -> 5 (10 - 2 - 3; from pung game, all term/honors)		
+			15: 4 little winds -> 6 												
+			16: 4 big winds ->10 (13 - 3; from pung game)										
+			17: 13 Orphans -> 10 (13 - 2 - 1; from all terms/honors, concealed) 	
+			18: 4 quads -> 10 (13 - 3; from pung game
+			19: 4 concealed trips -> 6 (10 - 3 - 1; from pung game, concealed)		
+			20: Nine gates -> 9 (10 - 1; from concealed)							
 		 */
-		double points = 0;
-		for(int index = 0; index < temp_2DArray.size(); index++)
-		{
-			if(temp_2DArray.get(index).size() >= 3)
+		String[] example_hand_list = {	
+        "123m455667p99sck555zo",        // 1 Dragon
+        "111m222s66zck555777zo",        // Small 3 Dragons
+        "77sck123m555666777zo",         // Big 3 Dragon
+        "123789m99pck111s111zo",        // Rotation Wind (input int as rotation index) this exp == 2 (w)
+        "12378999m456pck333zo",         // Seat Wind (input int as seat index) this exp == 3 (n)
+        "111234m55zc6666sk111zo",       // Concealed Kong == Kong point
+        "123456999m99s111zcko",         // Concealed
+        "23488m567pck234567so",			// All Sequences
+        "22mc6666mk555p777s111zo",		// All Triplet
+        "55667799sck222333zo",			// Half flush
+        "111m11sck999p999s666zo",		// All Terminal / Honors
+        "11122299mck677889mo",         	// Chinitsu (Full Flush, Single Suit)
+        "111m11sck111999p999so",		// All Terminal
+        "11166zc7777zk222333zo",		// All honors
+        "22zck456m1111333444zo",		// 4 little winds
+        "88mc11112222zk333444zo",		// 4 big winds
+//        "199m19p19s1234567zcko",		// KOKUSHI MUSOU
+        "11mc3333m8888sk11117777zo",	// 4 kongs
+        "111555m666p88s222zcko",		// 4 concealed Triplets
+        "11112345678999pcko",			// 9 gates
+		};
+		String[] score_name_list = {
+		"1 Dragon",
+		"Small 3 Dragon",
+		"Big 3 Dragon",
+		"Rotation Wind",
+		"Seat Wind",
+		"Kong points",
+		"Concealed",
+		"All Sequences",
+		"All Triplet",
+		"Half Flush",
+		"All Terminal and Honors",
+		"Full Flush",
+		"All Terminal",
+		"All Honors",
+		"4 Little Winds",
+		"4 Big Winds",
+		"4 Kongs",
+		"4 Concealed Triplets",
+		"9 Gates"
+		};
+		ArrayList<Player.PlayerHand> example_groupSN_list = new ArrayList<Player.PlayerHand>();
+		ArrayList<ArrayList<Group>> hand_groups_list = new ArrayList<ArrayList<Group>>();
+		for(String example_hand: example_hand_list) example_groupSN_list.add(Player.convert_mjSTR(example_hand));
+		for(int i = 0; i < example_groupSN_list.size(); i++)
+		{	ArrayList<Group> temp_groups = new ArrayList<Group>();
+			for(Group group: example_groupSN_list.get(i).getDeclaredGroup()) temp_groups.add(group);
+//			System.out.println("New hand: " + example_pHand.getCurrentHand());
+			HashMap<String, String> groupSN_map = GroupSearch.search_all_groupSN(example_groupSN_list.get(i), true);
+			System.out.println();
+			for(String key: groupSN_map.keySet())
 			{
-				points += 1.0;
-			}
-			else if(temp_2DArray.get(index).size() == 2)
-			{
-				points += 0.5;
+				System.out.println(score_name_list[i] + " groupSN: " + groupSN_map.get(key));
+				if(key.charAt(2) == 'C')
+				{
+					for(Group group: GroupSearch.groupSN_to_ArrayList(groupSN_map.get(key))) temp_groups.add(group);
+					hand_groups_list.add(temp_groups);
+					temp_groups = new ArrayList<Group>();
+					continue;
+				}
 			}
 		}
-		return points;
+		for(int i = 0; i < hand_groups_list.size(); i++)
+		{
+			System.out.println(i + ")" + score_name_list[i] + " Groups: " + hand_groups_list.get(i));
+		}
 	}
 }
