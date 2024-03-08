@@ -61,6 +61,7 @@ public class Scoring
 		}
 		return returnSuits;
 	}
+	
 	public static void main(String[] args)
 	{
 		/*
@@ -136,19 +137,10 @@ public class Scoring
 		{	ArrayList<Group> temp_groups = new ArrayList<Group>();
 			for(Group group: example_groupSN_list.get(i).getDeclaredGroup()) temp_groups.add(group);
 //			System.out.println("New hand: " + example_pHand.getCurrentHand());
-			HashMap<String, String> groupSN_map = GroupSearch.search_all_groupSN(example_groupSN_list.get(i), true);
-			System.out.println();
-			for(String key: groupSN_map.keySet())
-			{
-				System.out.println(score_name_list[i] + " groupSN: " + groupSN_map.get(key));
-				if(key.charAt(2) == 'C')
-				{
-					for(Group group: GroupSearch.groupSN_to_ArrayList(groupSN_map.get(key))) temp_groups.add(group);
-					hand_groups_list.add(temp_groups);
-					temp_groups = new ArrayList<Group>();
-					continue;
-				}
-			}
+			
+			System.out.println(score_name_list[i] + " Hand: " + example_groupSN_list.get(i).progress_score());
+			System.out.println("Current Hand: " + example_groupSN_list.get(i).getCurrentHand());
+			System.out.println("Declared Groups: " + example_groupSN_list.get(i).getDeclaredGroup());
 		}
 		for(int i = 0; i < hand_groups_list.size(); i++)
 		{

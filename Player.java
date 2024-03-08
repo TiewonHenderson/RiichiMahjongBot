@@ -162,6 +162,7 @@ public class Player
 				switch(add_mode)
 				{
 					case 2: //Add to open groups ArrayList
+						//General check (only complex sequences can pass)
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() < 3)
 						{
 							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
@@ -170,6 +171,43 @@ public class Player
 						if(Group.group_status(temp_tiles) >= 1) //Re-confirms the tiles added is a group
 						{
 							declared_segment.add(new Group(temp_tiles, false));
+							i = index + 1;
+							break;
+						}
+						//Checks complex sequence, temp_tile now becomes temp matrix
+						while(Character.isDigit(mjSTR.charAt(index)))
+						{
+							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
+							index--;
+						}
+						//Checks through SortedSet until the required groups is reached
+						
+						int group_counter = 0;
+						int needed_groups = temp_tiles.size()/3;
+						while(group_counter < needed_groups)
+						{
+							ArrayList<Integer> index_added = new ArrayList<Integer>();
+							SortedSet<Integer> search_list = new TreeSet<Integer>();
+							for(int temp_item = 0; temp_item < temp_tiles.size(); temp_item++)
+							{
+								if(search_list.size() == 3) //Breaks once group.size == 3 to confirm it is a group
+								{
+									break;
+								}
+								search_list.add(temp_tiles.get(temp_item));
+								index_added.add(temp_item);
+							}
+							ArrayList<Integer> substitute_temp = new ArrayList<Integer>(search_list);
+							if(Group.group_status(substitute_temp) >= 1) //Re-confirms the tiles added is a group
+							{
+								for(int remove_i = index_added.size() - 1; remove_i >= 0; remove_i--)
+								{
+									//When removing bigger index to lower, shifted index won't matter
+									temp_tiles.remove(index_added.get(remove_i));
+								}
+								declared_segment.add(new Group(substitute_temp, false));
+								group_counter++;
+							}
 						}
 						i = index + 1;
 						break;
@@ -586,6 +624,38 @@ public class Player
 				return ret_string;
 			}
 			catch(Exception e) {return "A variable most likely has not been initialized";}
+		}
+		
+		/**
+		 * GroupSearch progress_score would not consider declared groups, This will add this specific PlayerHand declared groups
+		 * Updates current this.update_Groups
+		 * 
+		 * *note* pairs are considered as incomplete groups
+		 * 4110 == 4 groups, 1 pair, 1 incomp groups, 0 floating tiles == complete
+		 * 
+		 * 4001 == 4 groups, 0 pairs, 0 incomp groups, 1 floating tile == waiting
+		 * 3220 == 3 groups, 2 pairs, 2 incomp groups, 0 floating tiles == waiting
+		 * 3120 == 3 groups, 1 pair, 2 incomp groups, 0 floating tiles == waiting
+		 * 
+		 * 3112 == 3 groups, 1 pair, 1 incomp group (the pair itself), 2 floating tiles == incomplete
+		 * etc == incomplete
+		 * 
+		 * 4000 == invalid
+		 * @return A Integer numerical score of how far the hand is close to winning
+		 */
+		public int progress_score()
+		{
+			this.update_Groups = GroupSearch.search_all_groupSN(this, true);
+			int best_score = 0;
+			for(String key: this.update_Groups.keySet())
+			{
+				int current_score = GroupSearch.progress_score(this.update_Groups.get(key)) + (this.declaredGroups.size() * 1000);
+				if(current_score > best_score)
+				{
+					best_score = current_score;
+				}
+			}
+			return best_score;
 		}
 		
 		/**

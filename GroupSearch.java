@@ -275,10 +275,10 @@ public class GroupSearch extends Group
 			}
 			return return_data;
 		}
-		else if(isolatePairs.length() == 0 && only_isolatePair)
-		{
-			return new HashMap<String, String>();
-		}
+//		else if(isolatePairs.length() == 0 && only_isolatePair)
+//		{
+//			return new HashMap<String, String>();
+//		}
 		else
 		{
 			//Copied from isolate pair, see above for reference
