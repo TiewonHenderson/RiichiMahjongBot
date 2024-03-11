@@ -574,17 +574,38 @@ public class Group extends Scoring
 	
 	/**
 	 * 
+	 * @param in_playVal The play value of the tile to be converted into the tile_id
+	 * @param suit The suit index the tile is present in, this is important, any out of range input will default to 0
+	 * @return The tileID of the inputed integers, note this function works with ranges:
+	 * 		   in_playVal = [1,9]
+	 * 		   suit = [0,3]
+	 */
+	public static int PlayVal_to_tileID(int in_playVal, int in_suit)
+	{
+		if(in_playVal < 1 || in_playVal > 9) {return -1;}
+		if(in_suit < 0 || in_suit > 3) {return -1;}
+		/*
+		 * (in_playVal - 1) = list index(starts at 0) + 1 = playing index(starts at 1)
+		 * (in_playVal - 1) + (suit * 9) = adding suit value by 9 for 9 tiles in each suit
+		 */
+		return (in_playVal - 1) + (in_suit * 9);
+	}
+	
+	/**
+	 * 
 	 * @param in_tile_id A singular int value to be converted from tile_id to play_val
-	 * @return The play_val of the inputed integer, note this function only works from 0-26 inclusive
+	 * @return The play_val of the inputed integer, note this function only works from 0-33 inclusive
 	 */
 	public static int tileID_to_PlayVal(int in_tile_id)
 	{
+		if(in_tile_id < 0 || in_tile_id > 33) {return -1;}
 		/*
 		 * (in_tile_id / 9) = suit by flooring
 		 * in_tile_id - ((in_tile_id / 9) * 9) = converts it into a man tile (all man = play_val - 1)
 		 */
 		return in_tile_id - ((in_tile_id / 9) * 9) + 1;
 	}
+	
 	/**
 	 * 
 	 * @param in_arraylist ArrayList<Integer> with any valid tile_id integer as each element
@@ -619,7 +640,7 @@ public class Group extends Scoring
 	 * @return A matrix displaying minimum in in_arraylist as index 0 and maximum as index max - min, 
 	 * 			quantity would be the value of each cell/index
 	 */
-	public static ArrayList<Integer> convert_2_matrix(ArrayList<Integer> in_suitarray)
+	public static ArrayList<Integer> convert_to_matrix(ArrayList<Integer> in_suitarray)
 	{
 		if(in_suitarray.size() == 0) {return new ArrayList<Integer>();}
 		/*
@@ -653,7 +674,7 @@ public class Group extends Scoring
 	 * @param min The minimum play_val in the suit of ArrayList<Integer>
 	 * @return The ArrayList<Integer> that represent the tile_ids of each tile
 	 */
-	public static ArrayList<Integer> convert_2_ArrayList(ArrayList<Integer> matrix, int suit, int min)
+	public static ArrayList<Integer> convert_to_ArrayList(ArrayList<Integer> matrix, int suit, int min)
 	{
 		boolean add_true = false;
 		int true_index = min - 1; //play_val - 1 to align with tile_id
@@ -865,7 +886,7 @@ public class Group extends Scoring
 		example_player.getPlayerHand().setCurrentHand(single_suit_example);
 		
 //		System.out.println("example 1: " + single_suit_example);
-//		System.out.println("Convert to matrix: " + convert_2_matrix(single_suit_example));
+//		System.out.println("Convert to matrix: " + convert_to_matrix(single_suit_example));
 		System.out.println("Search any groupLR: " + GroupSearch.list_GroupSearch(single_suit_example, false));
 		System.out.println("Search any groupRL: " + GroupSearch.list_GroupSearch(single_suit_example, true));
 		System.out.println("Search only SequencesLR: " + GroupSearch.list_SequenceSearch(single_suit_example, false));
@@ -875,7 +896,7 @@ public class Group extends Scoring
 		System.out.println("search_all_groupSN of Playerhand: " + GroupSearch.search_all_groupSN(example_player.getPlayerHand()) + "\n\n");
 		
 		//segment 2
-		int[] complex_hand = {0,0,1,3,7,7,15,15,16,16,17,27,27};
+		int[] complex_hand = {0,0,1,3,7,7,15,15,16,16,17,17,27,27};
 		ArrayList<Integer> complex_example = sortArray(createArrayList(complex_hand));
 		example_player.getPlayerHand().setCurrentHand(complex_example);
 		
@@ -884,7 +905,7 @@ public class Group extends Scoring
 		for(ArrayList<Integer> suits : suit_list)
 		{
 //			System.out.println("Suits: " + suits);
-//			System.out.println("Matrices: " + convert_2_matrix(suits));
+//			System.out.println("Matrices: " + convert_to_matrix(suits));
 			System.out.println("Search any groupLR (groupSN): " + GroupSearch.list_GroupSearch(suits, false));
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits, true));
 			System.out.println("Search only SequencesLR: " + GroupSearch.list_SequenceSearch(suits, false));
@@ -897,7 +918,7 @@ public class Group extends Scoring
 			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
 		}
 		
-		int[] completed_groups = {0,0,0,1,2,3,4,5,6,7,8,8,8};
+		int[] completed_groups = {0,0,0,0,1,2,3,4,5,6,7,8,8,8};
 		ArrayList<Integer> completeGroup_example = sortArray(createArrayList(completed_groups));
 		example_player.getPlayerHand().setCurrentHand(completeGroup_example);
 		System.out.println("CompleteGroups example: " + completeGroup_example);
@@ -905,7 +926,7 @@ public class Group extends Scoring
 		for(ArrayList<Integer> suits : suit_list)
 		{
 //			System.out.println("Suits: " + suits);
-//			System.out.println("Matrices: " + convert_2_matrix(suits));
+//			System.out.println("Matrices: " + convert_to_matrix(suits));
 			System.out.println("Search any groupLR (groupSN): " + GroupSearch.list_GroupSearch(suits,false));
 			System.out.println("Search any groupRL (groupSN): " + GroupSearch.list_GroupSearch(suits,true));
 			System.out.println("Search only SequencesLR: " + GroupSearch.list_SequenceSearch(suits, false));

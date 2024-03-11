@@ -109,7 +109,7 @@ public class Player
 	 * Prioritized indicators
 	 * "m", "p", "s", "z" to add respective tile_id for the group/tiles
 	 * ^^^ Refer to Group.suit_reference
-     *  "c", "k", and "o" to determine which ArrayList to add into
+     *  "c", "k", "q", and "o" to determine which ArrayList to add into
      *  
 	 * @param mjSTR The string that represents a player's mahjong Hand as a String value
 	 * @return A PlayerHand object that contains two ArrayList, the concealed hand and declared groups
@@ -123,11 +123,12 @@ public class Player
 		int suit = 3; //Used to track the suit_index
 		
 		/*
-		 * add_mode == 2 -> add as open declared groups
+		 * add_mode == 3 -> add as open declared groups
+		 * add_mode == 2 -> add as open declared kongs/kans
 		 * add_mode == 1 -> add as concealed declared kongs/kans
 		 * add_mode == 0 -> add as concealed in hand tiles
 		 */
-		int add_mode = 2;
+		int add_mode = 3;
 		
 		for(int i = mjSTR.length() - 1; i >= 0; i--)
 		{
@@ -149,9 +150,16 @@ public class Player
 				add_mode = 0;
 				continue;
 			}
+			// 'k' is for concealed declared quads
 			else if(current_char == 'k')
 			{
 				add_mode = 1;
+				continue;
+			}
+			// 'q' is for called quads
+			else if(current_char == 'q')
+			{
+				add_mode = 2;
 				continue;
 			}
 			
@@ -161,7 +169,7 @@ public class Player
 				ArrayList<Integer> temp_tiles = new ArrayList<Integer>();
 				switch(add_mode)
 				{
-					case 2: //Add to open groups ArrayList
+					case 3: //Add to open groups ArrayList
 						//General check (only complex sequences can pass)
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() < 3)
 						{
@@ -174,7 +182,7 @@ public class Player
 							i = index + 1;
 							break;
 						}
-						//Checks complex sequence, temp_tile now becomes temp matrix
+						//Checks complex sequence, temp_tile now becomes temp mini hand (with the context of containing completed groups)
 						while(Character.isDigit(mjSTR.charAt(index)))
 						{
 							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
@@ -194,8 +202,11 @@ public class Player
 								{
 									break;
 								}
-								search_list.add(temp_tiles.get(temp_item));
-								index_added.add(temp_item);
+								if(!search_list.contains(temp_tiles.get(temp_item)))
+								{
+									search_list.add(temp_tiles.get(temp_item));
+									index_added.add(temp_item);
+								}
 							}
 							ArrayList<Integer> substitute_temp = new ArrayList<Integer>(search_list);
 							if(Group.group_status(substitute_temp) >= 1) //Re-confirms the tiles added is a group
@@ -211,7 +222,10 @@ public class Player
 						}
 						i = index + 1;
 						break;
+					case 2: //Add to open groups and set concealed to false and is quad, no break to fall into case 1
 					case 1: //Add to open groups but set to concealed and is quad
+						boolean isconcealed = true;
+						if(add_mode == 2) {isconcealed = false;}
 						while(Character.isDigit(mjSTR.charAt(index)) && temp_tiles.size() != 4)
 						{
 							temp_tiles.add(Character.getNumericValue(mjSTR.charAt(index)) + (suit * 9) - 1);
@@ -219,7 +233,7 @@ public class Player
 						}
 						if(Group.group_status(temp_tiles) == 3)
 						{
-							declared_segment.add(new Group(temp_tiles, true));
+							declared_segment.add(new Group(temp_tiles, isconcealed));
 						}
 						i = index + 1;
 						break;
@@ -441,6 +455,12 @@ public class Player
 		 */
 		private HashMap<String, String> update_Groups = new HashMap<String, String>();
 		
+		/*
+		 * This makes aware if new tiles were called/accepted into the hand, which could
+		 * possibly change the hand's out-dated groups
+		 */
+		private boolean updated_searches = false;
+		
 		
 		
 		/**
@@ -463,6 +483,7 @@ public class Player
 			this.declaredGroups = new ArrayList<Group>(clone.declaredGroups);
 			this.mjSTRhand = new String(clone.mjSTRhand);
 			this.update_Groups = new HashMap<String, String>(clone.update_Groups);
+			this.updated_searches = clone.updated_searches;
 		}
 		
 		/**
@@ -627,6 +648,8 @@ public class Player
 		}
 		
 		/**
+		 * *Note* this function does not take into consideration unique hands like 7 pairs nor 13 orphans
+		 * 
 		 * GroupSearch progress_score would not consider declared groups, This will add this specific PlayerHand declared groups
 		 * Updates current this.update_Groups
 		 * 
@@ -645,7 +668,11 @@ public class Player
 		 */
 		public int progress_score()
 		{
-			this.update_Groups = GroupSearch.search_all_groupSN(this, true);
+			if(!this.updated_searches)
+			{
+				this.update_Groups = GroupSearch.search_all_groupSN(this, false);
+				this.updated_searches = true;
+			}
 			int best_score = 0;
 			for(String key: this.update_Groups.keySet())
 			{
@@ -656,6 +683,31 @@ public class Player
 				}
 			}
 			return best_score;
+		}
+		
+		/**
+		 * *Note* this function does not take into consideration unique hands like 7 pairs nor 13 orphans
+		 * @return The ArrayList<Group> that has the highest score in terms of progression to a complete hand
+		 */
+		public ArrayList<Group> get_fastestGroups()
+		{
+			if(!this.updated_searches)
+			{
+				this.update_Groups = GroupSearch.search_all_groupSN(this, false);
+				this.updated_searches = true;
+			}
+			int best_score = 0;
+			String best_key = "";
+			for(String key: this.update_Groups.keySet())
+			{
+				int current_score = GroupSearch.progress_score(this.update_Groups.get(key)) + (this.declaredGroups.size() * 1000);
+				if(current_score > best_score)
+				{
+					best_score = current_score;
+					best_key = key;
+				}
+			}
+			return Group.groupSN_to_ArrayList(this.update_Groups.get(best_key));
 		}
 		
 		/**

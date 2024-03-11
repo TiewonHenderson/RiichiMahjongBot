@@ -144,7 +144,7 @@ public class GroupSearch extends Group
 		 * Separate honors search since they CANNOT form sequences
 		 * If honor == only a pair == isolate and HAS to be pair of hand
 		 */
-		ArrayList<Integer> honor_matrix = convert_2_matrix(suit_list.get(suit_list.size() - 1));
+		ArrayList<Integer> honor_matrix = convert_to_matrix(suit_list.get(suit_list.size() - 1));
 		for(int tile_index = 0; tile_index < honor_matrix.size(); tile_index++)
 		{
 			if(honor_matrix.get(tile_index) == 2)
@@ -157,7 +157,7 @@ public class GroupSearch extends Group
 		{
 			if(suit_list.get(suit).size() <= 0) {continue;} //Don't check empty arrays, matrix doesnt include them
 			
-			ArrayList<Integer> suit_matrix = convert_2_matrix(suit_list.get(suit));
+			ArrayList<Integer> suit_matrix = convert_to_matrix(suit_list.get(suit));
 			
 			//max is reference to not get out of bounds with increment up to +2 when checking talking tiles
 			//add min = by play_val, i.e 4p = 12 [tile_id] = [index] + [min = 4] + [suit(p) * 9 = 1 * 9]
@@ -578,7 +578,7 @@ public class GroupSearch extends Group
 			return list_GroupSearch(in_arraylist, false);
 		}
 		
-		ArrayList<Integer> matrix = convert_2_matrix(new ArrayList<Integer>(in_arraylist));
+		ArrayList<Integer> matrix = convert_to_matrix(new ArrayList<Integer>(in_arraylist));
 		
 		int half_index = matrix.size()/2;
 		
@@ -607,8 +607,8 @@ public class GroupSearch extends Group
 		}
 		
 		
-		ArrayList<Group> left_groups  = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(left_matrix, suit, minimums.get(0)), false));
-		ArrayList<Group> right_groups = groupSN_to_ArrayList(list_GroupSearch(convert_2_ArrayList(right_matrix, suit , minimums.get(1)) , true));
+		ArrayList<Group> left_groups  = groupSN_to_ArrayList(list_GroupSearch(convert_to_ArrayList(left_matrix, suit, minimums.get(0)), false));
+		ArrayList<Group> right_groups = groupSN_to_ArrayList(list_GroupSearch(convert_to_ArrayList(right_matrix, suit , minimums.get(1)) , true));
 		
 		//Add complete/incomplete groups to corresponding ArrayList<Group>
 		ArrayList<ArrayList<Group>> categorized_Group = new ArrayList<ArrayList<Group>>();
@@ -747,7 +747,7 @@ public class GroupSearch extends Group
 		int play_val_min = temp_suit.get(0);
 
 		//Convert suit to matrix
-		ArrayList<Integer> matrix = Group.convert_2_matrix(in_arraylist);
+		ArrayList<Integer> matrix = Group.convert_to_matrix(in_arraylist);
 		
 		//Index that refers to the play_val integer in the matrix (a pointer)
 		int currentIndex = 0;
@@ -1015,7 +1015,7 @@ public class GroupSearch extends Group
 		int suit = in_arraylist.get(0)/9;
 		
 		//Convert suit to matrix
-		ArrayList<Integer> matrix = convert_2_matrix(in_arraylist);
+		ArrayList<Integer> matrix = convert_to_matrix(in_arraylist);
 		
 		//Adds all the complete/incomplete groups into this ArrayList<String>
 		ArrayList<String> group_shape_list = new ArrayList<String>();
@@ -1125,7 +1125,7 @@ public class GroupSearch extends Group
 		int play_val_min = temp_suit.get(0);
 
 		//Convert suit to matrix
-		ArrayList<Integer> matrix = convert_2_matrix(in_arraylist);
+		ArrayList<Integer> matrix = convert_to_matrix(in_arraylist);
 		
 		//Index that refers to the play_val integer in the matrix (a pointer)
 		int currentIndex = 0;
