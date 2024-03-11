@@ -82,7 +82,7 @@ public class Scoring
 		{
 			if(in_PlayerHand.getDeclaredGroup().size() > 0)
 			{
-				return "";
+				return "NULL";
 			}
 			return search_7pairs(in_PlayerHand.getCurrentHand());
 		}
@@ -160,7 +160,7 @@ public class Scoring
 		{
 			if(in_PlayerHand.getDeclaredGroup().size() > 0)
 			{
-				return "";
+				return "NULL";
 			}
 			return search_orphans(in_PlayerHand.getCurrentHand());
 		}
@@ -240,7 +240,7 @@ public class Scoring
 						{
 							needed_str += terminal_reference[i];
 						}
-						else
+						else if(amt == 1)
 						{
 							overflow_str += terminal_reference[i];
 						}
@@ -251,6 +251,122 @@ public class Scoring
 				return_str += needed_str + overflow_str + Group.suit_reference[suit_index];
 			}
 			return return_str + "c";
+		}
+		
+		/**
+		 * Nine Gates requires play_val list of 1112345678999 with another tile in the same suit
+		 * 
+		 * Return format:
+		 * (in current hand)r={required tiles}o=[Overflow tiles]suit *for each suit*
+		 * 
+		 * completed
+		 * (1112345678999)r={}o=[[1,9]]suit
+		 * 
+		 * waiting
+		 * (Some shape missing 1 tile from 111245678999)r={that 1 missing tile}o=[[1,9]]suit
+		 * or
+		 * (1112345678999)r={}o=[]suit == Any wait
+		 * 
+		 * incomplete
+		 * Anything other shape
+		 * 
+		 * @param tile_list The ArrayList<Integer> of tiles that wants to be searched for potential Nine Gates score
+		 * @return A String representation of what tiles that are acquired and what are missing for each suit
+		 */
+		public static String search_ninegates(ArrayList<Integer> tile_list)
+		{
+			if(tile_list.size() == 0)
+			{
+				return "";			
+			}
+			
+			
+			String return_str = "";
+			ArrayList<ArrayList<Integer>> suited_tile_list = suitDivide(sortArray(tile_list));
+			for(int suit = 0; suit < 3; suit++)
+			{
+				if(suited_tile_list.get(suit).size() == 0)
+				{
+					return_str += "()r={1112345678999}o={}" + Group.suit_reference[suit];
+					continue;
+				}
+				
+				String temp_string = "(";
+				String temp_remainder = "r={";
+				String temp_overflow = "o=[";
+				int min = tileID_to_PlayVal(suited_tile_list.get(suit).get(0));
+				int max = tileID_to_PlayVal(suited_tile_list.get(suit).get(suited_tile_list.get(suit).size() - 1));
+				int index = 0;
+				
+				ArrayList<Integer> matrixify_suit = convert_to_matrix(suited_tile_list.get(suit));
+				
+				//catch up
+				for(int i = 1; i < min; i++)
+				{
+					if(i == 1 || i == 9)
+					{
+						for(int j = 0; j < 3; j++) temp_remainder += i;
+					}
+					else
+					{
+						temp_remainder += i;
+					}
+				}
+				for(int i = min; i <= max; i++)
+				{
+					int needed_amt = 1;
+					int start_amt = 0;
+					if(i == 1 || i == 9) //The required "triplet" for nine gates
+					{
+						needed_amt = 3;
+					}
+					//Need every tile in the same suit, checks if there is tiles to offer
+					if(matrixify_suit.get(index) > 0)
+					{
+						temp_string += Integer.toString(i);
+						matrixify_suit.set(index, matrixify_suit.get(index) - 1);
+						start_amt++;
+					}
+					for(int j = start_amt; j < needed_amt; j++)
+					{
+						if(matrixify_suit.get(index) == 0)
+						{
+							for(int k = j; k < needed_amt; k++)
+							{
+								temp_remainder += Integer.toString(i);
+							}
+							break;
+						}
+						temp_string += Integer.toString(i);
+						matrixify_suit.set(index, matrixify_suit.get(index) - 1);
+					}
+					for(int j = 0; j < matrixify_suit.get(index); j++)
+					{
+						temp_overflow += Integer.toString(i);
+						matrixify_suit.set(index, matrixify_suit.get(index) - 1);
+					}
+					index++; //Temp var "i" does not keep track of index, it's the range of what tile is in the hand
+				}
+				
+				for(int i = max + 1; i <= 9; i++)
+				{
+					if(i == 1 || i == 9)
+					{
+						for(int j = 0; j < 3; j++) temp_remainder += i;
+					}
+					else
+					{
+						temp_remainder += i;
+					}
+				}
+				//fill remain
+				temp_string += ")";
+				temp_remainder += "}";
+				temp_overflow += "]";
+				return_str += temp_string + temp_remainder + temp_overflow + Group.suit_reference[suit];
+			}
+			
+			return return_str;
 		}
 		
 		/**
@@ -300,12 +416,112 @@ public class Scoring
 		 * 1102 == 11 uniques, 02 pairs == incomplete
 		 * etc... == incomplete
 		 * 
+		 * kokushiSN format:
+		 * (19){19}m(19){19}p(19){19}s(1234567){1234567}zc
+		 * 
 		 * @param kokushiSN The String notation of what was searched through ArrayList<Integer> as player's hand
 		 * @return A integer score similar to GroupSearch.progress_score(), just different scoring basis
 		 */
 		public static int orphan_score(String kokushiSN)
 		{
-			return -1;
+			int add_mode = 2; //2 = add unique, 0 = add pairs
+			int return_score = 0;
+			for(int i = 0; i < kokushiSN.length(); i++)
+			{
+				if(Character.isDigit(kokushiSN.charAt(i)))
+				{
+					return_score += (int)Math.pow(10, add_mode);
+					continue;
+				}
+				
+				//The important indicator that determines what score to add
+				if(kokushiSN.charAt(i) == '(')
+				{
+					add_mode = 2;
+					continue;
+				}
+				else if(kokushiSN.charAt(i) == '{')
+				{
+					add_mode = 0;
+					continue;
+				}
+			}
+			return return_score;
+		}
+		
+		/**
+		 * Scoring Table:
+		 * 
+		 * Score example: 130001 
+		 * 		index 0,1 -> acquired required tiles
+		 * 		index 2,3 -> still needed tiles
+		 * 		index 4,5 -> overflow tiles (need 1 to finish)
+		 * 
+		 * complete == 130001
+		 * waiting == 120101 or 130000
+		 * incomplete examples == 120000, 110200
+		 * 
+		 * chuurenSN format: (in current hand)r={required tiles}o={Overflow tiles}suit *for each suit*
+		 * Examples:
+		 * completed
+		 * (1112345678999)r={}o[{1,9]]suit
+		 * 
+		 * waiting
+		 * (Some shape missing 1 tile from 111245678999)r={that 1 missing tile}o=[[1,9]]suit
+		 * or
+		 * (1112345678999)r={}o=[]suit == Any wait
+		 * 
+		 * @param chuurenSN The String representation of how a player's hand progress towards nine gates
+		 * @return A integer score similar to GroupSearch.progress_score(), just different scoring basis
+		 */
+		public static ArrayList<Integer> ninegates_score(String chuurenSN)
+		{
+			int add_mode = 4; // 4 == index 1(has), 2 == index 3(need), 0 == index 5(overflow)
+			int suit_pointer = 0;
+			ArrayList<Integer> return_scores = new ArrayList<Integer>();
+			for(int i = 0; i < 3; i++) return_scores.add(0);
+			
+			for(int i = 0; i < chuurenSN.length(); i++)
+			{
+				if(Character.isAlphabetic(chuurenSN.charAt(i)))
+				{
+					if(chuurenSN.charAt(i) == 's') //Last suit possible to get nine gates (didn't scan honors)
+					{
+						break;
+					}
+					for(int suit = 0; suit < 3; suit++) //Changes suit by checking reference and increment pointer
+					{
+						if(chuurenSN.charAt(i) == Group.suit_reference[suit])
+						{
+							suit_pointer = suit + 1;
+							break;
+						}
+					}
+				}
+				else if(Character.isDigit(chuurenSN.charAt(i)))
+				{
+					return_scores.set(suit_pointer, return_scores.get(suit_pointer) + (int)Math.pow(10, add_mode));
+				}
+				//Indicates what the hand currently has
+				if(chuurenSN.charAt(i) == '(')
+				{
+					add_mode = 4;
+					continue;
+				}
+				//Indicates what the hand currently needs
+				else if(chuurenSN.charAt(i) == '{')
+				{
+					add_mode = 2;
+					continue;
+				}
+				//Indicates what the hand currently has extra of
+				else if(chuurenSN.charAt(i) == '[')
+				{
+					add_mode = 0;
+					continue;
+				}
+			}
+			return return_scores;
 		}
 	}
 	
@@ -322,36 +538,38 @@ public class Scoring
 			8: All Seq -> 1														
 			9: All Pon -> 3														
 			10: Mix Suit -> 3 														
-			11: All Terms/Honors -> 2 (5 - 3; from pung game)						
-			12: Full Suit -> 6 		
+			11: All Terms/Honors -> 2 (5 - 3; from pung game)		
+			12: 7 Pairs -> 3 (4 - 1; from concealed)				
+			13: Full Suit -> 6 		
 			-------------------------------------
-			13: All Terminals -> 5 (10 - 2 - 3; all term/honors, from pung game)	
-			14: All Honors -> 5 (10 - 2 - 3; from pung game, all term/honors)		
-			15: 4 little winds -> 6 												
-			16: 4 big winds ->10 (13 - 3; from pung game)										
-			17: 13 Orphans -> 10 (13 - 2 - 1; from all terms/honors, concealed) 	
-			18: 4 quads -> 10 (13 - 3; from pung game
-			19: 4 concealed trips -> 6 (10 - 3 - 1; from pung game, concealed)		
-			20: Nine gates -> 9 (10 - 1; from concealed)							
+			14: All Terminals -> 5 (10 - 2 - 3; all term/honors, from pung game)	
+			15: All Honors -> 5 (10 - 2 - 3; from pung game, all term/honors)		
+			16: 4 little winds -> 6 												
+			17: 4 big winds ->10 (13 - 3; from pung game)										
+			18: 13 Orphans -> 10 (13 - 2 - 1; from all terms/honors, concealed) 	
+			19: 4 quads -> 10 (13 - 3; from pung game
+			20: 4 concealed trips -> 6 (10 - 3 - 1; from pung game, concealed)		
+			21: Nine gates -> 9 (10 - 1; from concealed)							
 		 */
 		String[] example_hand_list = {	
-        "123m455667p99sckq555zo",        // 1 Dragon
-        "111m222s66zckq555777zo",        // Small 3 Dragons
-        "77sckq123m555666777zo",         // Big 3 Dragon
-        "123789m99pckq111s111zo",        // Rotation Wind (input int as rotation index) this exp == 2 (w)
-        "12378999m456pckq333zo",         // Seat Wind (input int as seat index) this exp == 3 (n)
+        "123m455667p99sckq555zo",       // 1 Dragon
+        "111m222s66zckq555777zo",       // Small 3 Dragons
+        "77sckq123m555666777zo",        // Big 3 Dragon
+        "123789m99pckq111s111zo",       // Rotation Wind (input int as rotation index) this exp == 2 (w)
+        "12378999m456pckq333zo",        // Seat Wind (input int as seat index) this exp == 3 (n)
         "111234m55zc6666sk111zo",       // Concealed Kong == Kong point
-        "123456999m99s111zckqo",         // Concealed
-        "23488m567pckq234567so",			// All Sequences
+        "123456999m99s111zckqo",        // Concealed
+        "23488m567pckq234567so",		// All Sequences
         "22mc6666mkq555p777s111zo",		// All Triplet
-        "55667799sck2222zq333zo",			// Half flush
+        "55667799sck2222zq333zo",		// Half flush
         "111m11sckq999p999s666zo",		// All Terminal / Honors
-        "11122299mckq677889mo",         	// Chinitsu (Full Flush, Single Suit)
+        "2255m7799p1122s55zckqo",		// 7 pairs
+        "11122299mckq677889mo",         // Chinitsu (Full Flush, Single Suit)
         "111m11sck1111pq999p999so",		// All Terminal
         "11166zc7777zkq222333zo",		// All honors
         "22zckq456m1111333444zo",		// 4 little winds
         "88mc11112222zkq333444zo",		// 4 big winds
-//        "199m19p19s1234567zcko",		// KOKUSHI MUSOU
+        "199m19p19s1234567zcko",		// KOKUSHI MUSOU
         "11mc3333m8888sk11117777zqo",	// 4 kongs
         "111555m666p88s222zckqo",		// 4 concealed Triplets
         "11112345678999pckqo",			// 9 gates
@@ -368,11 +586,13 @@ public class Scoring
 		"All Triplet",
 		"Half Flush",
 		"All Terminal and Honors",
+		"7 pairs",
 		"Full Flush",
 		"All Terminal",
 		"All Honors",
 		"4 Little Winds",
 		"4 Big Winds",
+		"13 Orphans",
 		"4 Kongs",
 		"4 Concealed Triplets",
 		"9 Gates"
@@ -387,18 +607,21 @@ public class Scoring
 			for(Group group: example_groupSN_list.get(i).getDeclaredGroup()) temp_groups.add(group);
 //			System.out.println("New hand: " + example_pHand.getCurrentHand());
 			
-			System.out.println("mjString: " + example_hand_list[i]);
-			System.out.println(score_name_list[i] + " Hand: " + example_groupSN_list.get(i).progress_score());
-			System.out.println("Current Hand: " + example_groupSN_list.get(i).getCurrentHand());
-			System.out.println("Best concealed groups: " + example_groupSN_list.get(i).get_fastestGroups());
+			System.out.println(	"mjString: " + example_hand_list[i]	);
+			System.out.println(	score_name_list[i] + " Hand: " + example_groupSN_list.get(i).progress_score() );
+			System.out.println(	"Current Hand: " + example_groupSN_list.get(i).getCurrentHand() );
+			System.out.println(	"Best concealed groups: " + example_groupSN_list.get(i).get_fastestGroups() );
 			for(Group declared_group: example_groupSN_list.get(i).getDeclaredGroup())
 			{
-				System.out.println(declared_group + "-> Conceal status: " + declared_group.concealed);
+				System.out.println(	declared_group + "-> Conceal status: " + declared_group.concealed);
 			}
-			System.out.println("CHITOI Score: " + Unique_GroupSearch.seven_pairs_score(Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).getCurrentHand())) + 
-							   ", 7 Pairs Search: " + Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).getCurrentHand()));
-			System.out.println("Orphan Search: " + Unique_GroupSearch.search_orphans(example_groupSN_list.get(i).getCurrentHand()));
-			System.out.println("\n\n");
+			System.out.println(	"CHITOI Score: " + Unique_GroupSearch.seven_pairs_score(Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).getCurrentHand())) + 
+							   	", 7 Pairs Search: " + Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).getCurrentHand()) );
+			System.out.println(	"Orphan Score: " + Unique_GroupSearch.orphan_score(Unique_GroupSearch.search_orphans(example_groupSN_list.get(i).getCurrentHand())) + 
+								", Orphan Search: " + Unique_GroupSearch.search_orphans(example_groupSN_list.get(i).getCurrentHand()) );
+			System.out.println(	"Nine gates score: " + Unique_GroupSearch.ninegates_score(Unique_GroupSearch.search_ninegates(example_groupSN_list.get(i).getCurrentHand())) + 
+								", Nine gates Search: " + Unique_GroupSearch.search_ninegates(example_groupSN_list.get(i).getCurrentHand()) );
+			System.out.println(	"\n\n");
 		}
 	}
 }
