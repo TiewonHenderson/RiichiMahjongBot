@@ -116,7 +116,7 @@ public class Scoring
 	public static int dragon_score(ArrayList<Group> all_groups)
 	{
 		if(all_groups.size() == 0) {return 0;}
-		//index == 1 -> pair, index == 2 -> triplet/quad
+		//digit 1s -> pair, digit 10s -> triplet/quad
 		int temp_counter = 0;
 		for(int i = 0; i < all_groups.size(); i++)
 		{
@@ -150,6 +150,50 @@ public class Scoring
 			default:
 				return temp_counter/10; //remainder (pairs don't add points) are excluded
 		}
+	}
+	
+	/**
+	 * @function This function does not search seat/prevalent wind, but searches the 4 winds combination score
+	 * 
+	 * @param all_groups all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
+	 * @return The integer score of only searched 4 big/small winds from all_groups, returns corresponding score, otherwise 0
+	 */
+	public static int four_wind_score(ArrayList<Group> all_groups)
+	{
+		if(all_groups.size() == 0) {return 0;}
+		//digit 1s -> pair, digit 10s -> triplet/quad
+		int temp_counter = 0;
+		for(int i = 0; i < all_groups.size(); i++)
+		{
+			if(all_groups.get(i).get_groupTiles().get(0) >= 27 && all_groups.get(i).get_groupTiles().get(0) <= 30) //checks wind tiles
+			{
+				switch(all_groups.get(i).get_groupTiles().size())
+				{
+					case 2:
+						temp_counter += 1;
+						break;
+					case 4: //quads are treated the same as triplet
+					case 3:
+						temp_counter += 10;
+						break;
+				}
+			}
+		}
+		/*
+		 * valid cases:
+		 * 40 == 4 big wind
+		 * 31 == 4 small winds
+		 * 20 == nothing, except seat/prevalent wind
+		 * etc
+		 */
+		switch(temp_counter)
+		{
+			case 40:
+				return 10; //13 - 3 from all triplet
+			case 31:
+				return 6;
+		}
+		return 0;
 	}
 	
 	/**
@@ -215,7 +259,7 @@ public class Scoring
 	 * Scoring reference:
 	 * mixed_suit = 3
 	 * full_suit = 6
-	 * all_honors = 5 (8 with required triplet)
+	 * all_honors = 5 (10 with required triplet[3] and all term/honor[2]) 
 	 * 
 	 * @param all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
 	 * @return A integer representation of the score all_groups is being checked for, this algorithm checks if the given
@@ -259,9 +303,15 @@ public class Scoring
 	}
 	
 	/**
+	 * Scoring reference:
+	 * (Must be all triplet, so not adding score to orphans hand)
+	 * All Terminal: 5 (10 - 2 [all term/honor] - 3 [triplets])
+	 * All Honors: 2 (All honors is checked in mix_full_suit), add back all term/honor point
+	 * All Term/Honor: 2 (default all term/honor)
+	 * 
 	 * 
 	 * @param all_groups all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
-	 * @return A score corresponding to what was found in all the groups, 
+	 * @return A score corresponding to what was found in all the groups, see scoring reference for more details
 	 */
 	public static int term_honors(ArrayList<Group> all_groups)
 	{
@@ -270,13 +320,73 @@ public class Scoring
 		int[] term_reference = {0,8,9,17,18,26}; //Honors > 26
 		for(int i = 0; i < all_groups.size(); i++)
 		{
-			if()
+			if(all_groups.get(i).getGroupInfo()[0] > 1) //Must be triplet
 			{
-				
+				boolean is_term = false;
+				int tile = all_groups.get(i).get_groupTiles().get(0);
+				if(tile >= 27) //Checks if tile_id is an honor value
+				{
+					has_term_honor[1] = true;
+					continue;
+				}
+				for(int j = 0; j < term_reference.length; j++)
+				{
+					if(tile == term_reference[j])
+					{
+						is_term = true;
+					}
+				}
+				if(is_term) //Checks if the triplet/quad is all terminal
+				{
+					has_term_honor[0] = true;
+					continue;
+				}
 			}
+			//Any other case will return 0
+			return 0;
 		}
+		if(has_term_honor[0] && !has_term_honor[1])
+		{
+			return 7; //all terminal 10 - 3 from all triplet
+		}
+		else if(has_term_honor[1])
+		{
+			return 2;
+		}
+		return 0;
 	}
 	
+	/**
+	 * 
+	 * @param all_groups all_groups all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
+	 * @return An integer score that only represents if all_groups only include concealed triplets as completed groups, 0 otherwise
+	 */
+	public static int concealed_triplets(ArrayList<Group> all_groups)
+	{
+		boolean pair_passed = false;
+		for(int i = 0; i < all_groups.size(); i++)
+		{
+			if(all_groups.get(i).concealed)
+			{
+				if(!pair_passed && Group.group_status(all_groups.get(i)) == 0) //Only allows 1 concealed pair to pass
+				{
+					pair_passed = true;
+					continue;
+				}
+				if(all_groups.get(i).getGroupInfo()[0] >= 2) //Checks if is concealed triplet/quad
+				{
+					continue;
+				}
+			}
+			//return 0 for any false case
+			return 0;
+		}
+		if(pair_passed)
+		{
+			return 6;
+		}
+		return 0;
+	}
 	/**
 	 * 
 	 * @param concealed_hand: NOT ArrayList<Group>, 7 pairs is unique as it requires pairs not groups, so the hand
@@ -288,6 +398,41 @@ public class Scoring
 		if(Unique_GroupSearch.seven_pairs_score(Unique_GroupSearch.search_7pairs(concealed_hand)) == 700)
 		{
 			return 3;
+		}
+		return 0;
+	}
+	
+	/**
+	 * 
+	 * @param concealed_hand NOT ArrayList<Group>, 13 orphans is unique as it requires isolate terms/honors, so the hand
+	 * 						 must be concealed and no declared groups, there has to be any copy of term/honor while having all term/honor to be complete
+	 * @return The integer score representation of the given concealed_hand, if 13 orphans is complete, return 12, otherwise return 0
+	 */
+	public static int kokushi_musou(ArrayList<Integer> concealed_hand)
+	{
+		if(Unique_GroupSearch.orphan_score(Unique_GroupSearch.search_orphans(concealed_hand)) == 1301)
+		{
+			return 12;
+		}
+		return 0;
+	}
+	
+	/**
+	 * 
+	 * @param concealed_hand concealed_hand NOT ArrayList<Group>, althought nine gates can be detected using ArrayList<Group>
+	 * 						 it is much more labor intensive, all 9 gates share a same shape with an additional tile in that same suit
+	 * 						 which would be how 9 gates is detected
+	 * @return The integer score representation of the given concealed_hand, if 9 gates is complete, return 3, otherwise return 0
+	 */
+	public static int nine_gates(ArrayList<Integer> concealed_hand)
+	{
+		ArrayList<Integer> suit_scores = Unique_GroupSearch.ninegates_score(Unique_GroupSearch.search_ninegates(concealed_hand));
+		for(int i = 0; i < suit_scores.size(); i++)
+		{
+			if(suit_scores.get(i) == 130001)
+			{
+				return 3; //10 - 6 - 1 from full suit, concealed
+			}
 		}
 		return 0;
 	}
