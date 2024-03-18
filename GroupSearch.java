@@ -409,138 +409,108 @@ public class GroupSearch extends Group
 	}
 	
 	/**
-	 * TO-DO if needed optimized addItemTo_groupSN
-	 * 	task:
-	 * 		- Add in remainder if remainder group IN ORDER
-	 * 		- Create suit if doesn't exist and add into it, same for remainder
 	 * 
-	 * *Note* this function assumes the new_tiles are all in the same suit
-	 * Use suit divide in order to all variant tiles in a ArrayList<Integer>
-	 * 
-	 * @param group_sn The current group_SN that wants to be updated
-	 * @param new_tiles New tiles that wanted to be added into groupSN
-	 * @param concealed Whether the new tiles being added will be concealed or not
-	 * @return The new groupSN that has updated tiles, with additional information as parameter values
+	 * @param group_sn The groupSN you would like to change alter
+	 * @param new_tiles The new tiles you would be inputing into groupSN, this function does not check if the tile is valid
+	 * @param add_status How the new tile is accepted, values listed below
+	 * 1 = add into concealed
+	 * 2 = declared concealed quad (triplet in concealed + draw -> declared concealed kan [behind 'k'])
+	 * 3 = called quad (triplet in concealed + discard -> called kan [behind 'q']
+	 * 4 = called add+quad (called triplet + draw -> declared open quad [behind 'q])
+	 * 5 = called triplet (at least 2 tiles in concealed -> remove 2 in concealed [behind 'o'])
+	 * 6 = called sequence (two tiles 0 < diff < -3 and tile completes [behind 'o'])
+	 * @return
 	 */
-	public static String future_addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles, boolean concealed)
+	public static String update_groupSN(String group_sn, ArrayList<Integer> new_tiles, ArrayList<Integer> add_status)
 	{
-		if(new_tiles.size() <= 0) {return group_sn;} //No tiles to add
-		String[] char_indicator = {"m", "p", "s", "z"}; //Used to indicate what suit the new tiles are in
-		String this_charneeds = char_indicator[new_tiles.get(0)/9];
-		
-		//How the new tiles will be added
-		String add_as = "(";
-		for(int tile: new_tiles) add_as += Integer.toString(tile);
-		add_as += ")";
-		
-		
-		ArrayList<String> all_indicator_index = new ArrayList<String>();
-		boolean is_concealed = false;
-		
-		
-		//Checks if the concealed/suit even exist in the inputed groupSN
-		for(int i = group_sn.length() - 1; i >= 0; i--)
+		if(new_tiles.size() == 0 || add_status.size() == 0) {return group_sn;}
+		/*
+		 * Integer representation of indicator:
+		 * 10^2 = indicator index of indicator reference
+		 * 10^1 + 10^0 = index within the groupSN
+		 * 
+		 * i.e c = m, 11 = index 11, 011 of groupSN is where mans ends
+		 * 
+		 * suit order:
+		 * m = 00, 04, 08, 12 (pre: c, k, q, o)
+		 * p = 01, 05, 09, 13
+		 * s = 02, 06, 10, 14
+		 * z = 03, 07, 11, 15
+		 * 
+		 * 
+		 * The reason suit is not searched is because they are not guaranteed to appear in groupSN
+		 * It can be searched before the above indicators if desired
+		 * 
+		 * if not found, add -1
+		 */
+		ArrayList<ArrayList<Integer>> indicator_indexes = new ArrayList<ArrayList<Integer>>();
+		int add_mode = 0;
+		for(int i = 0; i < group_sn.length(); i++)
 		{
-			if(group_sn.charAt(i) == 'c')
+			if(Character.isAlphabetic(group_sn.charAt(i)))
 			{
-				is_concealed = true;
-				continue;
-			}
-			for(String indicator: char_indicator)
-			{
-				if(group_sn.substring(i, i+1) == indicator)
+				ArrayList<Integer> element_index = new ArrayList<Integer>();
+				switch(group_sn.charAt(i))
 				{
-					//If min == -1, then character was not a number, will add -1 as min which means error was occured
-					int min = Character.getNumericValue(group_sn.charAt(i - 2));
-					//To get the String representation of the indicator index
-					String index = Integer.toString(i);
-					if(i <= 9) {index = "0" + index;}
-					
-					//Adds "c" if concealed was pass through, if not adds "o" with the suit index follows
-					if(is_concealed){all_indicator_index.add("c" + indicator + index + "L" + Integer.toString(min));}
-					else {all_indicator_index.add("o" + indicator + index + "L" + Integer.toString(min));}
+					case 'c':
+						add_mode = 1;
+						break;
+					case 'k':
+						add_mode = 2;
+						break;
+					case 'q':
+						add_mode = 3;
+						break;		
 				}
-			}
-			
-		}
-		
-		String temp_groupSN = new String(group_sn); //New return groupSN
-		String concealed_string = "c";
-		if(!concealed) {concealed_string = "o";}
-		
-		for(String indicators: all_indicator_index)
-		{
-			/*
-			 * indicators follows the pattern:
-			 * index = 0 -> c/o
-			 * index = 1 -> suit
-			 * index = 2,3 -> indicator index
-			 * index = 4 -> "L" to indicate LowerBound (m could be confused as mans suit)
-			 * index = 5 -> minimum (represented as LowerBound "L")
-			 */
-			
-			int start = Integer.parseInt(indicators.substring(2,4));
-			int min = Integer.parseInt(indicators.substring(5,6));
-			if(indicators.substring(0, 2) == (concealed_string + this_charneeds))
-			{
-				//Adding algorithm with existing starts here
-				if(group_status(new_tiles) >= 1) //1+ means the group is completed
+				for(int j = 0; j < Group.suit_reference.length; j++)
 				{
-					for(int i = start; i >= 0; i--)
+					if(group_sn.charAt(i) == Group.suit_reference[j])
 					{
-						/*
-						 * If the suit exist, then there should be a remainder category
-						 * Otherwise this segment will not function properly
-						 */
-						if(temp_groupSN.charAt(i) == 'r')
-						{
-							//substring ends exclusively, adds behind r which would be remainder
-							return temp_groupSN.substring(0, i) + add_as + temp_groupSN.substring(i);
-						}
+						element_index.add(j + (add_mode * 4));
+						break;
 					}
 				}
-				else //Anything less then 1 should be added into remainder category
-				{
-					for(int i = start; i >= 0; i--)
-					{
-						/*
-						 * If the suit exist, then there should be a remainder category
-						 * Otherwise this segment will not function properly
-						 */
-						if(temp_groupSN.charAt(i) == '}')
-						{
-							//substring ends exclusively, adds behind r which would be remainder
-							return temp_groupSN.substring(0, i) + add_as + temp_groupSN.substring(i);
-						}
-					}
-				}
+				element_index.add(i);
+				indicator_indexes.add(element_index);
 			}
 		}
-		//Adding algorithm with non-existing suit starts here
-		return null;
+		
+		//Search each tile suit to re-list_GroupSearch
+		for(int i = 0; i < new_tiles.size(); i++)
+		{
+			int suit = new_tiles.get(i)/9;
+			int tile_status = add_status.get(i);
+			
+			//Searches index of groupSN
+			for(int j = 0; j < indicator_indexes.size(); j++)
+			{
+				
+			}
+		}
+		return "";
 	}
 	
 	/**
 	 * NEED HEAVY OPTIMIZATION WITH STRING MANIPUTATION
 	 */
-	public static String addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles, boolean concealed)
+	public static String addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles, boolean declared, boolean concealed)
 	{
 		//Will check if there no tiles to add into, or if the tile is invalid by being < 0 or > 33
 		if(new_tiles.size() <= 0) {return group_sn;}
 		for(int i = 0; i < new_tiles.size(); i++) if(new_tiles.get(i) < 0 || new_tiles.get(i) > 33) {return group_sn;}
 		
 		ArrayList<Group> temp_groups = groupSN_to_ArrayList(group_sn);
-		temp_groups.add(new Group(new_tiles, concealed));
+		temp_groups.add(new Group(new_tiles, declared, concealed));
 		return ArrayList_to_groupSN(temp_groups);
 	}
 	
 	/**
 	 * NEED HEAVY OPTIMIZATION WITH STRING MANIPUTATION
-	 * Overloading the addItemTo_groupSN to make boolean concealed to be defaulted to true
+	 * Overloading the addItemTo_groupSN to make boolean concealed to be defaulted to true and declared false
 	 */
 	public static String addItemTo_groupSN(String group_sn, ArrayList<Integer> new_tiles)
 	{
-		return addItemTo_groupSN(group_sn, new_tiles, true);
+		return addItemTo_groupSN(group_sn, new_tiles, false, true);
 	}
 	
 	/**
