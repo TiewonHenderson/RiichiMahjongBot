@@ -178,7 +178,7 @@ public class Player
 						}
 						if(Group.group_status(temp_tiles) >= 1) //Re-confirms the tiles added is a group
 						{
-							declared_segment.add(new Group(temp_tiles, false));
+							declared_segment.add(new Group(temp_tiles, true, false));
 							i = index + 1;
 							break;
 						}
@@ -216,7 +216,7 @@ public class Player
 									//When removing bigger index to lower, shifted index won't matter
 									temp_tiles.remove(index_added.get(remove_i));
 								}
-								declared_segment.add(new Group(substitute_temp, false));
+								declared_segment.add(new Group(substitute_temp, true, false));
 								group_counter++;
 							}
 						}
@@ -233,7 +233,7 @@ public class Player
 						}
 						if(Group.group_status(temp_tiles) == 3)
 						{
-							declared_segment.add(new Group(temp_tiles, isconcealed));
+							declared_segment.add(new Group(temp_tiles, true, isconcealed));
 						}
 						i = index + 1;
 						break;
@@ -328,7 +328,7 @@ public class Player
 				rev_groupi--;
 				continue;
 			}
-			if(group.getGroupInfo()[0] == 3  && group.concealed) //Dont add concealed declared quads, add in future
+			if(group.getGroupInfo()[0] == 3) //Dont add any declared quads, add in future
 			{continue;}
 			
 			//(String cast) -> (char[] suit_list) -> (declared_group suit index in getGroupInfo())
@@ -340,6 +340,25 @@ public class Player
 			}
 			declared_list.remove(rev_groupi); //Removed means successfully added, this will allow only concealed quads to remain
 			rev_groupi--;
+		}
+		//where declared quads are added
+		ret_string += "q";
+		for(int remain_groupi = 0; remain_groupi < declared_list.size(); remain_groupi++) //Assumes all invalid groups are removed above
+		{
+			Group group = declared_list.get(remain_groupi);
+			if(group.concealed) //concealed quads are added separately
+			{
+				continue;
+			}
+			ArrayList<Integer> temp_list = group.get_groupTiles();
+			ret_string += Character.toString(Group.suit_reference[group.getGroupInfo()[1]]);
+			
+			for(int i = temp_list.size() - 1; i >= 0; i--)
+			{
+				ret_string += Integer.toString(Group.tileID_to_PlayVal(temp_list.get(i)));
+			}
+			declared_list.remove(remain_groupi); //Removed means successfully added, this will allow only concealed quads to remain
+			remain_groupi--;
 		}
 		
 		//Where concealed declared quads are added
@@ -455,12 +474,22 @@ public class Player
 		 */
 		private HashMap<String, String> update_Groups = new HashMap<String, String>();
 		
+		
 		/*
 		 * This makes aware if new tiles were called/accepted into the hand, which could
 		 * possibly change the hand's out-dated groups
 		 */
 		private boolean updated_searches = false;
 		
+		/*
+		 * An ArrayList to indicate what tiles can be called via index
+		 * 1 => sequence can be called
+		 * 2 => triplet can be called
+		 * 3 => sequence and triplet can be called
+		 * 4 => Quad (and automatically triplet) can be called
+		 * 5 => Everything call be called
+		 */
+		private ArrayList<Integer> call_map;
 		
 		
 		/**
@@ -484,8 +513,8 @@ public class Player
 			this.mjSTRhand = new String(clone.mjSTRhand);
 			this.update_Groups = new HashMap<String, String>(clone.update_Groups);
 			this.updated_searches = clone.updated_searches;
+			this.call_map = new ArrayList<Integer>(clone.call_map);
 		}
-		
 		/**
 		 * A concealed hand only PlayerHand Constructor
 		 * @param in_hand The only part of the ENTIRE player's hand and is complete concealed
@@ -608,6 +637,10 @@ public class Player
 			}
 		}
 		
+		/**
+		 * 
+		 * @return
+		 */
 		protected HashMap<String, String> get_currentGroups()
 		{
 			return this.update_Groups;
@@ -709,6 +742,20 @@ public class Player
 			}
 			return Group.groupSN_to_ArrayList(this.update_Groups.get(best_key));
 		}
+		
+		/**
+		 * WIP
+		 * 
+		 * This function is used to fit the new inputed tile to the groups the PlayerHand currently has
+		 * Without needing to search through every possible groups again using GroupSearch algorithm
+		 * @param new_tile
+		 * @return
+		 */
+		public boolean update_groups(int new_tile)
+		{
+			return false;
+		}
+		
 		
 		/**
 		 * *Warning* Should only run when this.update_Groups is empty, otherwise waste of resources
