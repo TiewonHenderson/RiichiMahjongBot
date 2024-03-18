@@ -6,6 +6,8 @@ public class Group extends Scoring
 {
 	//Literal list of tile_id
 	public ArrayList<Integer> tile_list = new ArrayList<Integer>();
+	
+	public boolean declared; //mainly to separate declared quads
 	public boolean concealed;
 	
 	public static char[] suit_reference = {'m','p','s','z'};
@@ -15,6 +17,7 @@ public class Group extends Scoring
 	 */
 	public Group()
 	{
+		this.declared = false;
 		this.concealed = true;
 	}
 	
@@ -23,9 +26,10 @@ public class Group extends Scoring
 	 * @param in_group A typical 3/4 tile ArrayList<Integer> that represents a tile group
 	 * @param concealed Declare whether the group is concealed
 	 */
-	public Group(ArrayList<Integer> in_group, boolean concealed)
+	public Group(ArrayList<Integer> in_group, boolean declared, boolean concealed)
 	{
 		this.tile_list = sortArray(in_group);
+		this.declared = declared;
 		this.concealed = concealed;
 	}
 	
@@ -34,9 +38,10 @@ public class Group extends Scoring
 	 * @param in_group A typical 3/4 tile int[] that represents a tile group
 	 * @param concealed Declare whether the group is concealed
 	 */
-	public Group(int[] in_group, boolean concealed)
+	public Group(int[] in_group, boolean declared, boolean concealed)
 	{
 		for(int i = 0; i < in_group.length; i++) tile_list.add(in_group[i]);
+		this.declared = declared;
 		this.concealed = concealed;
 	}
 	
@@ -47,6 +52,7 @@ public class Group extends Scoring
 	public Group(ArrayList<Integer> in_group)
 	{
 		this.tile_list = sortArray(in_group);
+		this.declared = false;
 		this.concealed = true;
 	}
 	
@@ -58,6 +64,7 @@ public class Group extends Scoring
 	{
 		for(int i = 0; i < in_group.length; i++) tile_list.add(in_group[i]);
 		this.tile_list = sortArray(this.tile_list);
+		this.declared = false;
 		this.concealed = true;
 	}
 	
@@ -67,6 +74,7 @@ public class Group extends Scoring
 	public Group(Group clone)
 	{
 		this.tile_list = clone.tile_list;
+		this.declared = clone.declared;
 		this.concealed = clone.concealed;
 	}
 
@@ -75,10 +83,11 @@ public class Group extends Scoring
 	 * @return Gets information of this instance of group as integer list
 	 * 			index 0 = group type, i.e 1 = sequence, 2 = triplets, 3 = quads
 	 * 			index 1 = group suit, i.e -1 = invalid/mixed, 0 = mans, 1 = pins, 2 = sous, 3 = honors
+	 * 			index 2 = group concealed, i.e 0 = concealed/undeclared, 1 = concealed/declared, 2 = open/declared, (open/undeclared is impossible)
 	 */
 	public int[] getGroupInfo()
 	{
-		int[] return_data = {-3, -1};
+		int[] return_data = {-3, -1, 0};
 		if(this.tile_list.size() <= 0)
 		{
 			return return_data;
@@ -93,6 +102,14 @@ public class Group extends Scoring
 				suit = -1;
 				break;
 			}
+		}
+		if(!this.concealed)
+		{
+			return_data[2]++;
+		}
+		if(this.declared)
+		{
+			return_data[2]++;
 		}
 		return_data[1] = suit;
 		return return_data;
@@ -361,6 +378,10 @@ public class Group extends Scoring
 		 */
 		boolean concealed = false;
 		
+		/*
+		 * Determine if group is technically declared
+		 */
+		boolean declared = true;
 		int suit = 0;
 		int min = 0;
 		
@@ -389,17 +410,27 @@ public class Group extends Scoring
 					{
 						suit = i; //refers to index respective to suit
 						add_tiles = false;
+						break;
 					}
 				}
+				//Pre-sets the condition of group status
 				switch(Character.toString(current_char))
 				{
 					case "c":
 						concealed = true;
+						declared = false;
 						break;
 					case "o":
 						concealed = false;
 						break;
+					case "q":
+						concealed = false;
+						break;
+					case "k":
+						concealed = true;
+						break;
 				}
+				continue;
 			}
 			//If character is a integer, however it can be complete group tiles/remainder tiles/add min
 			else if(Character.isDigit(current_char))
@@ -438,7 +469,7 @@ public class Group extends Scoring
 					{
 						continue;
 					}
-					Group new_group = new Group(sortArray(add_group), concealed);
+					Group new_group = new Group(sortArray(add_group), declared, concealed);
 					if(tile_mode == 1) { new_group.setDeclareStatus(true); } //If looking in remainder, incomplete groups are always concealed}
 					if(tile_mode == 1 || tile_mode == 0){ all_groups.get(tile_mode).add(new_group); } //Adds group to corresponding index
 					add_group = new ArrayList<Integer>();
@@ -469,9 +500,10 @@ public class Group extends Scoring
 		ArrayList<Group> temp_groups = new ArrayList<Group>(in_arraylist); //This temp ArrayList allows us to remove elements to sort
 		
 		HashMap<Integer, ArrayList<Group>> suit_groups = new HashMap<Integer, ArrayList<Group>>();
+		
 		for(int i = 0; i <= 3; i++) suit_groups.put(i, new ArrayList<Group>());
 		
-		for(int size = 3; size >= 1; size--)
+		for(int size = 4; size >= 1; size--)
 		{
 			for(int i = 0; i < temp_groups.size(); i++) 
 			{
@@ -491,16 +523,15 @@ public class Group extends Scoring
 			}
 		}
 		
+		
 		/*
-		 * Iterates through keys which represents suit since groupSN is in order
-		 * This algorithm assumes the suits in HashMap is in order
-		 * This algorithm loop is to indicate closed/open groups, 
-		 * Next loop for each suit
-		 * final loop is for each group
+		 * 0 = concealed
+		 * 1 = concealed quads
+		 * 2 = opened quads
+		 * 3 = opened
 		 */
-		for(int i = 0; i < 2; i++)
+		for(int i = 0; i < 4; i++)
 		{
-			int prev_str_length = return_str.length();
 			for(int key: suit_groups.keySet())
 			{
 				//Checks if there are any groups in this suit
@@ -509,64 +540,100 @@ public class Group extends Scoring
 				temp_groups = new ArrayList<Group>(); //To only contain either concealed or non-concealed groups
 				for(Group given_group: suit_groups.get(key))
 				{
-					if(given_group.concealed && (i == 0)) {temp_groups.add(given_group);}
-					else if(!given_group.concealed && (i == 1)) {temp_groups.add(given_group);}
+					switch(i)
+					{
+						case 0:
+							//Don't add declared concealed quads
+							if(given_group.concealed && !given_group.declared)
+							{
+								temp_groups.add(given_group);
+							}
+							break;
+						case 1:
+							if(given_group.get_groupTiles().size() == 4 && given_group.concealed && given_group.declared)
+							{
+								temp_groups.add(given_group);
+							}
+							break;
+						case 2:
+							if(given_group.get_groupTiles().size() == 4 && !given_group.concealed && given_group.declared)
+							{
+								temp_groups.add(given_group);
+							}
+							break;
+						case 3:
+							if(given_group.get_groupTiles().size() == 3 && !given_group.concealed && given_group.declared)
+							{
+								temp_groups.add(given_group);
+							}
+							break;
+					}
 				}
 				
 				if(temp_groups.size() == 0) {continue;} //If temp_groups.size() == 0, there is no concealed/non-concealed groups
 				ArrayList<Integer> suit_hand = new ArrayList<Integer>();
-				int min = -1;
+				int min;
 				//Adds all the tiles into one ArrayList
 				for(Group group: temp_groups) for(int tile: group.tile_list) suit_hand.add(tile);
 				
 				min = tileID_to_PlayVal(sortArray(suit_hand).get(0));
 				
-				boolean start_remain = true; //Keeps track of where to add "r={", also helps close remainder segment
+				boolean start_remain = false; //Keeps track of where to add "r={", also helps close remainder segment
 				String suit_string = ""; //The return for one suit, will be added to whole return_string
 
 				for(Group given_group: temp_groups)
 				{
-					if((i == 0 && given_group.concealed) || (i == 1 && !given_group.concealed))
+					if((i == 0 && given_group.concealed && !given_group.declared))
 					{
 						/*
 						 *	The groupSN method will return the play_val-min and set it appropriate to groupSN format 
 						 */
-						if(given_group.get_groupTiles().size() >= 3)
+						if(given_group.get_groupTiles().size() == 3)
 						{
 							suit_string += given_group.to_groupSN(min);
 						}
 						else if(given_group.get_groupTiles().size() <= 2)
 						{
-							if(start_remain)
+							if(!start_remain)
 							{
-								start_remain = false;
+								start_remain = true;
 								suit_string += "r={";
 							}
 							suit_string += given_group.to_groupSN(min);
 						}
 					}
+					else
+					{
+						suit_string += given_group.to_groupSN(min);
+					}
 				}
-				
-				if(suit_string.length() > 0 && !start_remain)//Checks if remainder was activated to close with }
+				if(i > 0) //Adds complete groups if confirmed
 				{
-					return_str += suit_string + "}[+" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
+					return_str += suit_string + "[+" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
 				}
-				else if(suit_string.length() > 0)//remainder was not added, only add min and suit
+				else if(suit_string.length() > 0 && !start_remain) //No remainder was detected
 				{
 					return_str += suit_string + "r={}[+" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
 				}
-			}
-			if(return_str.length() - prev_str_length > 0) //Only add close/open if there were even groupSN is begin with
-			{
-				switch(i)
+				else if(suit_string.length() > 0)//Last case, there was a remainder
 				{
-					case 0:
-						return_str += "c";
-						break;
-					case 1:
-						return_str += "o";
-						break;
+					return_str += suit_string + "}[+" + Integer.toString(min) + "]" +Character.toString(suit_reference[key]); 
 				}
+			}
+			switch(i)
+			{
+				case 0:
+					return_str += "c";
+					break;
+				case 1:
+					return_str += "k";
+					break;
+				case 2:
+					return_str += "q";
+					break;
+				case 3:
+					return_str += "o";
+					break;
 			}
 		}
 		return return_str;
@@ -709,10 +776,12 @@ public class Group extends Scoring
 	public static Group random_group(boolean is_complete, boolean is_concealed)
 	{
 		int suit = (int)(Math.random() * 4); //Decides random suit
+		boolean declared = false;
 		boolean concealed = true;
 		if(Math.random() > 0.5 && !concealed)
 		{
 			concealed = false;
+			declared = true;
 		}
 		ArrayList<Integer> tile_list = new ArrayList<Integer>();
 		int start = (int)(Math.random() * 9);
@@ -743,6 +812,7 @@ public class Group extends Scoring
 		{
 			case 0:
 				for(int i = 0; i < 4; i++) tile_list.add(start + (suit * 9));
+				declared = true;
 				break;
 			case 1:
 				for(int i = 0; i < 3; i++) tile_list.add(start + (suit * 9));
@@ -762,7 +832,7 @@ public class Group extends Scoring
 				tile_list.add(start + (suit * 9));
 				break;
 		}
-		return new Group(tile_list, concealed);
+		return new Group(tile_list, declared, concealed);
 	}
 	
 	/**
