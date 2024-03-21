@@ -629,9 +629,9 @@ public class GroupSearch extends Group
 		ArrayList<Integer> remainder_tiles = new ArrayList<Integer>();
 		for(Group incomp_groups : categorized_Group.get(1)) 
 		{
-			if(incomp_groups.tile_list.size() < 3)
+			if(incomp_groups.get_groupTiles().size() < 3)
 			{
-				for(int tile: incomp_groups.tile_list) remainder_tiles.add(tile);
+				for(int tile: incomp_groups.get_groupTiles()) remainder_tiles.add(tile);
 			}
 		}
 		if(in_arraylist.size() > remainder_tiles.size())

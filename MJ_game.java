@@ -9,10 +9,15 @@ import java.util.*;
 public class MJ_game
 {
 	/**
+	 * This ArrayList will keep track of all Players of this current MJ game
+	 */
+	protected ArrayList<Player> all_players = new ArrayList<Player>();
+	
+	/**
 	 * Possible_tiles: 			used for the searching algorithm to see what tiles are left
 	 * total_nonbonus_tiles: 	used to reference for how far the current game is progressing
 	 */
-	public ArrayList<ArrayList<Integer>> possible_tiles = new ArrayList<ArrayList<Integer>>();
+	public ArrayList<ArrayList<Integer>> possible_tiles_ = new ArrayList<ArrayList<Integer>>();
 	
 	/*
 	 * The int value that represents the remaining amount of tiles that does include other Player's hand
@@ -21,60 +26,69 @@ public class MJ_game
 	 * 
 	 * Should not include flower tiles/ or any kind of bonus tile
 	 */
-	public int total_wall_tiles;
+	public int total_wall_tiles_;
 	
 	/*
 	 * With each index that would represent the Player's wind_ID, the int value would indicate the amount
 	 * of remaining called Group possible (4 == no declared Group)
 	 */
-	public int[] player_status;
+	public int[] player_status_;
 	
 	/*
 	 * The list of possible flowers that is either in other Player's hand or in the wall
 	 * Each index represents the amount of flowers not visible
 	 */
-	public ArrayList<Integer> possible_flowers; 
+	public ArrayList<Integer> possible_flowers_; 
 	
 	/**
 	 * status int reference:
 	 * 0 = normal
 	 * 1 = last tile
-	 * 2 = 
+	 * 2 = added kan
+	 * 3 = concealed kan
 	 */
-	public int special_status = 0;
+	public int special_status_ = 0;
 	
 	/**
 	 * This stores the move history of a given game
 	 */
-	public ArrayList<Compress_input> move_history;
+	public ArrayList<Compress_input> move_history_;
 	
 	/**
 	 * This will be the counter responsible for whose turn it currently is
 	 */
-	public int wind_ID_turn = 0;
+	public int wind_ID_turn_ = 0;
 	
 	/**
 	 * @function This constructor does not take into consideration the player's starting hand and their first declaration
 	 * 			 of flowers and recovering tiles
+	 * 
+	 * @param wind_ID This input is the current Player that would input their hand while everyone else is unknown
+	 * 
 	 * This default constructor will start a new game, so all the fields would be set to a fresh wall
 	 */
-	public MJ_game()
+	public MJ_game(int wind_ID)
 	{
 		for(int i = 0; i < 4; i++) 
 		{
-			possible_tiles.add(new ArrayList<Integer>());
+			possible_tiles_.add(new ArrayList<Integer>());
 			int max = 9;
 			switch(i) //Used to add numbered suit and honor suit separately
 			{
 				case 3:
 					max = 7;
 				default:
-					for(int j = 0; j < max; j++) possible_tiles.get(i).add(4);
+					for(int j = 0; j < max; j++) possible_tiles_.get(i).add(4);
 					break;
 			}
+			all_players.add(new Player());
+			if(i == wind_ID)
+			{
+				
+			}
 		}
-		this.total_wall_tiles = 136 - (4 * 13);							// 4(amt) * 34(IDs) == 136 - 4(Players) * 13(Start hand amt)
-		for(int i = 0; i < 4; i++) this.possible_flowers.add(2);
+		this.total_wall_tiles_ = 136 - (4 * 13);							// 4(amt) * 34(IDs) == 136 - 4(Players) * 13(Start hand amt)
+		for(int i = 0; i < 4; i++) this.possible_flowers_.add(2);
 	}
 	
 	/**
@@ -87,19 +101,19 @@ public class MJ_game
 	{
 		for(int i = 0; i < 4; i++) 
 		{
-			possible_tiles.add(new ArrayList<Integer>());
+			possible_tiles_.add(new ArrayList<Integer>());
 			int max = 9;
 			switch(i) //Used to add numbered suit and honor suit separately
 			{
 				case 3:
 					max = 7;
 				default:
-					for(int j = 0; j < max; j++) possible_tiles.get(i).add(4);
+					for(int j = 0; j < max; j++) possible_tiles_.get(i).add(4);
 					break;
 			}
 		}
 		
-		this.total_wall_tiles = 136 - (int)(visible_tiles.length()/2) - (4 * 13);
+		this.total_wall_tiles_ = 136 - (int)(visible_tiles.length()/2) - (4 * 13);
 		
 		String temp_str = "";
 		for(int i = 0; i < visible_tiles.length(); i++)
@@ -115,7 +129,7 @@ public class MJ_game
 				{
 					int suit = Integer.parseInt(temp_str) / 9;
 					int index = Integer.parseInt(temp_str) % 9;
-					this.possible_tiles.get(suit).set(index, this.possible_tiles.get(suit).get(index) - 1);
+					this.possible_tiles_.get(suit).set(index, this.possible_tiles_.get(suit).get(index) - 1);
 				}
 				catch(Exception e)
 				{
@@ -125,20 +139,20 @@ public class MJ_game
 			}
 		}
 		
-		this.wind_ID_turn = current_windTurn;
-		if(wind_ID_turn > 3)
+		this.wind_ID_turn_ = current_windTurn;
+		if(wind_ID_turn_ > 3)
 		{
-			this.wind_ID_turn = 0;
+			this.wind_ID_turn_ = 0;
 		}
 	}
 	
-	public ArrayList<ArrayList<Integer>> get_possible_tiles(){return this.possible_tiles;}
-	public int total_tiles_left() {return this.total_wall_tiles;}
-	public int[] get_player_status() {return this.player_status;}
-	public ArrayList<Integer> get_possible_flowers(){return this.possible_flowers;}
-	public int get_special_status() {return this.special_status;}
-	public ArrayList<Compress_input> get_move_history(){return this.move_history;}
-	public int get_current_windID_turn() {return this.wind_ID_turn;}
+	public ArrayList<ArrayList<Integer>> get_possible_tiles(){return this.possible_tiles_;}
+	public int total_tiles_left() {return this.total_wall_tiles_;}
+	public int[] get_player_status() {return this.player_status_;}
+	public ArrayList<Integer> get_possible_flowers(){return this.possible_flowers_;}
+	public int get_special_status() {return this.special_status_;}
+	public ArrayList<Compress_input> get_move_history(){return this.move_history_;}
+	public int get_current_windID_turn() {return this.wind_ID_turn_;}
 	
 	
  	public boolean update_game(Compress_input new_turn)
@@ -146,35 +160,35 @@ public class MJ_game
  		if(!new_turn.is_validMove()) {return false;}
  		
  		//Adds the valid turn into move_history
- 		this.move_history.add(new_turn);
+ 		this.move_history_.add(new_turn);
  		
 		//Removes input tile from wall
 		int suit = new_turn.get_tileID() / 9;
 		int index = new_turn.get_tileID() % 9;
 		
 		//No tiles to offer, no tiles remove, return false
-		if(this.possible_tiles.get(suit).get(index) == 0)
+		if(this.possible_tiles_.get(suit).get(index) == 0)
 		{
 			return false;
 		}
-		this.possible_tiles.get(suit).set(index, this.possible_tiles.get(suit).get(index) - 1);
+		this.possible_tiles_.get(suit).set(index, this.possible_tiles_.get(suit).get(index) - 1);
 		
 		//Checks the same conditions for used_tiles
 		for(int i = 0; i < new_turn.get_used_tiles().size(); i++)
 		{
 			suit = new_turn.get_used_tiles().get(i) / 9;
 			index = new_turn.get_used_tiles().get(i) % 9;
-			if(this.possible_tiles.get(suit).get(index) == 0)
+			if(this.possible_tiles_.get(suit).get(index) == 0)
 			{
 				return false;
 			}
-			this.possible_tiles.get(suit).set(index, this.possible_tiles.get(suit).get(index) - 1);
+			this.possible_tiles_.get(suit).set(index, this.possible_tiles_.get(suit).get(index) - 1);
 		}
 		
 		// valid Move already checks if there are possible flowers, since true, it's safe to remove flowers
 		for(int i = 0; i < new_turn.get_flower_list().size(); i++)
 		{
-			this.possible_flowers.set(new_turn.get_flower_list().get(i), this.possible_flowers.get(new_turn.get_flower_list().get(i)) - 1);
+			this.possible_flowers_.set(new_turn.get_flower_list().get(i), this.possible_flowers_.get(new_turn.get_flower_list().get(i)) - 1);
 		}
 		
 		switch(new_turn.get_decision())
@@ -182,6 +196,17 @@ public class MJ_game
 			//No calls
 			case 0:
 			case 1:
+				//Increment the next Player's turn or loops back to dealer
+				if(this.wind_ID_turn_ == 3)
+				{
+					this.wind_ID_turn_ = 0;
+				}
+				else
+				{
+					this.wind_ID_turn_++;
+				}
+				
+				
 				break;
 			//Sequence call
 			case 2:

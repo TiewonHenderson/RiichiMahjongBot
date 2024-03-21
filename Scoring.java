@@ -74,7 +74,7 @@ public class Scoring
 		if(all_groups.size() == 0) {return 0;}
 		for(int i = 0; i < all_groups.size(); i++)
 		{
-			if(!all_groups.get(i).concealed)
+			if(!all_groups.get(i).concealed_)
 			{
 				return 0;
 			}
@@ -97,7 +97,7 @@ public class Scoring
 		int return_score = 0;
 		for(int i = 0; i < all_groups.size(); i++)
 		{
-			if(all_groups.get(i).getGroupInfo()[0] == 3 && all_groups.get(i).declared)
+			if(all_groups.get(i).getGroupInfo()[0] == 3 && all_groups.get(i).declared_)
 			{
 				return_score++;
 			}
@@ -366,7 +366,7 @@ public class Scoring
 		boolean pair_passed = false;
 		for(int i = 0; i < all_groups.size(); i++)
 		{
-			if(all_groups.get(i).concealed)
+			if(all_groups.get(i).concealed_)
 			{
 				if(!pair_passed && Group.group_status(all_groups.get(i)) == 0) //Only allows 1 concealed pair to pass
 				{

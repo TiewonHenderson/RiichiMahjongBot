@@ -5,10 +5,10 @@ import java.util.*;
 public class Group extends Scoring
 {
 	//Literal list of tile_id
-	public ArrayList<Integer> tile_list = new ArrayList<Integer>();
+	public ArrayList<Integer> tile_list_ = new ArrayList<Integer>();
 	
-	public boolean declared; //mainly to separate declared quads
-	public boolean concealed;
+	public boolean declared_; //mainly to separate declared quads
+	public boolean concealed_;
 	
 	public static char[] suit_reference = {'m','p','s','z'};
 	
@@ -17,8 +17,8 @@ public class Group extends Scoring
 	 */
 	public Group()
 	{
-		this.declared = false;
-		this.concealed = true;
+		this.declared_ = false;
+		this.concealed_ = true;
 	}
 	
 	/**
@@ -28,9 +28,9 @@ public class Group extends Scoring
 	 */
 	public Group(ArrayList<Integer> in_group, boolean declared, boolean concealed)
 	{
-		this.tile_list = sortArray(in_group);
-		this.declared = declared;
-		this.concealed = concealed;
+		this.tile_list_ = sortArray(in_group);
+		this.declared_ = declared;
+		this.concealed_ = concealed;
 	}
 	
 	/**
@@ -40,9 +40,9 @@ public class Group extends Scoring
 	 */
 	public Group(int[] in_group, boolean declared, boolean concealed)
 	{
-		for(int i = 0; i < in_group.length; i++) tile_list.add(in_group[i]);
-		this.declared = declared;
-		this.concealed = concealed;
+		for(int i = 0; i < in_group.length; i++) tile_list_.add(in_group[i]);
+		this.declared_ = declared;
+		this.concealed_ = concealed;
 	}
 	
 	/**
@@ -51,9 +51,9 @@ public class Group extends Scoring
 	 */
 	public Group(ArrayList<Integer> in_group)
 	{
-		this.tile_list = sortArray(in_group);
-		this.declared = false;
-		this.concealed = true;
+		this.tile_list_ = sortArray(in_group);
+		this.declared_ = false;
+		this.concealed_ = true;
 	}
 	
 	/**
@@ -62,10 +62,10 @@ public class Group extends Scoring
 	 */
 	public Group(int[] in_group)
 	{
-		for(int i = 0; i < in_group.length; i++) tile_list.add(in_group[i]);
-		this.tile_list = sortArray(this.tile_list);
-		this.declared = false;
-		this.concealed = true;
+		for(int i = 0; i < in_group.length; i++) tile_list_.add(in_group[i]);
+		this.tile_list_ = sortArray(this.tile_list_);
+		this.declared_ = false;
+		this.concealed_ = true;
 	}
 	
 	/*
@@ -73,9 +73,9 @@ public class Group extends Scoring
 	 */
 	public Group(Group clone)
 	{
-		this.tile_list = clone.tile_list;
-		this.declared = clone.declared;
-		this.concealed = clone.concealed;
+		this.tile_list_ = clone.tile_list_;
+		this.declared_ = clone.declared_;
+		this.concealed_ = clone.concealed_;
 	}
 
 	/**
@@ -88,26 +88,26 @@ public class Group extends Scoring
 	public int[] getGroupInfo()
 	{
 		int[] return_data = {-3, -1, 0};
-		if(this.tile_list.size() <= 0)
+		if(this.tile_list_.size() <= 0)
 		{
 			return return_data;
 		}
-		int groupType = group_status(this.tile_list);
+		int groupType = group_status(this.tile_list_);
 		return_data[0] = groupType;
-		int suit = this.tile_list.get(0)/9;
-		for(int index = 0; index < this.tile_list.size() - 1; index++)
+		int suit = this.tile_list_.get(0)/9;
+		for(int index = 0; index < this.tile_list_.size() - 1; index++)
 		{
-			if(this.tile_list.get(index)/9 != this.tile_list.get(index + 1)/9)
+			if(this.tile_list_.get(index)/9 != this.tile_list_.get(index + 1)/9)
 			{
 				suit = -1;
 				break;
 			}
 		}
-		if(!this.concealed)
+		if(!this.concealed_)
 		{
 			return_data[2]++;
 		}
-		if(this.declared)
+		if(this.declared_)
 		{
 			return_data[2]++;
 		}
@@ -120,9 +120,18 @@ public class Group extends Scoring
 	 * Used to alter if Group is concealed or not
 	 * @param in_status The new status of the group, if it's concealed or not
 	 */
-	public void setDeclareStatus(boolean in_status)
+	public void set_conceal_status(boolean in_status)
 	{
-		this.concealed = in_status;
+		this.concealed_ = in_status;
+	}
+	
+	/**
+	 * Used to alter if Group is now declared or not
+	 * @param in_status The new status of the group, if it's declared or not
+	 */
+	public void set_declare_status(boolean in_status)
+	{
+		this.declared_ = in_status;
 	}
 	
 	/**
@@ -135,7 +144,7 @@ public class Group extends Scoring
 	{
 		if(new_group.size() > 0 && new_group.size() < 5)
 		{
-			this.tile_list = new ArrayList<Integer>(new_group);
+			this.tile_list_ = new ArrayList<Integer>(new_group);
 			return true;
 		}
 		return false;
@@ -143,15 +152,15 @@ public class Group extends Scoring
 	
 	public ArrayList<Integer> get_groupTiles()
 	{
-		return this.tile_list;
+		return this.tile_list_;
 	}
 	/**
-	 * Used to print the string representation of the tile_list
+	 * Used to print the string representation of the tile_list_
 	 */
 	public String toString()
 	{
 		String return_str = "(";
-		for(int tile_id: this.tile_list) 
+		for(int tile_id: this.tile_list_) 
 		{
 			return_str += Integer.toString(tile_id) + ",";
 		}
@@ -171,7 +180,7 @@ public class Group extends Scoring
 	public String to_groupSN(int min)
 	{
 		String return_str = "(";
-		for(int tile_id: this.tile_list) 
+		for(int tile_id: this.tile_list_) 
 		{
 			return_str += Integer.toString(tileID_to_PlayVal(tile_id) - min);
 		}
@@ -470,7 +479,7 @@ public class Group extends Scoring
 						continue;
 					}
 					Group new_group = new Group(sortArray(add_group), declared, concealed);
-					if(tile_mode == 1) { new_group.setDeclareStatus(true); } //If looking in remainder, incomplete groups are always concealed}
+					if(tile_mode == 1) { new_group.set_conceal_status(true); } //If looking in remainder, incomplete groups are always concealed}
 					if(tile_mode == 1 || tile_mode == 0){ all_groups.get(tile_mode).add(new_group); } //Adds group to corresponding index
 					add_group = new ArrayList<Integer>();
 				}
@@ -544,25 +553,25 @@ public class Group extends Scoring
 					{
 						case 0:
 							//Don't add declared concealed quads
-							if(given_group.concealed && !given_group.declared)
+							if(given_group.concealed_ && !given_group.declared_)
 							{
 								temp_groups.add(given_group);
 							}
 							break;
 						case 1:
-							if(given_group.get_groupTiles().size() == 4 && given_group.concealed && given_group.declared)
+							if(given_group.get_groupTiles().size() == 4 && given_group.concealed_ && given_group.declared_)
 							{
 								temp_groups.add(given_group);
 							}
 							break;
 						case 2:
-							if(given_group.get_groupTiles().size() == 4 && !given_group.concealed && given_group.declared)
+							if(given_group.get_groupTiles().size() == 4 && !given_group.concealed_ && given_group.declared_)
 							{
 								temp_groups.add(given_group);
 							}
 							break;
 						case 3:
-							if(given_group.get_groupTiles().size() == 3 && !given_group.concealed && given_group.declared)
+							if(given_group.get_groupTiles().size() == 3 && !given_group.concealed_ && given_group.declared_)
 							{
 								temp_groups.add(given_group);
 							}
@@ -574,7 +583,7 @@ public class Group extends Scoring
 				ArrayList<Integer> suit_hand = new ArrayList<Integer>();
 				int min;
 				//Adds all the tiles into one ArrayList
-				for(Group group: temp_groups) for(int tile: group.tile_list) suit_hand.add(tile);
+				for(Group group: temp_groups) for(int tile: group.get_groupTiles()) suit_hand.add(tile);
 				
 				min = tileID_to_PlayVal(sortArray(suit_hand).get(0));
 				
@@ -583,7 +592,7 @@ public class Group extends Scoring
 
 				for(Group given_group: temp_groups)
 				{
-					if((i == 0 && given_group.concealed && !given_group.declared))
+					if((i == 0 && given_group.concealed_ && !given_group.declared_))
 					{
 						/*
 						 *	The groupSN method will return the play_val-min and set it appropriate to groupSN format 

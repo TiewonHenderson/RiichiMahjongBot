@@ -32,12 +32,12 @@ import java.util.function.*;
  */
 public class Compress_input 
 {
-	public boolean valid_move;
-	public int player_wind_ID;
-	public int decision;
-	public int tile_ID;
-	public ArrayList<Integer> used_tiles = new ArrayList<Integer>();
-	public ArrayList<Integer> declared_flowers = new ArrayList<Integer>();
+	public boolean valid_move_;
+	public int player_wind_ID_;
+	public int decision_;
+	public int tile_ID_;
+	public ArrayList<Integer> used_tiles_ = new ArrayList<Integer>();
+	public ArrayList<Integer> declared_flowers_ = new ArrayList<Integer>();
 	
 	public Compress_input(String input_str, MJ_game current_game)
 	{
@@ -71,44 +71,44 @@ public class Compress_input
 				switch(add_mode)
 				{
 					case 0:
-						this.player_wind_ID = Integer.parseInt(Character.toString(input_str.charAt(i)));
+						this.player_wind_ID_ = Integer.parseInt(Character.toString(input_str.charAt(i)));
 						break;
 					case 1:
-						this.decision = Integer.parseInt(Character.toString(input_str.charAt(i)));
+						this.decision_ = Integer.parseInt(Character.toString(input_str.charAt(i)));
 						break;
 					case 2:
 						if((i + 1) < input_str.length())
 						{
-							this.tile_ID = Integer.parseInt(input_str.substring(i, i + 2));
+							this.tile_ID_ = Integer.parseInt(input_str.substring(i, i + 2));
 						}
 						break;
 					case 3:
 						while(input_str.charAt(i) != 'f')
 						{
-							this.declared_flowers.add(Integer.parseInt(Character.toString(input_str.charAt(i))));
+							this.declared_flowers_.add(Integer.parseInt(Character.toString(input_str.charAt(i))));
 							i++;
 						}
 						add_mode++;
 						i++;
 						break;
 					case 4:
-						this.used_tiles.add(Integer.parseInt(Character.toString(input_str.charAt(i))));
+						this.used_tiles_.add(Integer.parseInt(Character.toString(input_str.charAt(i))));
 						break;
 				}
 				add_mode++;
 			}
 		}
-		this.valid_move = this.valid_turn(current_game);
+		this.valid_move_ = this.valid_turn(current_game);
 	}
 	
 	public Compress_input(int wind_ID, int decision, int tile_ID, ArrayList<Integer> declared_flowers, ArrayList<Integer> used_tiles, MJ_game current_game)
 	{
-		this.player_wind_ID = wind_ID;
-		this.decision = decision;
-		this.tile_ID = tile_ID;
-		this.declared_flowers = declared_flowers;
-		this.used_tiles = used_tiles;
-		this.valid_move = this.valid_turn(current_game);
+		this.player_wind_ID_ = wind_ID;
+		this.decision_ = decision;
+		this.tile_ID_ = tile_ID;
+		this.declared_flowers_ = declared_flowers;
+		this.used_tiles_ = used_tiles;
+		this.valid_move_ = this.valid_turn(current_game);
 	}
 	
 	/**
@@ -124,15 +124,15 @@ public class Compress_input
 	{
 		//condition 1, valid tiles
 		Predicate<Integer> withinRange = num -> num >= 0 && num <= 33;		//Lambda to see range of tile_ID input
-		if(!withinRange.test(this.tile_ID))									//Not within range
+		if(!withinRange.test(this.tile_ID_))									//Not within range
 		{
 			return false;
 		}
 		//Tile doesn't exist (all used or discarded)
-		if(current_game.get_possible_tiles().get(this.tile_ID / 9).get(this.tile_ID % 9) == 0) {return false;}
-		for(int i = 0; i < this.used_tiles.size(); i++) 
+		if(current_game.get_possible_tiles().get(this.tile_ID_ / 9).get(this.tile_ID_ % 9) == 0) {return false;}
+		for(int i = 0; i < this.used_tiles_.size(); i++) 
 		{
-			int used_tileID = this.used_tiles.get(i) + this.tile_ID;
+			int used_tileID = this.used_tiles_.get(i) + this.tile_ID_;
 			if(!withinRange.test(used_tileID)) {return false;}	//Not within range
 			//Tile doesn't exist (all used or discarded)
 			if(current_game.get_possible_tiles().get(used_tileID / 9).get(used_tileID % 9) == 0) {return false;}
@@ -141,11 +141,11 @@ public class Compress_input
 		ArrayList<Integer> temp_flowers = new ArrayList<Integer>(current_game.get_possible_flowers());
 		for(int i = 0; i < temp_flowers.size(); i++)
 		{
-			if(this.declared_flowers.get(i) < 0 || this.declared_flowers.get(i) > 3) {return false;}
-			if(temp_flowers.get(this.declared_flowers.get(i)) > 0)
+			if(this.declared_flowers_.get(i) < 0 || this.declared_flowers_.get(i) > 3) {return false;}
+			if(temp_flowers.get(this.declared_flowers_.get(i)) > 0)
 			{
 				//Decrements flower that appears when checking declared
-				temp_flowers.set(this.declared_flowers.get(i), temp_flowers.get(this.declared_flowers.get(i)) - 1);
+				temp_flowers.set(this.declared_flowers_.get(i), temp_flowers.get(this.declared_flowers_.get(i)) - 1);
 			}
 			else
 			{
@@ -161,24 +161,24 @@ public class Compress_input
 		}
 		
 		//condition 3
-		if(this.player_wind_ID == current_game.get_current_windID_turn() &&
-		   this.decision > 1)
+		if(this.player_wind_ID_ == current_game.get_current_windID_turn() &&
+		   this.decision_ > 1)
 		{
 			return false;
 		}
 		
 		//condition 4
-		if(this.decision == 2 && 
-		   this.player_wind_ID != current_game.get_current_windID_turn() + 1)
+		if(this.decision_ == 2 && 
+		   this.player_wind_ID_ != current_game.get_current_windID_turn() + 1)
 		{
 			return false;
 		}
 		return true;
 	}
-	public int get_windID(){return this.player_wind_ID;}
-	public int get_decision() {return this.decision;}
-	public int get_tileID() {return this.tile_ID;}
-	public ArrayList<Integer> get_flower_list(){return this.declared_flowers;}
-	public ArrayList<Integer> get_used_tiles(){return this.used_tiles;}
-	public boolean is_validMove() {return this.valid_move;}
+	public int get_windID(){return this.player_wind_ID_;}
+	public int get_decision() {return this.decision_;}
+	public int get_tileID() {return this.tile_ID_;}
+	public ArrayList<Integer> get_flower_list(){return this.declared_flowers_;}
+	public ArrayList<Integer> get_used_tiles(){return this.used_tiles_;}
+	public boolean is_validMove() {return this.valid_move_;}
 }

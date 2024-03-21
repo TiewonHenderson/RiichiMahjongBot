@@ -4,20 +4,21 @@ import java.util.*;
 
 public class Player
 {
+	/*
+	 * These enum represent the Player and is used in a variety of scoring, turns, and other
+	 */
+	enum wind{EAST, SOUTH, WEST, NORTH}
 	
 	/*
 	 * Used to keep track of amount of untitled players
 	 * Doesn't need to be accessed outside of this class
 	 */
-	protected static int unname_amt = 0;
+	protected static int assign_wind = 0;
 	
 	/*
-	 * Used to keep track of wind counter (Use seatWind index to reference who to assign)
-	 * Doesn't need to be accessed outside of this class
+	 * Player name, can add custom names in the future, for now is reference to their seat wind
 	 */
-	protected static int seatWind_amt = 0;
-
-	public String playerName;
+	public String playerName_;
 	
 	/*
 	 * E = 0
@@ -25,20 +26,20 @@ public class Player
 	 * W = 2
 	 * N = 3
 	 */
-	public int seatWind;
+	public int seatWind_;
 
 	/*
      * Integer to keep track of drawn flowers, will be of magnitude of 10^4
      * Use seatWind to determine what flower is the player's good flower (10^seatWind)
      */
-    public int flower;
+    public int flower_;
     
-	public ArrayList<Integer> dropPile;
+	public ArrayList<Integer> dropPile_;
 	
 	/*
 	 * The current Playerhand of this player instance, has closed and open tiles in 2D ArrayList
 	 */
-	private PlayerHand playerHand;
+	private PlayerHand playerHand_;
 	
 	/*
 	 * Used to created a new default player object, fields will be set as
@@ -48,34 +49,76 @@ public class Player
 	 */
 	public Player()
 	{
-		this.playerName = "UNNAMED" + Integer.toString(unname_amt);
-		this.seatWind = seatWind_amt;
-		unname_amt += 1;
-		seatWind_amt += 1;
+		this.playerName_ = wind.values()[assign_wind] + "PLAYER";
+		this.seatWind_ = assign_wind;
+		assign_wind += 1;
 		
-		if(unname_amt > 3)
+		if(assign_wind == 4)
 		{
-			unname_amt = 0;
+			assign_wind = 0;
 		}
-		if(seatWind_amt > 3)
-		{
-			seatWind_amt = 0;
-		}
-		this.dropPile = new ArrayList<Integer>();
-		this.playerHand = new PlayerHand();
-		this.flower = 0;
+		this.dropPile_ = new ArrayList<Integer>();
+		this.playerHand_ = new PlayerHand();
+		this.flower_ = 0;
 	}
 	
+	public Player(int wind_ID)
+	{
+		//Invalid input for wind_ID would just result in default constructor
+		if(wind_ID < 0 || wind_ID > 3)
+		{
+			this.playerName_ = "UNNAMED" + Integer.toString(assign_wind);
+			this.seatWind_ = assign_wind;
+			assign_wind += 1;
+			
+			if(assign_wind > 3)
+			{
+				assign_wind = 0;
+			}
+		}
+		else
+		{
+			// Assign name according to wind_ID
+			switch(wind_ID)
+			{
+				case 0:
+					this.playerName_ = "EAST Player";
+					this.seatWind_ = 0;
+					break;
+				case 1:
+					this.playerName_ = "SOUTH Player";
+					this.seatWind_ = 1;
+					break;
+				case 2:
+					this.playerName_ = "WEST Player";
+					this.seatWind_ = 2;
+					break;
+				case 3:
+					this.playerName_ = "NORTH Player";
+					this.seatWind_ = 3;
+					break;
+			}
+		}
+		
+		assign_wind = wind_ID + 1;
+		if(wind_ID == 4)
+		{
+			assign_wind = 0;
+		}
+		this.dropPile_ = new ArrayList<Integer>();
+		this.playerHand_ = new PlayerHand();
+		this.flower_ = 0;
+	}
 	/*
 	 * Used to create a copy of inputed Player
 	 */
 	public Player(Player clone)
 	{
-		this.playerName = new String(clone.playerName);
-		this.seatWind = clone.seatWind;
-		this.dropPile = new ArrayList<Integer>(clone.dropPile);
-		this.playerHand = new PlayerHand(clone.playerHand);
-		this.flower = clone.flower;
+		this.playerName_ = new String(clone.playerName_);
+		this.seatWind_ = clone.seatWind_;
+		this.dropPile_ = new ArrayList<Integer>(clone.dropPile_);
+		this.playerHand_ = new PlayerHand(clone.playerHand_);
+		this.flower_ = clone.flower_;
 	}
 	
 	/*
@@ -83,14 +126,14 @@ public class Player
 	 */
 	public PlayerHand getPlayerHand()
 	{	
-		return this.playerHand;
+		return this.playerHand_;
 	}
 	
 	public boolean setPlayerHand(PlayerHand in_playhand)
 	{
 		try
 		{
-			this.playerHand = new PlayerHand(in_playhand);
+			this.playerHand_ = new PlayerHand(in_playhand);
 			return true;
 		}
 		catch(Exception e)
@@ -101,7 +144,7 @@ public class Player
 	
 	public ArrayList<Integer> getPlayerDrops()
 	{
-		return this.dropPile;
+		return this.dropPile_;
 	}
 	
 	/**
@@ -346,7 +389,7 @@ public class Player
 		for(int remain_groupi = 0; remain_groupi < declared_list.size(); remain_groupi++) //Assumes all invalid groups are removed above
 		{
 			Group group = declared_list.get(remain_groupi);
-			if(group.concealed) //concealed quads are added separately
+			if(group.concealed_) //concealed quads are added separately
 			{
 				continue;
 			}
@@ -411,19 +454,19 @@ public class Player
 		 * The ArrayList<Integer> representation of the PlayerHand
 		 * Integer values should only range from [0,33]
 		 */
-		private ArrayList<Integer> currentHand;
+		private ArrayList<Integer> currentHand_;
 		
 		/*
 		 * The String representation of PlayerHand
 		 * A use for this String could be Logging, Display, Saved as starting hand indicator
 		 */
-		private String mjSTRhand; 
+		private String mjSTRhand_; 
 		
 		/*
 		 * The declaredGroups of this PlayerHand, what PlayerHand represents is not just
 		 * the concealed part of what the Player is playing on, but the Entire hand
 		 */
-		public ArrayList<Group> declaredGroups; 
+		public ArrayList<Group> declaredGroups_; 
 		
 		/*
 		 * 	update_Groups itself represents ArrayList<ArrayList<Group>> for each groupSN case, 
@@ -472,14 +515,14 @@ public class Player
 		 * 		The Tile is thrown out == Tsumogiri:
 		 * 			update_Groups == update_Groups (no groups are altered)
 		 */
-		private HashMap<String, String> update_Groups = new HashMap<String, String>();
+		private HashMap<String, String> update_Groups_ = new HashMap<String, String>();
 		
 		
 		/*
 		 * This makes aware if new tiles were called/accepted into the hand, which could
 		 * possibly change the hand's out-dated groups
 		 */
-		private boolean updated_searches = false;
+		private boolean updated_searches_ = false;
 		
 		/*
 		 * An ArrayList to indicate what tiles can be called via index
@@ -489,7 +532,7 @@ public class Player
 		 * 4 => Quad (and automatically triplet) can be called
 		 * 5 => Everything call be called
 		 */
-		private ArrayList<Integer> call_map;
+		private ArrayList<Integer> call_map_;
 		
 		
 		/**
@@ -497,9 +540,9 @@ public class Player
 		 */
 		public PlayerHand()
 		{
-			this.currentHand = new ArrayList<Integer>();
-			this.declaredGroups = new ArrayList<Group>();
-			this.mjSTRhand = "";
+			this.currentHand_ = new ArrayList<Integer>();
+			this.declaredGroups_ = new ArrayList<Group>();
+			this.mjSTRhand_ = "";
 		}
 		
 		/**
@@ -508,12 +551,12 @@ public class Player
 		 */
 		public PlayerHand(PlayerHand clone)
 		{
-			this.currentHand = new ArrayList<Integer>(clone.currentHand);
-			this.declaredGroups = new ArrayList<Group>(clone.declaredGroups);
-			this.mjSTRhand = new String(clone.mjSTRhand);
-			this.update_Groups = new HashMap<String, String>(clone.update_Groups);
-			this.updated_searches = clone.updated_searches;
-			this.call_map = new ArrayList<Integer>(clone.call_map);
+			this.currentHand_ = new ArrayList<Integer>(clone.currentHand_);
+			this.declaredGroups_ = new ArrayList<Group>(clone.declaredGroups_);
+			this.mjSTRhand_ = new String(clone.mjSTRhand_);
+			this.update_Groups_ = new HashMap<String, String>(clone.update_Groups_);
+			this.updated_searches_ = clone.updated_searches_;
+			this.call_map_ = new ArrayList<Integer>(clone.call_map_);
 		}
 		/**
 		 * A concealed hand only PlayerHand Constructor
@@ -521,9 +564,9 @@ public class Player
 		 */
 		public PlayerHand(ArrayList<Integer> in_hand)
 		{
-			this.currentHand = new ArrayList<Integer>(in_hand);
-			this.declaredGroups = new ArrayList<Group>();
-			this.mjSTRhand = convert_PlayerHand(in_hand, this.declaredGroups);
+			this.currentHand_ = new ArrayList<Integer>(in_hand);
+			this.declaredGroups_ = new ArrayList<Group>();
+			this.mjSTRhand_ = convert_PlayerHand(in_hand, this.declaredGroups_);
 		}
 		
 		/**
@@ -533,9 +576,9 @@ public class Player
 		 */
 		public PlayerHand(ArrayList<Integer> in_hand, ArrayList<Group> declared_groups)
 		{
-			this.currentHand = new ArrayList<Integer>(in_hand);
-			this.declaredGroups = new ArrayList<Group>(declared_groups);
-			this.mjSTRhand = convert_PlayerHand(in_hand, declared_groups);
+			this.currentHand_ = new ArrayList<Integer>(in_hand);
+			this.declaredGroups_ = new ArrayList<Group>(declared_groups);
+			this.mjSTRhand_ = convert_PlayerHand(in_hand, declared_groups);
 		}
 		
 		/**
@@ -546,9 +589,9 @@ public class Player
 		 */
 		public PlayerHand(ArrayList<Integer> in_hand, ArrayList<Group> declared_groups, String mjSTR)
 		{
-			this.currentHand = new ArrayList<Integer>(in_hand);
-			this.declaredGroups = new ArrayList<Group>(declared_groups);
-			this.mjSTRhand = mjSTR;
+			this.currentHand_ = new ArrayList<Integer>(in_hand);
+			this.declaredGroups_ = new ArrayList<Group>(declared_groups);
+			this.mjSTRhand_ = mjSTR;
 		}
 		
 		/**
@@ -559,9 +602,9 @@ public class Player
 		{
 			PlayerHand temp_obj = convert_mjSTR(in_STRformat);
 			
-			this.currentHand = temp_obj.getCurrentHand();
-			this.declaredGroups = temp_obj.getDeclaredGroup();
-			this.mjSTRhand = new String(in_STRformat);
+			this.currentHand_ = temp_obj.getCurrentHand();
+			this.declaredGroups_ = temp_obj.getDeclaredGroup();
+			this.mjSTRhand_ = new String(in_STRformat);
 		}
 		
 		/*
@@ -569,7 +612,7 @@ public class Player
 		 */
 		public ArrayList<Integer> getCurrentHand()
 		{
-			return this.currentHand;
+			return this.currentHand_;
 		}
 		
 		/*
@@ -579,7 +622,7 @@ public class Player
 		 */
 		public ArrayList<Group> getDeclaredGroup()
 		{
-			return this.declaredGroups;
+			return this.declaredGroups_;
 		}
 		
 		/**
@@ -591,7 +634,7 @@ public class Player
 		{
 			try
 			{
-				this.currentHand = new ArrayList<Integer>(in_newHand);
+				this.currentHand_ = new ArrayList<Integer>(in_newHand);
 				return true;
 			}
 			catch(Exception e)
@@ -610,7 +653,7 @@ public class Player
 		{
 			try
 			{
-				this.declaredGroups = new ArrayList<Group>(in_newGroups);
+				this.declaredGroups_ = new ArrayList<Group>(in_newGroups);
 				return true;
 			}
 			catch(Exception e)
@@ -628,7 +671,7 @@ public class Player
 		{
 			try
 			{
-				this.declaredGroups.add(new Group(new_group));
+				this.declaredGroups_.add(new Group(new_group));
 				return true;
 			}
 			catch(Exception e)
@@ -643,7 +686,7 @@ public class Player
 		 */
 		protected HashMap<String, String> get_currentGroups()
 		{
-			return this.update_Groups;
+			return this.update_Groups_;
 		}
 		
 		/**
@@ -674,7 +717,7 @@ public class Player
 					}
 					ret_string += this.getDeclaredGroup().get(i) + ", ";
 				}
-				ret_string += "\nmjSTR format: " + this.mjSTRhand;
+				ret_string += "\nmjSTR format: " + this.mjSTRhand_;
 				return ret_string;
 			}
 			catch(Exception e) {return "A variable most likely has not been initialized";}
@@ -701,15 +744,15 @@ public class Player
 		 */
 		public int progress_score()
 		{
-			if(!this.updated_searches)
+			if(!this.updated_searches_)
 			{
-				this.update_Groups = GroupSearch.search_all_groupSN(this, false);
-				this.updated_searches = true;
+				this.update_Groups_ = GroupSearch.search_all_groupSN(this, false);
+				this.updated_searches_ = true;
 			}
 			int best_score = 0;
-			for(String key: this.update_Groups.keySet())
+			for(String key: this.update_Groups_.keySet())
 			{
-				int current_score = GroupSearch.progress_score(this.update_Groups.get(key)) + (this.declaredGroups.size() * 1000);
+				int current_score = GroupSearch.progress_score(this.update_Groups_.get(key)) + (this.declaredGroups_.size() * 1000);
 				if(current_score > best_score)
 				{
 					best_score = current_score;
@@ -724,23 +767,23 @@ public class Player
 		 */
 		public ArrayList<Group> get_fastestGroups()
 		{
-			if(!this.updated_searches)
+			if(!this.updated_searches_)
 			{
-				this.update_Groups = GroupSearch.search_all_groupSN(this, false);
-				this.updated_searches = true;
+				this.update_Groups_ = GroupSearch.search_all_groupSN(this, false);
+				this.updated_searches_ = true;
 			}
 			int best_score = 0;
 			String best_key = "";
-			for(String key: this.update_Groups.keySet())
+			for(String key: this.update_Groups_.keySet())
 			{
-				int current_score = GroupSearch.progress_score(this.update_Groups.get(key)) + (this.declaredGroups.size() * 1000);
+				int current_score = GroupSearch.progress_score(this.update_Groups_.get(key)) + (this.declaredGroups_.size() * 1000);
 				if(current_score > best_score)
 				{
 					best_score = current_score;
 					best_key = key;
 				}
 			}
-			return Group.groupSN_to_ArrayList(this.update_Groups.get(best_key));
+			return Group.groupSN_to_ArrayList(this.update_Groups_.get(best_key));
 		}
 		
 		/**
@@ -769,7 +812,7 @@ public class Player
 			{
 				HashMap<String, String> groupSN_map = GroupSearch.search_all_groupSN(this, false);
 				for(String key: groupSN_map.keySet())
-					this.update_Groups.put(key, groupSN_map.get(key));
+					this.update_Groups_.put(key, groupSN_map.get(key));
 				return true;
 			}
 			catch(Exception e)
@@ -807,13 +850,13 @@ public class Player
 			Group temp_group = Group.random_group(true, false);
 			System.out.println("Added Group: " + temp_group);
 			declared_groups.add(temp_group);
-			if(declared_groups.get(declared_groups.size() - 1).tile_list.size() == 4)
+			if(declared_groups.get(declared_groups.size() - 1).get_groupTiles().size() == 4)
 			{
-				declared_groups.get(declared_groups.size() - 1).setDeclareStatus(true); //Makes all declared quads concealed
+				declared_groups.get(declared_groups.size() - 1).set_conceal_status(false); //Makes all declared quads concealed
 			}
 			else
 			{
-				declared_groups.get(declared_groups.size() - 1).setDeclareStatus(false); //Makes sure declared non quad groups are not concealed
+				declared_groups.get(declared_groups.size() - 1).set_conceal_status(false); //Makes sure declared non quad groups are not concealed
 			}
 		}
 		int[] add_tiles = {0,0,1,5,6,7,7,18,19,31};
