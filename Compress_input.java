@@ -17,7 +17,8 @@ import java.util.function.*;
  * 								 4 = call kan,
  * 								 5 = added kan,
  * 								 6 = concealed kan,
- * 								 7 = ron) 
+ * 								 7 = if {player wind ID == wind_ID_turn_}: tsumo
+ * 									 if {player wind ID != wind_ID_turn_}: ron) 
  * [2,3] = tileID 				(refer to Nums to TilesVal.txt)
  * [4] = f						(states flowers used, still remain if no flower dropped) 
  * [5,x] = all the flowers		(the flower numbers is saved)
@@ -26,6 +27,7 @@ import java.util.function.*;
  * 								(The talking tile range is [-2,2], which is why the index is represented as [0,4]-4)
  * 								(if num > 2, then there is no tiles used to call)
  * 								(pon/kan will be formatted the same, just refer to decision to call)
+ * 								*note* when added to used_tiles_, it is converted into tile_ID
  * 
  * example system, current player (me) == 2,
  * 0005f12f55 == 1st Player, drop from hand, 6m, after using flowers 1;2, no tiles used
@@ -117,6 +119,7 @@ public class Compress_input
 	 *	2- There are no tiles in the wall 							(to be able to draw a new tile during new turn)
 	 *	3- Player dropping tile was also labeled to call tile		(Player cannot call their own tile)
 	 * 	4- Called sequence is called by the person after current	(only next player can call sequence)
+	 * 	5- declared self-kan is not by self Player					(must be the Player's turn to declare self-kan)
 	 *  
 	 * @return true if all the test above passes, false is any of them fails the test
 	 */
@@ -162,7 +165,7 @@ public class Compress_input
 		
 		//condition 3
 		if(this.player_wind_ID_ == current_game.get_current_windID_turn() &&
-		   this.decision_ > 1)
+		   (this.decision_ > 1 && this.decision_ < 5))
 		{
 			return false;
 		}
@@ -173,12 +176,31 @@ public class Compress_input
 		{
 			return false;
 		}
+		
+		//condition 5
+		if((this.decision_ == 5 || this.decision_ == 6) &&
+			this.player_wind_ID_ != current_game.get_current_windID_turn())
+		{
+			return false;
+		}
 		return true;
 	}
+	/**
+	 * 
+	 * @return 	The Player responsible for the decision being made; The cases include:
+	 * 			0,1 == The Player that dropped the tile (only current wind_ID_turn_)
+	 * 			2 	== The next Player					(only wind_ID_turn_ + 1)
+	 * 			3,4 == Any Player, isn't the current	(except current wind_ID_turn_)
+	 * 			5,6 == Only current Player				(only current wind_ID_turn_)
+	 * 			7	== Any Player						([0,3])
+	 */
 	public int get_windID(){return this.player_wind_ID_;}
 	public int get_decision() {return this.decision_;}
 	public int get_tileID() {return this.tile_ID_;}
 	public ArrayList<Integer> get_flower_list(){return this.declared_flowers_;}
-	public ArrayList<Integer> get_used_tiles(){return this.used_tiles_;}
+	public ArrayList<Integer> get_used_tiles()
+	{
+		return this.used_tiles_;
+	}
 	public boolean is_validMove() {return this.valid_move_;}
 }

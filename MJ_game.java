@@ -11,7 +11,7 @@ public class MJ_game
 	/**
 	 * This ArrayList will keep track of all Players of this current MJ game
 	 */
-	protected ArrayList<Player> all_players = new ArrayList<Player>();
+	protected HashMap<Integer, Player> all_players = new HashMap<Integer, Player>();
 	
 	/**
 	 * Possible_tiles: 			used for the searching algorithm to see what tiles are left
@@ -39,16 +39,7 @@ public class MJ_game
 	 * Each index represents the amount of flowers not visible
 	 */
 	public ArrayList<Integer> possible_flowers_; 
-	
-	/**
-	 * status int reference:
-	 * 0 = normal
-	 * 1 = last tile
-	 * 2 = added kan
-	 * 3 = concealed kan
-	 */
-	public int special_status_ = 0;
-	
+
 	/**
 	 * This stores the move history of a given game
 	 */
@@ -58,6 +49,11 @@ public class MJ_game
 	 * This will be the counter responsible for whose turn it currently is
 	 */
 	public int wind_ID_turn_ = 0;
+	
+	/**
+	 * Anything that goes wrong, or the game actually finishes, this will indicates these two cases
+	 */
+	public boolean complete_game = false;
 	
 	/**
 	 * @function This constructor does not take into consideration the player's starting hand and their first declaration
@@ -81,10 +77,10 @@ public class MJ_game
 					for(int j = 0; j < max; j++) possible_tiles_.get(i).add(4);
 					break;
 			}
-			all_players.add(new Player());
+			all_players.put(i, new Player(i, "", this));
 			if(i == wind_ID)
 			{
-				
+				all_players.put(i, new Player(i, "", this));
 			}
 		}
 		this.total_wall_tiles_ = 136 - (4 * 13);							// 4(amt) * 34(IDs) == 136 - 4(Players) * 13(Start hand amt)
@@ -92,69 +88,64 @@ public class MJ_game
 	}
 	
 	/**
-	 * @param hand_statuses For each player in the game, the index corresponds to their hand status,
-	 * 						each index represents the amount of calls the player has made.
-	 * @param flowers_used All the visible flowers that are declared.
-	 * @param visible_tiles All the visible tiles, this includes drop pile, called tiles. (DON'T ADD COMMA)
+	 * @todo
+	 * Implement mid-game MJ_game in the future here
 	 */
-	public MJ_game(int[] flowers_used, String visible_tiles, int current_windTurn)
-	{
-		for(int i = 0; i < 4; i++) 
-		{
-			possible_tiles_.add(new ArrayList<Integer>());
-			int max = 9;
-			switch(i) //Used to add numbered suit and honor suit separately
-			{
-				case 3:
-					max = 7;
-				default:
-					for(int j = 0; j < max; j++) possible_tiles_.get(i).add(4);
-					break;
-			}
-		}
-		
-		this.total_wall_tiles_ = 136 - (int)(visible_tiles.length()/2) - (4 * 13);
-		
-		String temp_str = "";
-		for(int i = 0; i < visible_tiles.length(); i++)
-		{
-			if(temp_str.length() < 2) //Each tile will take 2 indexes
-			{
-				temp_str += visible_tiles.charAt(i);
-			}
-			else
-			{
-				//If tile is visible, remove it from known tiles in 2D ArrayList<Integer>
-				try
-				{
-					int suit = Integer.parseInt(temp_str) / 9;
-					int index = Integer.parseInt(temp_str) % 9;
-					this.possible_tiles_.get(suit).set(index, this.possible_tiles_.get(suit).get(index) - 1);
-				}
-				catch(Exception e)
-				{
-					System.out.println("String inputed was not in 2 index tile_ID format");
-				}
-				temp_str = "";
-			}
-		}
-		
-		this.wind_ID_turn_ = current_windTurn;
-		if(wind_ID_turn_ > 3)
-		{
-			this.wind_ID_turn_ = 0;
-		}
-	}
 	
+	/**
+	 * 
+	 * @return Every tile in a suit by suit ArrayList<Integer> format that are not visible
+	 */
 	public ArrayList<ArrayList<Integer>> get_possible_tiles(){return this.possible_tiles_;}
+	
+	
+	/**
+	 * 
+	 * @return The total number of tiles left from THE WALL, not total visible tiles
+	 */
 	public int total_tiles_left() {return this.total_wall_tiles_;}
+	
+	
+	/**
+	 * 
+	 * @return Returns a list of 4 elements representing each Player and the amount of calls they have
+	 */
 	public int[] get_player_status() {return this.player_status_;}
+	
+	
+	/**
+	 * 
+	 * @return Returns a list of 4 elements representing the amount of flowers left for the index representation
+	 * 			of that seasoned flower, i.e flower 1 == index 0; flower 4 == index 3
+	 */
 	public ArrayList<Integer> get_possible_flowers(){return this.possible_flowers_;}
-	public int get_special_status() {return this.special_status_;}
+	
+	
+	/**
+	 * 
+	 * @return Return a ArrayList of all the previous moves that occured during this MJ_game
+	 */
 	public ArrayList<Compress_input> get_move_history(){return this.move_history_;}
+	
+	
+	/**
+	 * 
+	 * @return The current wind_id that is allowed to go (in other words, the integer that represent which Player's turn)
+	 */
 	public int get_current_windID_turn() {return this.wind_ID_turn_;}
 	
 	
+	/**
+	 * 
+	 * @return A boolean that represents if the game is complete (true) or not (false)
+	 */
+	public boolean game_status(){return this.complete_game;}
+	
+	/**
+	 * 
+	 * @param new_turn The new turn that was just perform in order to update MJ_game in real time
+	 * @return	True if the input was valid and was added properly, false otherwise and was not added
+	 */
  	public boolean update_game(Compress_input new_turn)
 	{
  		if(!new_turn.is_validMove()) {return false;}
@@ -191,12 +182,14 @@ public class MJ_game
 			this.possible_flowers_.set(new_turn.get_flower_list().get(i), this.possible_flowers_.get(new_turn.get_flower_list().get(i)) - 1);
 		}
 		
+		
 		switch(new_turn.get_decision())
 		{
-			//No calls
+			//All increment by 1 cases ([0,1] == drop + [2] == seq call)
 			case 0:
 			case 1:
-				//Increment the next Player's turn or loops back to dealer
+			case 2:
+				
 				if(this.wind_ID_turn_ == 3)
 				{
 					this.wind_ID_turn_ = 0;
@@ -205,27 +198,20 @@ public class MJ_game
 				{
 					this.wind_ID_turn_++;
 				}
-				
-				
 				break;
-			//Sequence call
-			case 2:
-				break;
-			//Triplet call
+				
+			//All any but current Player cases ([3,4] = pon/kan calls)
 			case 3:
-				break;
-			//Called kan
 			case 4:
+				this.wind_ID_turn_ = new_turn.get_windID();
 				break;
-			//Added kan
-			case 5:
-				break;
-			//Concealed kan
-			case 6:
-				break;
-			//Ron
+				
+			//ron/tsumo is ALL Players
 			case 7:
+				//Get Player index -> Scoring.java
+				this.complete_game = true;
 				break;
 		}
+		return true;
 	}
 }

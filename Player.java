@@ -10,12 +10,6 @@ public class Player
 	enum wind{EAST, SOUTH, WEST, NORTH}
 	
 	/*
-	 * Used to keep track of amount of untitled players
-	 * Doesn't need to be accessed outside of this class
-	 */
-	protected static int assign_wind = 0;
-	
-	/*
 	 * Player name, can add custom names in the future, for now is reference to their seat wind
 	 */
 	public String playerName_;
@@ -41,70 +35,45 @@ public class Player
 	 */
 	private PlayerHand playerHand_;
 	
-	/*
-	 * Used to created a new default player object, fields will be set as
-	 * playerName = "UNNAMED" + unname_amt
-	 * seatWind = seatWind_amt
-	 * new drop pile and playerHand
+	/**
+	 * Default constructor responsible for creating a random Player mainly for testing
 	 */
 	public Player()
 	{
-		this.playerName_ = wind.values()[assign_wind] + "PLAYER";
-		this.seatWind_ = assign_wind;
-		assign_wind += 1;
-		
-		if(assign_wind == 4)
-		{
-			assign_wind = 0;
-		}
+		int random_wind = (int)(Math.random() * 4);
+		this.playerName_ = wind.values()[random_wind] + " PLAYER";
+		this.seatWind_ = random_wind;
 		this.dropPile_ = new ArrayList<Integer>();
 		this.playerHand_ = new PlayerHand();
 		this.flower_ = 0;
 	}
 	
-	public Player(int wind_ID)
+	public Player(int wind_ID, String specific_name, MJ_game input_game)
 	{
 		//Invalid input for wind_ID would just result in default constructor
 		if(wind_ID < 0 || wind_ID > 3)
 		{
-			this.playerName_ = "UNNAMED" + Integer.toString(assign_wind);
-			this.seatWind_ = assign_wind;
-			assign_wind += 1;
-			
-			if(assign_wind > 3)
-			{
-				assign_wind = 0;
-			}
+			int random_wind = (int)(Math.random() * 4);
+			this.playerName_ = wind.values()[random_wind] + " PLAYER";
+			this.seatWind_ = random_wind;
 		}
 		else
 		{
-			// Assign name according to wind_ID
-			switch(wind_ID)
+			//If finds another Player with same wind_ID, override that Player
+			for(int key: input_game.all_players.keySet())
 			{
-				case 0:
-					this.playerName_ = "EAST Player";
-					this.seatWind_ = 0;
-					break;
-				case 1:
-					this.playerName_ = "SOUTH Player";
-					this.seatWind_ = 1;
-					break;
-				case 2:
-					this.playerName_ = "WEST Player";
-					this.seatWind_ = 2;
-					break;
-				case 3:
-					this.playerName_ = "NORTH Player";
-					this.seatWind_ = 3;
-					break;
+				if(wind_ID == key)
+				{
+					input_game.all_players.put(wind_ID, this);
+				}
 			}
+			//If empty String provided, put default name
+			if(specific_name.length() == 0){this.playerName_ = wind.values()[wind_ID] + " PLAYER";}
+			else {this.playerName_ = specific_name;}
+			
+			this.seatWind_ = wind_ID;
 		}
-		
-		assign_wind = wind_ID + 1;
-		if(wind_ID == 4)
-		{
-			assign_wind = 0;
-		}
+		//Default initialize
 		this.dropPile_ = new ArrayList<Integer>();
 		this.playerHand_ = new PlayerHand();
 		this.flower_ = 0;
