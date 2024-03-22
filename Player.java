@@ -27,7 +27,10 @@ public class Player
      * Use seatWind to determine what flower is the player's good flower (10^seatWind)
      */
     public int flower_;
-    
+
+    /**
+     * An ArrayList that represents the drop tile history of this instance of Player
+     */
 	public ArrayList<Integer> dropPile_;
 	
 	/*
