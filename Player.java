@@ -23,10 +23,10 @@ public class Player
 	public int seatWind_;
 
 	/*
-     * Integer to keep track of drawn flowers, will be of magnitude of 10^4
+     * Integer list to keep track of drawn flowers, each index represent each unique flower
      * Use seatWind to determine what flower is the player's good flower (10^seatWind)
      */
-    public int flower_;
+    public int[] flower_ = new int[4];
 
     /**
      * An ArrayList that represents the drop tile history of this instance of Player
@@ -48,7 +48,6 @@ public class Player
 		this.seatWind_ = random_wind;
 		this.dropPile_ = new ArrayList<Integer>();
 		this.playerHand_ = new PlayerHand();
-		this.flower_ = 0;
 	}
 	
 	public Player(int wind_ID, String specific_name, MJ_game input_game)
@@ -62,14 +61,6 @@ public class Player
 		}
 		else
 		{
-			//If finds another Player with same wind_ID, override that Player
-			for(int key: input_game.all_players.keySet())
-			{
-				if(wind_ID == key)
-				{
-					input_game.all_players.put(wind_ID, this);
-				}
-			}
 			//If empty String provided, put default name
 			if(specific_name.length() == 0){this.playerName_ = wind.values()[wind_ID] + " PLAYER";}
 			else {this.playerName_ = specific_name;}
@@ -79,7 +70,6 @@ public class Player
 		//Default initialize
 		this.dropPile_ = new ArrayList<Integer>();
 		this.playerHand_ = new PlayerHand();
-		this.flower_ = 0;
 	}
 	/*
 	 * Used to create a copy of inputed Player
@@ -94,13 +84,64 @@ public class Player
 	}
 	
 	/*
-	 * Used to all details about this instance's hand, includes open/closed decalred groups
+	 * Mutator method to set a new name for this instance of Player
+	 */
+	public void set_Player_name(String new_name)
+	{
+		this.playerName_ = new_name;
+	}
+	
+	/**
+	 * Mutator method to set a new wind_ID of this instance of Player
+	 * @param new_windID
+	 */
+	public void set_seatwind(int new_windID)
+	{
+		this.seatWind_ = new_windID;
+	}
+	
+	/**
+	 * Mutator method to set the flower corresponding to it's index as an inputed amount
+	 * @param index The index (would represent the flower number [index + 1]) to set new amount for this instance of Player
+	 * @param new_amt The amount of declared flowers for this instance of Player
+	 */
+	public void set_flower(int index, int new_amt)
+	{
+		this.flower_[index] = new_amt;
+	}
+	
+	/**
+	 * Mutator method by adding the inputed tile at the end of this instance of Player drop_pile List
+	 * @param tile_ID The new tile that was dropped by this instance of Player
+	 */
+	public void add_droptile(int tile_ID)
+	{
+		this.dropPile_.add(tile_ID);
+	}
+	
+	/**
+	 * Additional Mutator method mainly for non-new games to completely override old droppile
+	 * @param new_droppile The new list of drop pile of this instance of Player
+	 */
+	public void set_drop_pile(ArrayList<Integer> new_droppile)
+	{
+		this.dropPile_ = new_droppile;
+	}
+	
+	/**
+	 * 
+	 * @return The PlayerHand object that has information of this Player's hand
 	 */
 	public PlayerHand getPlayerHand()
 	{	
 		return this.playerHand_;
 	}
 	
+	/**
+	 * 
+	 * @param in_playhand The new hand to set onto this instance of Player
+	 * @return True if the mutator method was successful, false otherwise
+	 */
 	public boolean setPlayerHand(PlayerHand in_playhand)
 	{
 		try
@@ -114,6 +155,11 @@ public class Player
 		}
 	}
 	
+	/**
+	 * 
+	 * @return The ArrayList of tiles that would represent the drop pile of the Player, will not
+	 *		   delete tiles that were called on
+	 */
 	public ArrayList<Integer> getPlayerDrops()
 	{
 		return this.dropPile_;

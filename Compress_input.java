@@ -7,6 +7,7 @@ import java.util.function.*;
  * This class is a temporary i/o system that will intake a String that gives information about what happened during the turn
  * String index reference:
  * [0] = player wind ID 		(0 = E, 1 = S, 2 = W, 3 = N)
+ * 
  * IF someone else called on the tile, this ID would be the Player that called the tile
  * IF no one called on the tile, the player wind ID should be who dropped the tile
  * 
@@ -34,12 +35,12 @@ import java.util.function.*;
  */
 public class Compress_input 
 {
-	public boolean valid_move_;
-	public int player_wind_ID_;
-	public int decision_;
-	public int tile_ID_;
-	public ArrayList<Integer> used_tiles_ = new ArrayList<Integer>();
-	public ArrayList<Integer> declared_flowers_ = new ArrayList<Integer>();
+	private boolean valid_move_;
+	private int player_wind_ID_;
+	private int decision_;
+	private int tile_ID_;
+	private ArrayList<Integer> used_tiles_ = new ArrayList<Integer>();
+	private ArrayList<Integer> declared_flowers_ = new ArrayList<Integer>();
 	
 	public Compress_input(String input_str, MJ_game current_game)
 	{
@@ -49,7 +50,7 @@ public class Compress_input
 		 */
 		if(input_str.length() < 5)
 		{
-			
+			this.valid_move_ = false;
 		}
 		else
 		{
@@ -72,19 +73,19 @@ public class Compress_input
 				}
 				switch(add_mode)
 				{
-					case 0:
+					case 0: 	// Set wind_ID
 						this.player_wind_ID_ = Integer.parseInt(Character.toString(input_str.charAt(i)));
 						break;
-					case 1:
+					case 1:		// Sets decision
 						this.decision_ = Integer.parseInt(Character.toString(input_str.charAt(i)));
 						break;
-					case 2:
+					case 2:		// Sets the tile_ID
 						if((i + 1) < input_str.length())
 						{
 							this.tile_ID_ = Integer.parseInt(input_str.substring(i, i + 2));
 						}
 						break;
-					case 3:
+					case 3:		// Sets flowers used
 						while(input_str.charAt(i) != 'f')
 						{
 							this.declared_flowers_.add(Integer.parseInt(Character.toString(input_str.charAt(i))));
@@ -93,7 +94,7 @@ public class Compress_input
 						add_mode++;
 						i++;
 						break;
-					case 4:
+					case 4:		// Used tiles if called/declared
 						this.used_tiles_.add(Integer.parseInt(Character.toString(input_str.charAt(i))));
 						break;
 				}
@@ -185,22 +186,58 @@ public class Compress_input
 		}
 		return true;
 	}
+	
 	/**
 	 * 
-	 * @return 	The Player responsible for the decision being made; The cases include:
-	 * 			0,1 == The Player that dropped the tile (only current wind_ID_turn_)
-	 * 			2 	== The next Player					(only wind_ID_turn_ + 1)
-	 * 			3,4 == Any Player, isn't the current	(except current wind_ID_turn_)
-	 * 			5,6 == Only current Player				(only current wind_ID_turn_)
-	 * 			7	== Any Player						([0,3])
+	 * @return The Player this Compress_input is referring to perform the decision being made
 	 */
-	public int get_windID(){return this.player_wind_ID_;}
-	public int get_decision() {return this.decision_;}
-	public int get_tileID() {return this.tile_ID_;}
-	public ArrayList<Integer> get_flower_list(){return this.declared_flowers_;}
+	public int get_windID()
+	{
+		return this.player_wind_ID_;
+	}
+	
+	/**
+	 * 
+	 * @return The decision (drop/discard/call/any move) being made
+	 */
+	public int get_decision()
+	{
+		return this.decision_;
+	}
+	
+	/**
+	 * 
+	 * @return The tile being called/discarded/added
+	 */
+	public int get_tileID()
+	{
+		return this.tile_ID_;
+	}
+	
+	/**
+	 * 
+	 * @return Any flowers the Player being referred to dropped during that move
+	 */
+	public ArrayList<Integer> get_flower_list()
+	{
+		return this.declared_flowers_;
+	}
+	
+	/**
+	 * 
+	 * @return The Used tiles to call/declared, if the decision was discard, this can be left empty
+	 */
 	public ArrayList<Integer> get_used_tiles()
 	{
 		return this.used_tiles_;
 	}
-	public boolean is_validMove() {return this.valid_move_;}
+	
+	/**
+	 * 
+	 * @return A boolean to represent if this is a valid move or not
+	 */
+	public boolean is_validMove()
+	{
+		return this.valid_move_;
+	}
 }

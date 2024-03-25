@@ -911,28 +911,28 @@ public class Scoring
 	public static void main(String[] args)
 	{
 		/*
-		 * 	1: Dragon Groups -> 1													
-			2: Small 3 Dragons -> 3													
-			3: Big 3 Dragons -> 5 													
-			4: Rotation Wind -> 1 (from gamestatus)									
-			5: Seat Wind -> 1 (from player seatwind + 1) 							
-			6: Kongs -> 1				
-			7: Concealed -> 1																																			
-			8: All Seq -> 1														
-			9: All Pon -> 3														
-			10: Mix Suit -> 3 														
-			11: All Terms/Honors -> 2 (5 - 3; from pung game)		
-			12: 7 Pairs -> 3 (4 - 1; from concealed)				
-			13: Full Suit -> 6 		
+		 * 	0: Dragon Groups -> 1													
+			1: Small 3 Dragons -> 3													
+			2: Big 3 Dragons -> 5 													
+			3: Rotation Wind -> 1 (from gamestatus)									
+			4: Seat Wind -> 1 (from player seatwind + 1) 							
+			5: Kongs -> 1				
+			6: Concealed -> 1																																			
+			7: All Seq -> 1														
+			8: All Pon -> 3														
+			9: Mix Suit -> 3 														
+			10: All Terms/Honors -> 2 (5 - 3; from pung game)		
+			11: 7 Pairs -> 3 (4 - 1; from concealed)				
+			12: Full Suit -> 6 		
 			-------------------------------------
-			14: All Terminals -> 5 (10 - 2 - 3; all term/honors, from pung game)	
-			15: All Honors -> 5 (10 - 2 - 3; from pung game, all term/honors)		
-			16: 4 little winds -> 6 												
-			17: 4 big winds ->10 (13 - 3; from pung game)										
-			18: 13 Orphans -> 10 (13 - 2 - 1; from all terms/honors, concealed) 	
-			19: 4 quads -> 10 (13 - 3; from pung game
-			20: 4 concealed trips -> 6 (10 - 3 - 1; from pung game, concealed)		
-			21: Nine gates -> 9 (10 - 1; from concealed)							
+			13: All Terminals -> 5 (10 - 2 - 3; all term/honors, from pung game)	
+			14: All Honors -> 5 (10 - 2 - 3; from pung game, all term/honors)		
+			15: 4 little winds -> 6 												
+			16: 4 big winds ->10 (13 - 3; from pung game)										
+			17: 13 Orphans -> 10 (13 - 2 - 1; from all terms/honors, concealed) 	
+			18: 4 quads -> 10 (13 - 3; from pung game
+			19: 4 concealed trips -> 6 (10 - 3 - 1; from pung game, concealed)		
+			20: Nine gates -> 9 (10 - 1; from concealed)							
 		 */
 		String[] example_hand_list = {	
         "123m455667p99sckq555zo",       // 1 Dragon
