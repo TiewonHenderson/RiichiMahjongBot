@@ -69,9 +69,13 @@ public class MJ_game
 	public int wind_ID_turn_ = 0;
 	
 	/**
-	 * Anything that goes wrong, or the game actually finishes, this will indicates these two cases
+	 * game_status_ declares what the game current is progressing as, int values include:
+	 * 0 = new game
+	 * 1 = mid game
+	 * 2 = complete game
+	 * 3 = bugged game
 	 */
-	public boolean complete_game = false;
+	public int game_status_;
 	
 	/**
 	 * @function This constructor does not take into consideration the player's starting hand and their first declaration
@@ -83,6 +87,7 @@ public class MJ_game
 	 */
 	public MJ_game()
 	{
+		this.game_status_ = 0;
 		this.in_out_system_ = new Prototype_UI(this);							// sets in_out_system_
 		
 		for(int i = 0; i < 4; i++) 
@@ -293,12 +298,17 @@ public class MJ_game
 		this.wind_ID_turn_ = new_windID;
 	}
 	/**
+	 * 0 = new game
+	 * 1 = mid game
+	 * 2 = complete game
+	 * 3 = bug game
+	 * 
 	 * Accessor method to get the current game status
-	 * @return A boolean that represents if the game is complete (true) or not (false)
+	 * @return An integer that represents the status of the game
 	 */
-	public boolean game_status()
+	public int game_status()
 	{
-		return this.complete_game;
+		return this.game_status_;
 	}
 	
 	/**
@@ -369,7 +379,7 @@ public class MJ_game
 			//ron/tsumo is ALL Players
 			case 7:
 				//Get Player index -> Scoring.java
-				this.complete_game = true;
+				this.game_status_ = 2;
 				break;
 		}
 		return true;

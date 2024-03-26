@@ -19,6 +19,7 @@ public class Prototype_UI
 	 * A Player instance reference to this current User, instead of accessing through MJ_game
 	 */
 	private Player player_reference;
+	
 	/**
 	 * The int value corresponding to this Player's MJ wind name by initial
 	 */
@@ -98,6 +99,8 @@ public class Prototype_UI
 		return return_str;
 	}
 	
+	
+	
 	/**
 	 * 
 	 * @return The username assigned by the user input
@@ -116,20 +119,6 @@ public class Prototype_UI
 		return this.user_windID_;
 	}
 	
-	public void starting_game()
-	{
-		
-	}
-	
-	public void mid_game()
-	{
-		
-	}
-	
-	public void completed_game()
-	{
-		
-	}
 	public static void main(String[] args)
 	{
 	}
