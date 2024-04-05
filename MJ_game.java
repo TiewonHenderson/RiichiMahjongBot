@@ -14,22 +14,9 @@ public class MJ_game
 	private ArrayList<Player> all_players = new ArrayList<Player>();
 	
 	/**
-	 * This is the prototype input output of how information is to be in/out-puted.
-	 * input:
-	 * 		Compress_input
-	 * 			- Player moves
-	 * 		Info_input
-	 * 			- Opponent predictions, 	range: [0,3] inclusive
-	 * 			- Top progress scores,		range: [0,20] inclusive
-	 * Output:
-	 * 		from Compress_input
-	 * 			- boolean => represents move was added
-	 * 		from Info_input
-	 * 			- Opponent progress score, predicted scores
-	 * 			- Your progress scores for each potential yaku
-	 * 			
+	 * The user interface for the bot algorithm
 	 */
-	private Prototype_UI in_out_system_;
+	private Panel_Manager in_out_system_;
 	
 	/**
 	 * Possible_tiles: 			used for the searching algorithm to see what tiles are left
@@ -88,7 +75,7 @@ public class MJ_game
 	public MJ_game()
 	{
 		this.game_status_ = 0;
-		this.in_out_system_ = new Prototype_UI(this);							// sets in_out_system_
+		this.in_out_system_ = new Panel_Manager(this);							// sets in_out_system_
 		
 		for(int i = 0; i < 4; i++) 
 		{
@@ -151,7 +138,7 @@ public class MJ_game
 			all_players.add(new Player(wind_ID, "", this));
 			
 		}
-		this.in_out_system_ = new Prototype_UI(this);						// sets in_out_system_
+		this.in_out_system_ = new Panel_Manager(this);						// sets in_out_system_
 	}
 	
 	/**
