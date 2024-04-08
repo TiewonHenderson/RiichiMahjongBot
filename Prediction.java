@@ -43,10 +43,19 @@ public class Prediction
 	/**
 	 * @warning Need to fix in future when exporting as application, path will not remain
 	 */
-	final public static Path Player_behav_file = Paths.get(Paths.get("").toAbsolutePath().normalize() + 
+	final private static Path Player_behav_file = Paths.get(Paths.get("").toAbsolutePath().normalize() + 
 														   "src" + File.separator + 
 														   "bot_package" + File.separator +
 														   "Player_behaviors.txt");
+	/**
+	 * 
+	 */
+	protected static HashMap<Integer, String> ID_2_Player = new HashMap<Integer, String>();
+	
+	public static boolean update_ID_2_Player(predict_Player new_prediction)
+	{
+		
+	}
 	
 	/**
 	 * A dummy Player used to predict what a Player has, not an actual Player instance
@@ -91,13 +100,18 @@ public class Prediction
 		{
 			try
 			{
-				Files.write(Prediction.Player_behav_file, );
+				String save_state = "";
+				
+				Files.write(Prediction.Player_behav_file, Arrays.asList(save_state), StandardOpenOption.APPEND);
+				
 			}
 			catch(IOException e)
 			{
 				return false;
 			}
 		}
+		
+		public static 
 	}
 	public static void main(String[] args)
 	{

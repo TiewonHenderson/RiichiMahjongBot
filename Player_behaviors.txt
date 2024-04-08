@@ -1,3 +1,2 @@
-true
-2123
-323131
+ID, Name, # Games, Fav scores, Unique behav
+0122, Tiewon, 0, 7;8;13;26, [0,1,1,2]
