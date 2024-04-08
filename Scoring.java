@@ -765,7 +765,7 @@ public class Scoring
 			
 			for(int i = 0; i < pairSN.length(); i++)
 			{
-				//Checks indicators
+				//Checks indicators+
 				if(Character.isAlphabetic(pairSN.charAt(i)))
 				{
 					if(pairSN.charAt(i) == 'r') {add_mode = 1;}; //'r' acts as remainder as in floating tiles after that
