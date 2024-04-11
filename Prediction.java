@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.*;
 import java.nio.file.*;
+import java.util.function.*;
 
 /**
  * Needed for bot prediction:
@@ -107,6 +108,89 @@ public class Prediction
 			}
 		}
 		
+		/**
+		 * 
+		 * @param end_hand
+		 * @param drop_pile
+		 * @return
+		 */
+		public static ArrayList<String> retrace_history(String end_hand, ArrayList<Double> drop_pile)
+		{
+			
+		}
+		
+		/**
+		 * 
+		 * @param drop_pile
+		 * @return
+		 */
+		public static ArrayList<ArrayList<Double>> split_droppile_layer(ArrayList<Double> drop_pile)
+		{
+			/*
+			 * 	How importance is scored:
+			 * 	Tile type:		honor = +0, terminal = +1, simple = +2
+			 * 	Discard type:	tsumogiri = +0, tedashi = +4
+			 * 	layer:			1st = +0, 2nd = +2, 3rd/last = +4
+			 * 	Weights can be adjusted later
+			 */
+			ArrayList<Integer> importance_list = new ArrayList<Integer>();
+			int[] pivot_points = {-1, -1};
+			DoubleToIntFunction condition = (num) -> 
+			{
+				int score = 0;
+				int play_val = Group.tileID_to_PlayVal((int)num);
+				
+				//tile type
+				if(play_val == 1 || play_val == 9){score++;}
+				else{score+=2;}
+				
+				//checks tsumogiri or tedashi
+				if(num - (int)num == 0.5)
+				{
+					score+=4;
+				}
+				
+				//checks layer
+				for(int i = 0; i < 2; i++)
+				{
+					if(pivot_points[i] != -1)
+					{
+						score += 2 * (i+1);
+						break;
+					}
+				}
+				return score;
+			};
+			/*
+			 *	Normal hand case:
+			 *	Mixed with tsumogiri of useless tiles, only suited tiles should be considered 
+			 *	discard order = honors -> terminals/isolate tiles -> overflow tiles
+			 */
+			for(int i = 0; i < drop_pile.size(); i++)
+			{
+				/*
+				 * Checks first non honor and if 1st pivot point is not set
+				 */
+				if(drop_pile.get(i) < 26.5 && pivot_points[0] == -1)
+				{
+					pivot_points[0] = i;
+				}
+				// Adds importance of current tile to ArrayList
+				importance_list.add(condition.applyAsInt((drop_pile.get(i))));
+			}
+			/*
+			 * 	Half/ Full flush hand case:
+			 * 	Extremely obvious after two suits are discarded frequently
+			 * 	discard order = nonsuit 1/2 <-> nonsuit 2/1 -> honors -> flush suit
+			 */
+			
+			/*
+			 * 	Kokushi hand case:
+			 * 	Extremely obvious to see when nonorphans are only discards
+			 * 	discard order = simples -> orphans
+			 */
+			
+		}
 	}
 	public static void main(String[] args)
 	{

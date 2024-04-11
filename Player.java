@@ -30,8 +30,9 @@ public class Player
 
     /**
      * An ArrayList that represents the drop tile history of this instance of Player
+     * The reasoning behind Double and not Integer is 0.0 == tsumogiri, 0.5 == tedashi
      */
-	public ArrayList<Integer> dropPile_;
+	public ArrayList<Double> dropPile_;
 	
 	/*
 	 * The current Playerhand of this player instance, has closed and open tiles in 2D ArrayList
@@ -46,7 +47,7 @@ public class Player
 		int random_wind = (int)(Math.random() * 4);
 		this.playerName_ = wind.values()[random_wind] + " PLAYER";
 		this.seatWind_ = random_wind;
-		this.dropPile_ = new ArrayList<Integer>();
+		this.dropPile_ = new ArrayList<Double>();
 		this.playerHand_ = new PlayerHand();
 	}
 	
@@ -68,7 +69,7 @@ public class Player
 			this.seatWind_ = wind_ID;
 		}
 		//Default initialize
-		this.dropPile_ = new ArrayList<Integer>();
+		this.dropPile_ = new ArrayList<Double>();
 		this.playerHand_ = new PlayerHand();
 	}
 	/*
@@ -78,7 +79,7 @@ public class Player
 	{
 		this.playerName_ = new String(clone.playerName_);
 		this.seatWind_ = clone.seatWind_;
-		this.dropPile_ = new ArrayList<Integer>(clone.dropPile_);
+		this.dropPile_ = new ArrayList<Double>(clone.dropPile_);
 		this.playerHand_ = new PlayerHand(clone.playerHand_);
 		this.flower_ = clone.flower_;
 	}
@@ -114,7 +115,7 @@ public class Player
 	 * Mutator method by adding the inputed tile at the end of this instance of Player drop_pile List
 	 * @param tile_ID The new tile that was dropped by this instance of Player
 	 */
-	public void add_droptile(int tile_ID)
+	public void add_droptile(double tile_ID)
 	{
 		this.dropPile_.add(tile_ID);
 	}
@@ -123,7 +124,7 @@ public class Player
 	 * Additional Mutator method mainly for non-new games to completely override old droppile
 	 * @param new_droppile The new list of drop pile of this instance of Player
 	 */
-	public void set_drop_pile(ArrayList<Integer> new_droppile)
+	public void set_drop_pile(ArrayList<Double> new_droppile)
 	{
 		this.dropPile_ = new_droppile;
 	}
@@ -160,7 +161,7 @@ public class Player
 	 * @return The ArrayList of tiles that would represent the drop pile of the Player, will not
 	 *		   delete tiles that were called on
 	 */
-	public ArrayList<Integer> getPlayerDrops()
+	public ArrayList<Double> getPlayerDrops()
 	{
 		return this.dropPile_;
 	}
