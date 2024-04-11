@@ -52,10 +52,6 @@ public class Prediction
 	 */
 	protected static HashMap<Integer, String> ID_2_Player = new HashMap<Integer, String>();
 	
-	public static boolean update_ID_2_Player(predict_Player new_prediction)
-	{
-		
-	}
 	
 	/**
 	 * A dummy Player used to predict what a Player has, not an actual Player instance
@@ -91,8 +87,9 @@ public class Prediction
 		public ArrayList<Integer> unique_behav_;
 	
 		
-		public predict_Player(int wind_ID)
+		public predict_Player(Player opponenet)
 		{
+			this.player_IDs_ = opponenet.seatWind_;
 			
 		}
 		
@@ -101,9 +98,8 @@ public class Prediction
 			try
 			{
 				String save_state = "";
-				
 				Files.write(Prediction.Player_behav_file, Arrays.asList(save_state), StandardOpenOption.APPEND);
-				
+				return true;
 			}
 			catch(IOException e)
 			{
@@ -111,7 +107,6 @@ public class Prediction
 			}
 		}
 		
-		public static 
 	}
 	public static void main(String[] args)
 	{
