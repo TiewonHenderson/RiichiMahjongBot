@@ -35,11 +35,6 @@ import java.util.function.*;
 
 public class Prediction
 {
-	/**
-	 * In retrospect to the current MJ_game's whole drop pile, this will keep track of what are
-	 * tiles are non-visual, but that doesn't mean it's available (can be in other Players' hand)
-	 */
-	ArrayList<ArrayList<Integer>> tile_market_;
 	
 	/**
 	 * @warning Need to fix in future when exporting as application, path will not remain
@@ -48,164 +43,1107 @@ public class Prediction
 														   "src" + File.separator + 
 														   "bot_package" + File.separator +
 														   "Player_behaviors.txt");
-	/**
-	 * 
-	 */
-	protected static HashMap<Integer, String> ID_2_Player = new HashMap<Integer, String>();
 	
+	final double[][] type_scalars = {{2, 1.75, 1.0, 0.8} , {1.1, 1.1, 1.25, 1.5}, {0.15, 0.5, 1.5, 1.5}};
 	
 	/**
-	 * A dummy Player used to predict what a Player has, not an actual Player instance
+	 * Used to indicate if tedashi is being tracked / inputed by user
 	 */
-	static class predict_Player
+	public boolean track_tedashi;
+	
+	/**
+	 * If algorithm is looking into riichi mahjong, the discard of dora can raise suspicion on the Player status
+	 */
+	public int dora;
+	
+	/**
+	 * The inputed drop_pile of the opponent
+	 */
+	public ArrayList<Double> drop_pile;
+	
+	/**
+	 * A private int AL that is responsible for storing unique tiles that were discarded
+	 */
+	private ArrayList<Integer> unique_tiles = new ArrayList<Integer>();
+	
+	/**
+	 * A ordered orphan to simple tile type in order of game discard
+	 */
+	private ArrayList<ArrayList<Integer>> orphan_ratio_list = new ArrayList<ArrayList<Integer>>();
+	
+	/**
+	 * A AL of ArrayList of 4 integers representing each suit and it's amount of Unique tiles
+	 * being discarded in each suit incrementing the index value
+	 */
+	private ArrayList<ArrayList<Integer>> suit_amt = new ArrayList<ArrayList<Integer>>();
+	
+	/**
+	 * Parameterized Constructor
+	 * @param drop_pile
+	 * @param dora
+	 * @param track_tedashi
+	 */
+	public Prediction(ArrayList<Double> drop_pile, int dora, boolean track_tedashi)
 	{
-		/**
-		 * A HashMap that represents the algorithm guess on the wind_ID corresponding to the Player's hand
-		 * Integer = the placement of the guess (lower == more confident)
-		 * String = mjSTR to represent the hand
-		 */
-		protected HashMap<Integer,String> mjSTR_prediction_;
+		//sets drop_pile of 1 player to this prediction instance
+		this.drop_pile = new ArrayList<Double>(drop_pile);
 		
-		/**
-		 * Integer ranges from [0,10] inclusive
-		 * 0 = starting hand
-		 * 1-4 = early progression
-		 * 5 = 2 confirmed groups / 3-2 shanten
-		 * 6-8 = 3 confirmed groups / 2-1 shanten
-		 * 9 = 4 confirmed groups / extreme confidence 1-shanten
-		 * 10 = completed hand
-		 */
-		protected int progress_score_ = 0;
+		//Saves a list of unique tile_ids
+		for(double tile: drop_pile) this.unique_tiles.add((int)tile);
+		unique_tiles = new ArrayList<Integer>(new LinkedHashSet<Integer>(this.unique_tiles));
 		
-		/**
-		 * Saves this Player's game as a Unique ID incase this instance of Player plays again
-		 */
-		public int player_IDs_;
+		//Will show amt of tile in each suit per turn
+		ArrayList<Integer> start = new ArrayList<Integer>();
+		for(int i = 0; i < 4; i++) start.add(0);
+		this.suit_amt.add(start);
 		
-		/**
-		 * Given the end of the game, if the Player does reveal their hand, with reflection of their drop pile
-		 */
-		public ArrayList<Integer> unique_behav_;
-	
-		
-		public predict_Player(Player opponenet)
+		int orphan_count = 0;
+		int simple_count = 0;
+		for(int i = 0; i < this.drop_pile.size(); i++)
 		{
-			this.player_IDs_ = opponenet.seatWind_;
+			switch(tile_type(this.drop_pile.get(i)))
+			{
+				//3,2 == honor, terminal
+				case 3:
+				case 2:
+					orphan_count++;
+					break;
+				//1,0 == edge simple, middle tile
+				case 1:
+				case 0:
+					simple_count++;
+					break;
+			}
+			if(i < this.unique_tiles.size())
+			{
+				ArrayList<Integer> turn_suit_amt = new ArrayList<Integer>(this.suit_amt.get(i));
+				turn_suit_amt.set(this.unique_tiles.get(i).intValue()/9, turn_suit_amt.get(this.unique_tiles.get(i).intValue()/9) + 1);
+				this.suit_amt.add(turn_suit_amt);
+			}
 			
+			ArrayList<Integer> add_tiletype_count = new ArrayList<Integer>();
+			add_tiletype_count.add(orphan_count);
+			add_tiletype_count.add(simple_count);
+			orphan_ratio_list.add(add_tiletype_count);
 		}
 		
-		public static boolean save_Player_behav(Player player, predict_Player save_behav)
+		//Only applicable to riichi mahjong
+		this.dora = dora;
+		
+		//Option of the user where tedashi / tsumogiri is tracked, otherwise just tile_id
+		this.track_tedashi = track_tedashi;
+	}
+	
+	public boolean add_tile(double new_tile)
+	{
+		drop_pile.add(new_tile);
+		int tile_id = (int)new_tile;
+		
+		//invalid tile id
+		if(tile_id < 0 || tile_id > 33)
 		{
+			return false;
+		}
+		
+		//checks if is unique tile
+		boolean unique = true;
+		for(int tile: this.unique_tiles)
+		{
+			if(tile_id == tile)
+			{
+				unique = false;
+				break;
+			}
+		}
+		if(unique)
+		{
+			this.unique_tiles.add(tile_id);
+			ArrayList<Integer> next_suit_drop;
 			try
 			{
-				String save_state = "";
-				Files.write(Prediction.Player_behav_file, Arrays.asList(save_state), StandardOpenOption.APPEND);
-				return true;
+				next_suit_drop = new ArrayList<Integer>(this.suit_amt.get(this.suit_amt.size() - 1));
 			}
-			catch(IOException e)
+			catch(IndexOutOfBoundsException e)
 			{
-				return false;
+				//This would indicate there were no previous this.suit_amt (no drop pile case)
+				next_suit_drop = new ArrayList<Integer>();
+				for(int i = 0; i < 4; i++) next_suit_drop.add(0);
+				next_suit_drop.set(tile_id/9, next_suit_drop.get(tile_id/9) + 1);
 			}
+			next_suit_drop.set(tile_id/9, next_suit_drop.get(tile_id/9) + 1);
+			this.suit_amt.add(next_suit_drop);
 		}
-		
-		/**
-		 * 
-		 * @param end_hand
-		 * @param drop_pile
-		 * @return
-		 */
-		public static ArrayList<String> retrace_history(String end_hand, ArrayList<Double> drop_pile)
+		return true;
+	}
+	/**
+	 * @info
+	 * Start layer: honors / terminal should be more abundant
+	 * (tile_type 3 + tile_type 2) > (tile_type 1 + tile_type 0)
+	 * index 0 - index 6 weight equation = -(4/3)ln(x-0.55) + e (caps at y = 5)
+	 * 
+	 * weights:
+	 * 1 	->	3.7829588
+	 * 2	->	2.223
+	 * 3	->	1.523
+	 * 4	->	1.067
+	 * 5	->	0.728
+	 * 6	->	0.457
+	 * 
+	 * MAX values(weighted ratio score) possible:
+	 * 3.7829588 + 4.4457275 + 4.5704934 + 4.2684647 + 3.6387152 + 2.7447661 == 23.4511257
+	 * MAX average value(weighted ratio score) where all start discard honors = 3.90852095
+	 * 
+	 * total_additive_ratio_score = ln(1+e^(3(average weight score)-3.5)) Softplus function
+	 * where (average weight score) >= 2.84 reaches max score
+	 * total_additive_ratio_score range = [0,5] inclusive
+	 * 
+	 * 2nd algorithm == average weighted variance score (see Numerical_tools.weighted_variance_mean() for information)
+	 * total_average_weighted_variance_score range = [-3.75,3.75] inclusive
+	 * 
+	 * final_score range = [-3.75,8.75], midpoint == 2.5
+	 * @return A score reflecting the probability of a given drop pile protraying a player going a normal hand
+	 */
+	public double normal_prob()
+	{
+		double final_prob = 0.0;
+		double average_weight = 0.0;
+		for(int i = 1; i < 7; i++) 
 		{
+			if(i > this.orphan_ratio_list.size())
+			{
+				break;
+			}
 			
+			double orphan_ratio;
+			if(this.orphan_ratio_list.get(i-1).get(1) == 0){orphan_ratio = this.orphan_ratio_list.get(i-1).get(0).doubleValue();}
+			else{orphan_ratio = this.orphan_ratio_list.get(i-1).get(0).doubleValue() / this.orphan_ratio_list.get(i-1).get(1).doubleValue();}
+			
+			average_weight += (orphan_ratio*((-4.0/3.0)*Math.log(i - 0.55) + Math.E));
+		}
+		average_weight /= 6;
+		
+		final_prob = Math.log(1.0 + Math.exp(3.0*average_weight - 3.5));
+		if(final_prob > 5) {final_prob = 5;}
+		
+		/*
+		 * Middle / End layer: dependant on speed of hand
+		 * SEE Numerical_tools.weighted_variance_mean() documentation for more information
+		 */
+		double variance_score = Numerical_tools.weighted_variance_mean(this.suit_amt);
+		return final_prob + variance_score;
+	}
+	
+	/**
+	 * Algorithm 1: Suit distribution (range == [0.0,32.62]
+	 * Excluding honors: assume the lowest unique thrown tile SUIT is the flush Player is going for
+	 * 
+	 * Loop through drop pile: 
+	 * any occurance of same suit == decrease slope of consecutive weight function
+	 * -Layer 1:
+	 * 		> honor		  	 n == 19/20n scalar
+	 * 		> terminal 	  	 n == 6/7n scalar
+	 * 		> edge simple 	 n == 17/20n scalar
+	 * 		> simple 	  	 n == 3/5n scalar
+	 * -Layer 2:
+	 * 	 	> honor			 n == nothing
+	 * 		> terminal		 n == 9/10n scalar
+	 * 		> edge simple 	 n == 6/7n scalar
+	 * 		> simple 	  	 n == 2/3n scalar
+	 * -Layer 3: No decrease scalar
+	 * 
+	 * Each consecutive non flush is added based off this Sigmoid linear unit formula
+	 * (n)(x)/(2.75 + 70 e^(-x))
+	 * where n == changing scalar; x == consecutive non flush count
+	 * 
+	 * Algorithm 2: Least unique suit discard
+	 * Each turn unique suit discard is increased, if one suit isn't catching up, it
+	 * could indicate that Player is going a flush hand for that suit
+	 * Each turn is weighted based of the Softplus function 
+	 * ln(1 + e^(x-6)/3) + 3 where x == turn
+	 * 
+	 * Final ratio score is inverted to a final algorithm 2 score by using the function
+	 * 
+	 * Algorithm factor: (Algorithm 2 score) * 3.5 > (Algorithm 1 score) * 1.5
+	 * Better sign with more unique discards of other suits to show the Player -> flush hand
+	 * Layer 1 flaw is having an early discard of flush suit to throw the score off
+	 * 
+	 * @return 
+	 * final_score range = [-3.75,8.75], midpoint == 2.5
+	 */
+	public double flush_prob()
+	{
+		//Loop drop pile algorithm
+		final double[][] layer_scalar = {{0.75,0.85,0.8571428571,0.95},{0.6666666667,0.8571428571,0.9,1.0}};
+		ArrayList<Integer> decide_suit = new ArrayList<Integer>();
+		int assume_flush_suit = -1;
+		
+		ArrayList<Integer> last_suit_amt;
+		try{last_suit_amt = new ArrayList<Integer>(this.suit_amt.get(this.suit_amt.size() - 1));}
+		catch(IndexOutOfBoundsException  e) {return -99.99;}
+		
+		double tile_size_weight = 1.0; //allow 2 layered hands to be weighted up
+		
+		if(this.drop_pile.size() >= 8 && this.drop_pile.size() < 18)
+		{
+			switch(this.drop_pile.size())
+			{
+				case 8:
+				case 9:
+					tile_size_weight += 12.0/this.drop_pile.size();
+					break;
+				default:
+					tile_size_weight += 18.0/this.drop_pile.size();
+					break;
+			}
 		}
 		
-		/**
-		 * 
-		 * @param drop_pile
-		 * @return
+		/*
+		 * gets the assumed suit for flush hand (min suit)
+		 * if 2 suits are equal, earlier discards are out
 		 */
-		public static ArrayList<ArrayList<Double>> split_droppile_layer(ArrayList<Double> drop_pile)
+		double min = last_suit_amt.get(0);
+		decide_suit.add(0);
+		for(int i = 1; i < last_suit_amt.size(); i++)
 		{
-			/*
-			 * 	How importance is scored:
-			 * 	Tile type:		honor = +0, terminal = +1, simple = +2
-			 * 	Discard type:	tsumogiri = +0, tedashi = +4
-			 * 	layer:			1st = +0, 2nd = +2, 3rd/last = +4
-			 * 	Weights can be adjusted later
-			 */
-			ArrayList<Integer> importance_list = new ArrayList<Integer>();
-			int[] pivot_points = {-1, -1};
-			DoubleToIntFunction condition = (num) -> 
+			if(i == 3) {break;}
+			if(min == last_suit_amt.get(i))
 			{
-				int score = 0;
-				int play_val = Group.tileID_to_PlayVal((int)num);
-				
-				//tile type
-				if(play_val == 1 || play_val == 9){score++;}
-				else{score+=2;}
-				
-				//checks tsumogiri or tedashi
-				if(num - (int)num == 0.5)
+				decide_suit.add(i);
+			}
+			if(min > last_suit_amt.get(i))
+			{
+				min = last_suit_amt.get(i);
+				assume_flush_suit = i;
+				decide_suit.remove(0);
+				decide_suit.add(i);
+			}
+		}
+		if(decide_suit.size() > 1)
+		{
+			for(int i = 0; i < this.drop_pile.size(); i++)
+			{
+				if(decide_suit.size() == 1)
 				{
-					score+=4;
+					assume_flush_suit = decide_suit.get(0);
+					break;
 				}
-				
-				//checks layer
-				for(int i = 0; i < 2; i++)
+				for(int j = 0; j < decide_suit.size(); j++)
 				{
-					if(pivot_points[i] != -1)
+					//If same suit present earlier, delete that suit from decision
+					if(this.drop_pile.get(i).intValue()/9 == decide_suit.get(j))
 					{
-						score += 2 * (i+1);
-						break;
+						decide_suit.remove(j);
 					}
 				}
-				return score;
-			};
-			/*
-			 *	Normal hand case:
-			 *	Mixed with tsumogiri of useless tiles, only suited tiles should be considered 
-			 *	discard order = honors -> terminals/isolate tiles -> overflow tiles
-			 */
-			for(int i = 0; i < drop_pile.size(); i++)
+			}
+		}
+		if(assume_flush_suit == -1) {assume_flush_suit = 0;}
+		
+//		System.out.println(last_suit_amt + "; Assumed suit: " + assume_flush_suit);
+		
+		int consec_nonflush_drop = 0;		//counter for consecutive non_flush drops (honors doesn't reset)
+		int nonflush_drop = 0;				//counter for non_flush drops (doesn't count honor)
+		int layer = 0;						//the layer of the drop_pile(default = interval of 6)
+		double alg1_score = 0.0;			//the total score for this algorithm 1
+		double n = 1.15;					//the adaptive scalar responding to the discard order
+		int tild_id;
+		for(int i = 0; i < this.drop_pile.size(); i++)
+		{
+			tild_id = this.drop_pile.get(i).intValue();
+			int suit = tild_id/9;
+			boolean is_flushsuit = false;
+			layer = i/6;
+			//Last layer is not accounted, it's extremely speed dependent
+			if(layer == 2) {break;}
+			//reset consecutive nonflush count if applicable
+			if(suit == assume_flush_suit) {is_flushsuit = true;}
+			if(is_flushsuit || (suit == 3 && layer == 0))
+			{
+				if(is_flushsuit){consec_nonflush_drop = 0;}
+				n *= layer_scalar[layer][tile_type(this.drop_pile.get(i))];
+			}
+			else{nonflush_drop++; consec_nonflush_drop++;}
+			double current_grade = n * (1.5 * nonflush_drop/(2.75 + 70 * (Math.exp((-1 * consec_nonflush_drop))))) * tile_size_weight;
+			if(current_grade > 5) {current_grade = 5;}
+			alg1_score += current_grade;
+			
+//			try{System.out.print(Double.toString(alg1_score).substring(0, 5) + "; ");}
+//			catch(StringIndexOutOfBoundsException e) {System.out.print(Double.toString(alg1_score) + "; ");}
+		}
+		alg1_score = (10/38.36) * alg1_score - 5;
+		if(alg1_score > 5) {alg1_score = 5;} //max score == [-5,5]
+		if(alg1_score < -5) {alg1_score = -5;}//max score == [-5,5]
+//		System.out.println("\n================Final Score: " + alg1_score + "==============");
+
+		//Ratio of nonsuit tiles to suited tiles, higher score == less likely flush
+		ArrayList<Double> suit_ratio = new ArrayList<Double>();
+		
+		int after_decoy_index = 0;		//saves second index of drop tile with same assume flush suit
+		double suit_weight = 0;			//the weight of the suit drop depending on layers, includes some honors
+		int nonsuit_amt = 0;			//the amount of tiles that don't belong in the assume suit
+		layer = 0;
+		for(int i = 0; i < this.drop_pile.size(); i++)
+		{
+			layer = i/4;
+			if(layer > 2) {layer = 2;}
+			
+			int tile_id = this.drop_pile.get(i).intValue();
+			
+			if(tile_id / 9 == assume_flush_suit) 
+			{
+				if(after_decoy_index == 0) {after_decoy_index = i;}
+				suit_weight += 1 * Math.abs(layer - 2);
+			}
+			else if(tile_id / 9 == 3) {suit_weight += 0.2 * Math.abs(layer - 2);}
+			else {nonsuit_amt++;}
+			
+			if(i == 0 || suit_weight == 0) {suit_ratio.add((double)nonsuit_amt);}
+			else {suit_ratio.add((double)nonsuit_amt/(i * suit_weight));}
+		}
+		if(after_decoy_index == 0) {after_decoy_index = this.drop_pile.size();} //if the suit has never appeared, set equal to drop_pile size
+		
+		double ratio_sum = 0.0;
+		for(double ratio: suit_ratio) ratio_sum += ratio;
+		ratio_sum = ratio_sum/suit_ratio.size();
+		
+//		System.out.println(suit_ratio);
+//		System.out.println("Ratio average: " + ratio_sum);
+//		System.out.println("Score bonus: " + (double)after_decoy_index/this.drop_pile.size());
+		
+		double alg2_score = ratio_sum + (double)after_decoy_index/this.drop_pile.size();
+		if(alg2_score > 3.5) {alg2_score = 3.5;} //max range = [0,3.5]
+		
+		double final_score = alg1_score + alg2_score;
+		if(final_score < -3.5) {return -3.5;}
+		return final_score;
+	}
+
+	
+	/**
+	 * 
+	 * @param drop_pile
+	 * @return
+	 */
+	public double normal_progress_score()
+	{
+		final double[] normal_scalars = {2, 1.55, 1.0, 0.75};
+		ArrayList<ArrayList<Double>> tedashi_weight;
+		if(this.track_tedashi){tedashi_weight = this.tedashi_weight(tile_to_discardType(this.drop_pile));}
+		else
+		{
+			tedashi_weight = new ArrayList<ArrayList<Double>>();
+			for(int i = 0; i < this.drop_pile.size(); i++)
 			{
 				/*
-				 * Checks first non honor and if 1st pivot point is not set
+				 * since tedashi and tsumogiri arent tracked, theyre treated equal
+				 * base weight formula = e^((x-7)/3)+(x/15)
 				 */
-				if(drop_pile.get(i) < 26.5 && pivot_points[0] == -1)
-				{
-					pivot_points[0] = i;
-				}
-				// Adds importance of current tile to ArrayList
-				importance_list.add(condition.applyAsInt((drop_pile.get(i))));
+				ArrayList<Double> base_weight = new ArrayList<Double>();
+				base_weight.add(Math.exp(((i-7.0)/3.0))+(i/15.0));
+				base_weight.add(Math.exp(((i-7.0)/3.0))+(i/15.0));
+				tedashi_weight.add(base_weight);
 			}
-			/*
-			 * 	Half/ Full flush hand case:
-			 * 	Extremely obvious after two suits are discarded frequently
-			 * 	discard order = nonsuit 1/2 <-> nonsuit 2/1 -> honors -> flush suit
-			 */
+		}
+		
+		double ret_score = 0.0;
+		double check_discardtype = 0.0;
+		double dora_scalar = 1.5;
+		if(this.dora == -1) {dora_scalar = 1;}
+		
+		ArrayList<Double> tile_weights = new ArrayList<Double>();
+		
+		for(int index = 0; index < this.drop_pile.size(); index++)
+		{
+			double tile = this.drop_pile.get(index);
+			check_discardtype = tile - (int)tile;
+			if(check_discardtype >= 0.5)	//tedashi
+			{
+				tile_weights.add(normal_scalars[tile_type(tile)] * tedashi_weight.get(index).get(0) + 1.5);
+			}
+			else							//tsumogiri
+			{
+				tile_weights.add(normal_scalars[tile_type(tile)] * tedashi_weight.get(index).get(1) + 0.5);
+			}
+			if(this.dora == (int)tile)
+			{
+				tile_weights.set(tile_weights.size() - 1, tile_weights.get(tile_weights.size() - 1) * dora_scalar);
+			}
+		}
+		
+		for(int i = 0; i < tile_weights.size(); i++)
+		{
+			System.out.println("tile: " + this.drop_pile.get(i) + "\tWeight: " + tile_weights.get(i) + "\tDiscard weight: " + tedashi_weight.get(i));
+		}
+		
+		return ret_score;
+	}
+	
+	/**
+	 * @info
+	 * How progression typically occurs
+	 * start == multiple tedashi to get rid of useless tiles
+	 * middle == mixed tedashi / tsumogiri
+	 * end == majority tsumogiri, tedashi would typically only to change for better waits
+	 * 
+	 * the above mentioned are the 3 layers of progression
+	 * All follows a exponential growth with consecutive discard pattern
+	 * if you tedashi consecutively at start/middle, the progress rate grows exponentially
+	 * if you tsumogiri consecutively at middle/end, the chance of ready hand grows exponentially
+	 * 
+	 * exceptions, tsumogiri consecutively at start -> EXTREMELY fast hand or EXTREMELY slow hand
+	 * exceptions, tedashi consecutively at end 	-> folding or EXTREMELY slow hand
+	 * 
+	 * Average starting shanten = 3.278 (3,4)
+	 * 
+	 * exponential weight rate for tedashi: 	x = tedashi consective, 	z = layer;	f(x) = progress rate 	(caps at 10)
+	 * 		   expoentialfactor	 	 linearlayerfactor
+	 * 	f(x) = e^(0.25(x-4))-(1/e) * (0.8z + 0.8333)
+	 * exponential weight rate for tsumogiri:	x = tsumogiri consective, 	z = layer;	g(x) = ready chance		(caps at 10)
+	 * 		   sigmoidfactor		   				  linearlayerfactor
+	 * 	g(x) = (10/(1+e^(-0.5*(x-5))) - 10/1+e^2.5) * (1.5z + 1.067)
+	 * 
+	 *
+	 * 
+	 * @param discardtype_list	A ArrayList<Integer> of only integers representing tedashi or tsumogiri
+	 * @return ArrayList<ArrayList<Double>> where index 0 or each ArrayList<Double> represents tedashi weight
+	 * 											  index 1 represents tsumogiri weight
+	 */
+	public ArrayList<ArrayList<Double>> tedashi_weight(ArrayList<Integer> discardtype_list)
+	{
+		ArrayList<ArrayList<Double>> return_weights = new ArrayList<ArrayList<Double>>();
+		
+		//total discard type count
+		int tedashi_count = 0;
+		int tsumogiri_count = 0;
+		
+		//consecutive discard type count
+		int tedashi_consec = 0;
+		int tsumogiri_consec = 0;
+		
+		//layer starts at index 0
+		int layer = 0;
+		
+		ArrayList<Double> temp_weight_list = new ArrayList<Double>();
+		for(int i = 0; i < 2; i++)temp_weight_list.add(0.0);
+		for(int i = 0; i < discardtype_list.size(); i++)
+		{
+			for(int j = 0; j < 2; j++)temp_weight_list.set(j, 0.0);
+			//changes layer
+			layer = i/6;
+			switch(discardtype_list.get(i))
+			{
+				case 0:
+					tsumogiri_count++;
+					tsumogiri_consec++;
+					tedashi_consec = 0;
+					break;
+				case 1:
+					tedashi_count++;
+					tedashi_consec++;
+					tsumogiri_consec = 0;
+					break;
+				default:
+					return null;
+			}
 			
 			/*
-			 * 	Kokushi hand case:
-			 * 	Extremely obvious to see when nonorphans are only discards
-			 * 	discard order = simples -> orphans
+			 * x = tedashi consective, 	z = layer;	f(x) = progress rate (caps at 10)
+			 * f(x) = e^(0.25(x-4))-(1/e) * (0.8z + 0.8333)
 			 */
+			double tedashi_weight = (Math.exp(0.25 * (tedashi_consec - 4.0)) - 
+									(1.0/Math.E) + 
+									(double)tsumogiri_count/18) * 
+									(0.8 * layer + (0.8 + (1.0/3.0)));
+			if(tedashi_weight > 10) {tedashi_weight = 10.0;}
 			
+			/*
+			 * x = tsumogiri consective, 	z = layer;	g(x) = ready chance
+			 * g(x) = (10/(1+e^(-0.5*(x-5))) - 10/1+e^2.5) * (1.5z + 1.067)
+			 */
+			double tsumogiri_weight = (10.0/(1.0 + Math.exp(-0.5 * (tsumogiri_consec - 5.0))) - 
+									  (10.0/(1.0 + Math.exp(2.5))) + 
+									  (double)tsumogiri_count/18) * 
+									  (1.5*layer + 1.067);
+			if(tsumogiri_weight > 10) {tsumogiri_weight = 10.0;}
+			
+			temp_weight_list.set(0, tedashi_weight);
+			temp_weight_list.set(1, tsumogiri_weight);
+			return_weights.add(new ArrayList<Double>(temp_weight_list));
+		}
+		
+		double discard_type_ratio_val = (double)tedashi_count;
+		if(tsumogiri_count > 0) {discard_type_ratio_val /= tsumogiri_count;}
+		ArrayList<Double> discard_type_ratio = new ArrayList<Double>();
+		discard_type_ratio.add(-1.0);
+		discard_type_ratio.add(discard_type_ratio_val);
+		return_weights.add(discard_type_ratio);
+		
+		return return_weights;
+	}
+	
+	/**
+	 * Prints out the drop tiles using the same algorithm from AL_droppile_toSTR
+	 */
+	public void print()
+	{
+		final String[] honor = {"E","S","W","N","Wh","G","R"}; ArrayList<String> print_str = new ArrayList<String>(); 
+		int signal = 0; boolean riichi = false; boolean tedashi = false;
+		for(double tile: this.drop_pile){
+			String this_tile = "";
+			int tile_id = (int)(tile);
+			if(tile - tile_id >= 0.5){tedashi = true;} if((tile * 100 - ((int)(tile * 100))) > 0.1){signal += 1;}
+			if(Double.toString(tile).charAt(Double.toString(tile).length() - 1) == '1'){signal += 2;}
+			if(((int)tile) / 9 >= 3){this_tile += honor[(int)tile % 9];}
+			else
+			{
+				this_tile += ((int)tile % 9) + 1;if(signal % 2 == 1) {this_tile += "r";}
+				switch(((int)tile) / 9){
+					case 0:
+						this_tile += "m";
+						break;
+					case 1:
+						this_tile += "p";
+						break;
+					case 2:
+						this_tile += "s";
+						break;}
+			}
+			if(tedashi && !riichi){this_tile += "d";} else if(!riichi){this_tile += "t";}
+			if(signal >= 2) {this_tile += "-"; riichi = true;}
+			tedashi = false;signal = 0;print_str.add(this_tile);}
+		System.out.println(print_str);
+	}
+	
+	public static double score_2_percentage(double score)
+	{
+		return ((score + 3.75)/(12.5)) * 100.0;
+	}
+	
+	/**
+	 * 
+	 * @param drop_pile The drop pile that wants to be checked for tedashi and tsumogiri
+	 * @return A binary ArrayList where 0 = tsumogiri, 1 = tedashi
+	 */
+	public static ArrayList<Integer> tile_to_discardType(ArrayList<Double> drop_pile)
+	{
+		ArrayList<Integer> return_list = new ArrayList<Integer>();
+		for(double tile: drop_pile) return_list.add((int)Math.round(tile - (int)tile));
+		return return_list;
+	}
+	
+	/**
+	 * @info
+	 * 0 = middle tile 	[3,7] inclusive
+	 * 1 = edge simple 	(only 2,8)
+	 * 2 = terminal		(only 1,9)
+	 * 3 = honor
+	 * @param tile the tile that wants to be check what type (input by tile_id)
+	 * @return a integer that corresponds to the type
+	 */
+	public static int tile_type(double tile)
+	{
+		int tild_id = (int)tile;
+		if(tild_id < 0 || tild_id > 33) {return -1;}
+		if(tild_id > 26) {return 3;}
+		if((tild_id%9 == 0) || (tild_id%9 == 8)) {return 2;}
+		if((tild_id%9 == 1) || (tild_id%9 == 7)) {return 1;}
+		return 0;
+	}
+	
+	public static ArrayList<Double> read_dropSTR(String drop_pile)
+	{
+		ArrayList<Double> ret_droppile = new ArrayList<Double>();
+		String temp_droppile = new String(drop_pile.toLowerCase());
+		String get_tile = "";
+		boolean riichi = false;
+		while(temp_droppile.length() > 0)
+		{
+			double temp_tile = -1;
+			//Add riichi mode
+			if(temp_droppile.charAt(0) == '-' || riichi)
+			{
+				//if riichi not set true before, set true and go to next char
+				if(!riichi)
+				{
+					riichi = true; 
+					ret_droppile.set(ret_droppile.size() - 1, ret_droppile.get(ret_droppile.size() - 1) + 0.0001);
+					continue;
+				}
+				
+				final char[] indicators = {'e', 's', 'w', 'n', 'h', 'g', 'r', 'm', 'p', 's'};
+				int num_val = 0;
+				boolean red_five_case = false;
+				ArrayList<Double> temp_ret_droppile = new ArrayList<Double>();
+				//Iterates the remaining tile_str
+				for(int i = 0; i < temp_droppile.length(); i++)
+				{
+					if(Character.isAlphabetic(temp_droppile.charAt(i)))
+					{
+						for(int j = 0; j < indicators.length; j++)
+						{
+							if(temp_droppile.charAt(i) == indicators[j])
+							{
+//								System.out.println(temp_droppile.charAt(i) + Integer.toString(num_val) + j); test print
+								if(j == 6 && num_val != 0)		//red 5 case
+								{
+									red_five_case = true;
+									break;
+								}
+								if(j <= 6 && num_val == 0) 		//char is an honor symbol (exception with red five)
+								{
+									//west would added more if white dragon is present, so if h is detected, delete one w
+									temp_tile = tile_interpreter(Character.toString(indicators[j]) + "t");
+									if(j == 4){temp_ret_droppile.remove(temp_ret_droppile.size() - 1);}
+								}
+								if((j == 1 || j > 6) && num_val != 0)	//char is suit symbol
+								{
+									String translate_tile = Integer.toString(num_val);					//tile play val
+									if(red_five_case){translate_tile += "r"; red_five_case = false;}	//red five indicator if true
+									translate_tile += Character.toString(indicators[j]) + "t";			//suit, then riichi = tsumogiri
+									temp_tile = tile_interpreter(translate_tile);
+									num_val = 0;
+								}
+								if(temp_tile > 0){temp_ret_droppile.add(temp_tile);}
+								break;
+							}
+						}
+					}
+					else if(Character.isDigit(temp_droppile.charAt(i)))
+					{
+						num_val = Character.getNumericValue(temp_droppile.charAt(i));
+					}
+				}
+				for(double tile: temp_ret_droppile) ret_droppile.add(tile);
+				break;
+			}
+			
+			//Add tile without riichi mode
+			get_tile += temp_droppile.charAt(0);
+			if(temp_droppile.length() == 1)
+			{
+				//How tiles are checked b4 added
+				temp_tile = tile_interpreter(get_tile);
+				if(temp_tile > 0){ret_droppile.add(temp_tile);}
+				break;
+			}
+			switch(temp_droppile.charAt(0))
+			{
+				case 't':
+				case 'd':
+					
+					//How tiles are checked b4 added
+					temp_tile = tile_interpreter(get_tile);
+					if(temp_tile >= 0){ret_droppile.add(temp_tile);}
+					
+					//resets string checking vars
+					get_tile = "";
+					break;
+			}
+			
+			//resets string checking vars
+			temp_droppile = temp_droppile.substring(1);
+		}
+		return ret_droppile;
+	}
+	
+	public static String AL_droppile_toSTR(ArrayList<Double> drop_pile)
+	{
+		final String[] honor = {"e","s","w","n","wh","g","r"};
+		String return_str = "";
+		/*
+		 * signal = 1 == redfive
+		 * 		  = 2 == riichi
+		 * 		  = 3 == both
+		 */
+		int signal = 0;
+		boolean riichi = false;
+		boolean tedashi = false;
+		for(double tile: drop_pile)
+		{
+			int tile_id = (int)(tile);
+			if(tile - tile_id >= 0.5){tedashi = true;}
+			if((tile * 100 - ((int)(tile * 100))) > 0.1){signal += 1;}
+			if(Double.toString(tile).charAt(Double.toString(tile).length() - 1) == '1'){signal += 2;}
+			if(((int)tile) / 9 >= 3)
+			{
+				return_str += honor[(int)tile % 9];
+			}
+			else
+			{
+				return_str += ((int)tile % 9) + 1;
+				if(signal % 2 == 1) {return_str += "r";}
+				switch(((int)tile) / 9)
+				{
+					case 0:
+						return_str += "m";
+						break;
+					case 1:
+						return_str += "p";
+						break;
+					case 2:
+						return_str += "s";
+						break;
+				}
+			}
+			if(tedashi && !riichi){return_str += "d";}
+			else if(!riichi){return_str += "t";}
+			
+			if(signal >= 2) {return_str += "-"; riichi = true;}
+			tedashi = false;
+			signal = 0;
+		}
+		return return_str;
+	}
+	
+	public static double tile_interpreter(String tile_str)
+	{
+		if(tile_str.isBlank()) {return 0.0;}
+		
+		String temp_str = new String(tile_str.toLowerCase());
+		
+		double red_five_detail = 0;
+		
+		//White dragon needs to replace wh with
+		if(temp_str.length() >= 2)
+		{
+			if(temp_str.substring(0, 2).compareTo("wh") == 0)
+			{
+				temp_str = temp_str.substring(1);
+			}
+		}
+		/*
+		 * 0 = play_val
+		 * 1 = suit
+		 * 2 = discard_type
+		 */
+		int[] tile_data = {-1,-1,-1};
+		final char[][] indicator_list = {{'e', 's', 'w', 'n', 'h', 'g', 'r'},{'m', 'p', 's'}, {'t', 'd'}};
+		
+		for(int i = 0; i < temp_str.length(); i++)
+		{
+			if(Character.isDigit(temp_str.charAt(i)))
+			{
+				tile_data[0] = Character.getNumericValue(temp_str.charAt(i)) - 1;
+			}
+			else if(Character.isAlphabetic(temp_str.charAt(i)))
+			{
+				int j = 0;
+				if(tile_data[0] != -1)	// indicating play_val already set
+				{
+					if(temp_str.charAt(i) == 'r')
+					{
+						red_five_detail = 0.005;
+					}
+					j++;
+				}
+				while(j < indicator_list.length)
+				{
+					for(int k = 0; k < indicator_list[j].length; k++)
+					{
+						if(Character.toLowerCase(temp_str.charAt(i)) == indicator_list[j][k])
+						{
+							tile_data[j] = k;
+							if(j == 0)
+							{
+								tile_data[1] = 3;
+							}
+							j = indicator_list.length;
+							break;
+						}
+					}
+					j++;
+				}
+			}
+		}
+		//returns -1 if not valid tile return
+		for(int i = 0; i < 2; i++)
+		{
+			if(tile_data[i] == -1)
+			{
+				return -1.0;
+			}
+		}
+//		System.out.println((tile_data[0]) + (tile_data[1] * 9) + (tile_data[2] * 0.5) + red_five_detail); test print
+		return (tile_data[0]) + (tile_data[1] * 9) + (tile_data[2] * 0.5) + red_five_detail;
+	}
+	
+	static class Numerical_tools
+	{
+		
+		/**
+		 * 
+		 * @param num_list A list of numbers to calculate the mean of the whole list
+		 * @return The mean of the inputed list
+		 */
+		public static double calc_mean(ArrayList<Double> num_list)
+		{
+			double mean = 0.0;
+			for(double num: num_list) mean += num;
+			return mean/num_list.size();
+		}
+		/**
+		 * 
+		 * @param num_list A list of numbers to calculate the variance of the whole list
+		 * @return The variance of the inputed list
+		 */
+		public static double calc_variance(ArrayList<Double> num_list)
+		{
+			double mean = calc_mean(num_list);
+			
+			double variance = 0.0;
+			for(double num: num_list) variance += Math.pow((num - mean), 2);
+			
+			return variance/num_list.size();
+		}
+		
+		/**
+		 * @warning when downcasting, decimal values will not be saved
+		 * @param AL_double A list of doubles that needs to be downcasted and saved as a ArrayList
+		 * @return an ArrayList<Integer> downcasted from an ArrayList<Double>
+		 */
+		public static ArrayList<Integer> downcast_AL_double(ArrayList<Double> AL_double)
+		{
+			ArrayList<Integer> return_AL = new ArrayList<Integer>();
+			for(double num: AL_double) return_AL.add((int)num);
+			return return_AL;
+		}
+		
+		/**
+		 * @info integer decimal value defaults to 0 when upcasting
+		 * @param AL_double A list of integer that needs to be upcasted and saved as a ArrayList
+		 * @return an ArrayList<Double> upcasted from an ArrayList<Integer>
+		 */
+		public static ArrayList<Double> upcast_AL_int(ArrayList<Integer> AL_int)
+		{
+			ArrayList<Double> return_AL = new ArrayList<Double>();
+			for(int num: AL_int) return_AL.add((double)num);
+			return return_AL;
+		}
+		
+		/**
+		 * @info
+		 * A distribution algorithm:
+		 * A variance is weighted at each turn, and it's scaled to the weighted formula
+		 * indexed weight rates = i^2/40.0 (caps at 5) (where i == the index discard)
+		 * 
+		 * let x = the average of all variance
+		 * final score = (x - 5.0) * (-0.75)
+		 * Lower variance == more different suit discared == more chance for normal
+		 * Higher variance == some suits are extremed out == more chance for flush
+		 * @param indexed_suit_list a 2D ArrayList where each ArrayList 
+		 * represents amount of unique tiles drop in each suit per turn
+		 * @return The final double score of the given indexed_suit_list weighting it's variance, range = [-3.75,3.75]
+		 * where positive value == more distributed, negative value == less evenly distributed/ more skewed
+		 */
+		public static double weighted_variance_mean(ArrayList<ArrayList<Integer>> indexed_suit_list)
+		{
+			ArrayList<Double> weighted_var_list = new ArrayList<Double>();
+			double weight_sum = 0.0;
+			for(int i = 0; i < indexed_suit_list.size(); i++)
+			{
+				double variance = calc_variance(upcast_AL_int(indexed_suit_list.get(i)));
+				double weighted_variance = variance * (Math.pow(i, 2)/40.0);
+				if(weighted_variance > 5) {weighted_variance = 5;}
+				weight_sum += weighted_variance;
+//				System.out.println("suit:" + indexed_suit_list.get(i) + 
+//								   "\tvariance: " + variance + 
+//								   "     weighted_var: " + weighted_variance);
+				weighted_var_list.add(weighted_variance);
+			}
+			double weight_var_mean = weight_sum/(weighted_var_list.size() + 1) * 4;
+			
+			if(weight_var_mean > 10)	{weight_var_mean = 10;}		//Max score for LEAST evenly distributed == -3.75
+			if(weight_var_mean < 0)		{weight_var_mean = 0;}		//Max score for MOST  evenly distributed == 3.75
+			
+			return (weight_var_mean - 5.0) * -0.75;
+		}
+		
+		/**
+		 * 
+		 * @param indexed_suit_list a 2D ArrayList where each ArrayList 
+		 * represents amount of unique tiles drop in each suit per turn
+		 * @return Same format as param indexed_suit_list but instead each element represents it's mean difference
+		 */
+		public static ArrayList<ArrayList<Double>> index_unique_outlier(ArrayList<ArrayList<Integer>> indexed_suit_list)
+		{
+			ArrayList<ArrayList<Double>> ordered_variance = new ArrayList<ArrayList<Double>>();
+			for(int i = 0; i < indexed_suit_list.size(); i++)
+			{
+				double mean = calc_mean(upcast_AL_int(indexed_suit_list.get(i)));
+				ArrayList<Double> dist_2_mean = new ArrayList<Double>();
+				for(int suit_unique_drops: indexed_suit_list.get(i)) 
+					dist_2_mean.add(Math.abs(suit_unique_drops - mean));
+				ordered_variance.add(dist_2_mean);
+			}
+			return ordered_variance;
+		}
+		
+		/**
+		 * 
+		 * @param indexed_suit_list a 2D ArrayList where each ArrayList 
+		 * represents amount of unique tiles drop in each suit per turn
+		 * @return The lowest amt unique tiles in suit in each turn 
+		 */
+		public static ArrayList<Integer> least_amt_suit(ArrayList<ArrayList<Integer>> indexed_suit_list, int bias_suit, boolean include_honor)
+		{
+			ArrayList<Integer> min_suit = new ArrayList<Integer>();
+			int min;
+			for(int i = 0; i < indexed_suit_list.size(); i++)
+			{
+				min = 0;
+				for(int j = 0; j < indexed_suit_list.get(i).size(); j++) 
+				{
+					if(!include_honor && j == 3) {break;}
+					if((indexed_suit_list.get(i).get(min) > indexed_suit_list.get(i).get(j)) || 
+					   (indexed_suit_list.get(i).get(min) == indexed_suit_list.get(i).get(j) && j == bias_suit))
+					{
+						min = j;
+					}
+				}
+				min_suit.add(min);
+			}
+			return min_suit;
 		}
 	}
 	public static void main(String[] args)
 	{
-		Path path = Paths.get(System.getProperty("user.dir") + "\\src\\bot_package\\Player_behaviors.txt");
-		System.out.println(path.getFileName());
-		System.out.println(Paths.get("").toAbsolutePath().normalize());
-		System.out.println(System.getProperty("user.dir") + "\\src\\bot_package\\Player_behaviors.txt");
-		try
+//		Path path = Paths.get(System.getProperty("user.dir") + "\\src\\bot_package\\Player_behaviors.txt");
+//		System.out.println(path.getFileName());
+//		System.out.println(Paths.get("").toAbsolutePath().normalize());
+//		System.out.println(System.getProperty("user.dir") + "\\src\\bot_package\\Player_behaviors.txt");
+//		try
+//		{
+//			List<String> Player_behav_list = Files.readAllLines(path);
+//			for(String Player_behav: Player_behav_list) System.out.println(Player_behav);
+//		}
+//		catch(IOException e)
+//		{
+//			System.out.println("Exception catched");
+//		}
+		
+		
+		//Hand: 115r6789p123678sckqo (4,7p)
+		Prediction normal1 = new Prediction(read_dropSTR("wdnd5md3md2ptgd7sd3sd4md"), -1, false);
+		//Hand: 45567m33789sckq111zo (3,6m)
+		Prediction normal2 = new Prediction(read_dropSTR("nd2pd7pd1md9md8sdwht5rpt2sdst3pt1st6ptgt"), -1, false);
+		//Hand: 789m234678p78s11zckqo (6,9s)
+		Prediction normal3 = new Prediction(read_dropSTR("1md4md4st1pd-1s2m1swwh9pwe3m5rs4m"), -1, false);
+		//Hand: 3789m234p566778sckqo (3m tanki)
+		Prediction normal4 = new Prediction(read_dropSTR("whd1md2sdgt1st5md9sd4sd1mt9st"), -1, false);
+		//Hand: 23499m455667p67s (5,8s)
+		Prediction normal5 = new Prediction(read_dropSTR("sdrdrt9sted6md2pd-1p6s2s1pwhw6s6m"), -1, false);
+		//Hand: 123m44789p23345sckqo (1,4s)
+		Prediction normal6 = new Prediction(read_dropSTR("nd2md2sd6st5rmdwhtrt9mtgdgd7pd-1pw5m5p7mgn"), -1, false);
+		//Hand: 78m567789p33789sckqo (6,9m)
+		Prediction normal7 = new Prediction(read_dropSTR("9mdrd4st9sdrt2pd-w4m4p5m1s5rm4p6s5p"), -1, false);
+		
+		Prediction flush1 = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd2pd3pd4pd5pd6pd7pd8pd9pd"), -1, false);
+		
+		//Hand: 9s123567778sckq555zo (no ten)
+//		Prediction flush1 = new Prediction(read_dropSTR("4md9md3md3mtrd6mdsd3pd6pd6pt8pd"), -1, false);
+		//Hand: 12233447m57zckq789mo (noten)
+		Prediction flush2 = new Prediction(read_dropSTR("7pd8pd3sd3sd6sd1pdwded3pd6pd"), -1, false);
+		//Hand: 13377s33zckq999s444zo (noten)
+		Prediction flush3 = new Prediction(read_dropSTR("6md6pd5md5rpt6st3md8md2pd1mdgdrded5mdrtsdgt3pd"), -1, false);
+		//Hand: 1222355888s222zckqo (25s shanpon)
+		Prediction flush4 = new Prediction(read_dropSTR("2pd4pd8pd1pd4pt2md8ptwhd1md2md3md4md6pd6pted-"), -1, false);
+		//Hand: 33m22zckq777z111z111mo (3m S shanpon)
+		Prediction flush5 = new Prediction(read_dropSTR("4pd4sd8sd4sd7pd7pd6md9mt5pt2st5rmt5mt2md6pd4mt7st8mt2mt2pt"), -1, false);
+		//Hand: 12p44zckq555p678p999po (3p edge wait)
+		Prediction flush6 = new Prediction(read_dropSTR("4sd1mt6stsd7stwd9st4stedgd4mt8pt6pdnt5st"), -1, false);
+		//Hand: 678p3444666788sckqo (Noten)
+		Prediction flush7 = new Prediction(read_dropSTR("2md5pd3pd3ptndgdrdndsdrdwt1mtwhted4pt9pt8mt"), -1, false);
+		//Hand: 8m6p345566899s44zckqo (no ten)
+		Prediction flush8 = new Prediction(read_dropSTR("9mdwhd5md3pdsdwd9pt3mt2ptrd7pt"), -1, false);
+		//Hand: 5r6788m66zckq444m777zo (8m g shanpon)
+		Prediction flush9 = new Prediction(read_dropSTR("8sd1st9mdet6pd5pd6sd7sd7sd1st3md6mt3pt"), -1, false);
+		
+		//Hand: 2233m55p779s4477zckqo (9s tanki)
+		Prediction seven_pairs1 = new Prediction(read_dropSTR("2pdwd1pt7md4mt-1mt"), -1, false);
+		
+		//Hand: Hand: 19m19p19s1234456zckqo (r kokushi wait)
+		Prediction kokushi1 =  new Prediction(read_dropSTR("7sd5sd4pd3pd3pd2pd5md5md5st2mt3mt1pd"), -1, false);
+		//Hand: 19m19p19s1223567zkqo (north kokushi wait)
+		Prediction kokushi2 =  new Prediction(read_dropSTR("7md5md7pd8pd9md4md6pd2sd7md3st9pd6pt1mded-wh5p6p1s5s"), -1, false);
+		//Hand: 9m19p19s12345677zkqo (1m kokushi wait)
+		Prediction kokushi3 =  new Prediction(read_dropSTR("6sd5st4st7md6md5md8mt4pd5pd1sdwhd5rptwt"), -1, false);
+		
+		Prediction extreme = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd1sd1zd-"), -1, false);
+
+		String[] name = {"Normal", "Flush", "7 Pairs", "Kokushi"};
+		ArrayList<Prediction> test_list = new ArrayList<Prediction>();
+		test_list.add(normal1);test_list.add(normal2);test_list.add(normal3);
+		test_list.add(normal4);test_list.add(normal5);test_list.add(normal6);
+		test_list.add(normal7);test_list.add(flush1);test_list.add(flush2);
+		test_list.add(flush3);test_list.add(flush4);test_list.add(flush5);
+		test_list.add(flush6);test_list.add(flush7);test_list.add(flush8);
+		test_list.add(flush9);test_list.add(seven_pairs1);test_list.add(kokushi1);
+		test_list.add(kokushi2);test_list.add(kokushi3);test_list.add(extreme);
+//		Prediction seven_pair = new Prediction();
+//		Prediction kokushi = new Prediction();
+		
+//		System.out.println(tile_to_discardType(read_dropSTR("nd2pdwhd2mtwt5rpd5pt-whe9p2sg5rs3sw7s")));
+		
+//		System.out.println("Normal 1: " + score_2_percentage(normal1.normal_prob()));
+//		System.out.println("Normal 2: " + score_2_percentage(normal2.normal_prob()));
+//		System.out.println("Normal 3: " + score_2_percentage(normal3.normal_prob()));
+//		System.out.println("Normal 4: " + score_2_percentage(normal4.normal_prob()));
+//		System.out.println("Normal 5: " + score_2_percentage(normal5.normal_prob()));
+//		System.out.println("Normal 6: " + score_2_percentage(normal6.normal_prob()));
+//		System.out.println("Normal 7: " + score_2_percentage(normal7.normal_prob()));
+//		System.out.println("Flush 1: " + score_2_percentage(flush1.normal_prob()));
+//		System.out.println("Flush 2: " + score_2_percentage(flush2.normal_prob()));
+//		System.out.println("Flush 3: " + score_2_percentage(flush3.normal_prob()));
+//		System.out.println("Flush 4: " + score_2_percentage(flush4.normal_prob()));
+//		System.out.println("Flush 5: " + score_2_percentage(flush5.normal_prob()));
+//		System.out.println("Flush 6: " + score_2_percentage(flush6.normal_prob()));
+//		System.out.println("Flush 7: " + score_2_percentage(flush7.normal_prob()));
+//		System.out.println("Flush 8: " + score_2_percentage(flush8.normal_prob()));
+//		System.out.println("Flush 9: " + score_2_percentage(flush9.normal_prob()));
+		
+		int name_index = 0;
+		int hand_index = 1;
+		for(int i = 0; i < test_list.size() - 1; i++)
 		{
-			List<String> Player_behav_list = Files.readAllLines(path);
-			for(String Player_behav: Player_behav_list) System.out.println(Player_behav);
+			switch(i) 
+			{
+				case 7: 
+					name_index = 1; 
+					hand_index = 1;
+					break; 
+				case 16: 
+					name_index = 2; 
+					hand_index = 1;
+					break; 
+				case 17: 
+					name_index = 3; 
+					hand_index = 1;
+					break;
+			}
+			System.out.println(name[name_index] + hand_index + ": ");
+			test_list.get(i).print();
+			System.out.println("flush score: " + test_list.get(i).flush_prob());
+			hand_index++;
 		}
-		catch(IOException e)
-		{
-			System.out.println("Exception catched");
-		}
+		
+//		System.out.println("Normal 1: " + score_2_percentage(normal1.flush_prob()));
+//		System.out.println("Normal 2: " + score_2_percentage(normal2.flush_prob()));
+//		System.out.println("Normal 3: " + score_2_percentage(normal3.flush_prob()));
+//		System.out.println("Normal 4: " + score_2_percentage(normal4.flush_prob()));
+//		System.out.println("Normal 5: " + score_2_percentage(normal5.flush_prob()));
+//		System.out.println("Normal 6: " + score_2_percentage(normal6.flush_prob()));
+//		System.out.println("Normal 7: " + score_2_percentage(normal7.flush_prob()));
+//		System.out.println("Flush 1: " + score_2_percentage(flush1.flush_prob()));
+//		System.out.println("Flush 2: " + score_2_percentage(flush2.flush_prob()));
+//		System.out.println("Flush 3: " + score_2_percentage(flush3.flush_prob()));
+//		System.out.println("Flush 4: " + score_2_percentage(flush4.flush_prob()));
+//		System.out.println("Flush 5: " + score_2_percentage(flush5.flush_prob()));
+//		System.out.println("Flush 6: " + score_2_percentage(flush6.flush_prob()));
+//		System.out.println("Flush 7: " + score_2_percentage(flush7.flush_prob()));
+//		System.out.println("Flush 8: " + score_2_percentage(flush8.flush_prob()));
+//		System.out.println("Flush 9: " + score_2_percentage(flush9.flush_prob()));
+//		x.normal_prob(read_dropSTR("nd2pdwhd2mtwt5rpd-whe9p2sg5rs3sw7s"), true);
+//		x.normal_prob(read_dropSTR("etetetetststststwtwtwtwtntntntnt"), true);
+//		x.normal_prob(read_dropSTR("whd1md2sdgt1st5md9sd4sd1mt9st"), true);
 	}
 }

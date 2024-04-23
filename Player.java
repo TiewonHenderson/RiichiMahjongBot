@@ -30,7 +30,7 @@ public class Player
 
     /**
      * An ArrayList that represents the drop tile history of this instance of Player
-     * The reasoning behind Double and not Integer is 0.0 == tsumogiri, 0.5 == tedashi
+     * The reasoning behind Double and not Integer is 0.0 == tsumogiri, 0.5 == tedashi, 0.25 == tsumogiri riichi, 0.75 == tedashi riichi
      */
 	public ArrayList<Double> dropPile_;
 	
