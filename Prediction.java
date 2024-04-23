@@ -418,6 +418,70 @@ public class Prediction
 		return final_score;
 	}
 
+	/**
+	 * method depends on size of drop_pile:
+	 * if full size drop_pile, drop_pile.size > 15
+	 * 
+	 * select 1-3 pivot orphans if applicable
+	 * 
+	 * weight system of equations (let x = turn)
+	 * {x >= 9} 	-> -(1/6)x + 2.63013	(weight cap at 0.7)
+	 * {9 > x >= 0}	-> -(1.67) * (e^((x+3)/10) - 1) + 5
+	 * 
+	 * tile score:
+	 * 		> middle tile *= 0.05
+	 * 		> edge simple *= 0.65
+	 * 		> terminal	  *= 2
+	 * 		> honor		  *= 3
+	 * 
+	 * this means higher score == more likely to be kokushi
+	 * 
+	 * @return
+	 */
+	public double kokushi_prob()
+	{
+		final double[] scalars = {0.05,0.65,2,3};
+		ArrayList<Double> weighted_values = new ArrayList<Double>();
+		ArrayList<Double> weighted_ratios = new ArrayList<Double>();
+		double weight = 0.0;
+		double sum = 0.0;
+		for(int i = 0; i < this.drop_pile.size(); i++) 
+		{
+			if(i >= this.drop_pile.size()/2.0)
+			{
+				weight = (-1/6) * i + 2.63013;
+				if(weight < 0.7) {weight = 0.7;}
+			}
+			else
+			{
+				weight = (-1.67)*(Math.exp((i+3.0)/10.0) - 1) + 5;
+			}
+			
+			sum += weight * scalars[tile_type(this.drop_pile.get(i))];
+			weighted_values.add(weight * scalars[tile_type(this.drop_pile.get(i))]);
+		}
+		
+		int layer = 0;
+		double weighted_ratios_sum = 0.0;
+		double ratio = 0.0;
+		for(int i = 0; i < this.orphan_ratio_list.size(); i++)
+		{
+			layer = i/6;
+			//index 0 == amt orphans, index 1 == amt simples
+			if(this.orphan_ratio_list.get(i).get(1) == 0)
+			{
+				if(layer == 0) 
+				{ratio = this.orphan_ratio_list.get(i).get(0).doubleValue() * Math.abs(i - 6);}
+				else{ratio = this.orphan_ratio_list.get(i).get(0).doubleValue();}
+			}
+			else{ratio = this.orphan_ratio_list.get(i).get(0).doubleValue()/this.orphan_ratio_list.get(i).get(1);}
+			if(i < this.drop_pile.size()){ratio *= scalars[tile_type(this.drop_pile.get(i))];}
+			weighted_ratios_sum += ratio;
+			weighted_ratios.add(ratio);
+		}
+		System.out.println(sum/this.drop_pile.size());
+		return weighted_ratios_sum/this.drop_pile.size();
+	}
 	
 	/**
 	 * 
@@ -1006,22 +1070,7 @@ public class Prediction
 		}
 	}
 	public static void main(String[] args)
-	{
-//		Path path = Paths.get(System.getProperty("user.dir") + "\\src\\bot_package\\Player_behaviors.txt");
-//		System.out.println(path.getFileName());
-//		System.out.println(Paths.get("").toAbsolutePath().normalize());
-//		System.out.println(System.getProperty("user.dir") + "\\src\\bot_package\\Player_behaviors.txt");
-//		try
-//		{
-//			List<String> Player_behav_list = Files.readAllLines(path);
-//			for(String Player_behav: Player_behav_list) System.out.println(Player_behav);
-//		}
-//		catch(IOException e)
-//		{
-//			System.out.println("Exception catched");
-//		}
-		
-		
+	{	
 		//Hand: 115r6789p123678sckqo (4,7p)
 		Prediction normal1 = new Prediction(read_dropSTR("wdnd5md3md2ptgd7sd3sd4md"), -1, false);
 		//Hand: 45567m33789sckq111zo (3,6m)
@@ -1079,27 +1128,6 @@ public class Prediction
 		test_list.add(flush6);test_list.add(flush7);test_list.add(flush8);
 		test_list.add(flush9);test_list.add(seven_pairs1);test_list.add(kokushi1);
 		test_list.add(kokushi2);test_list.add(kokushi3);test_list.add(extreme);
-//		Prediction seven_pair = new Prediction();
-//		Prediction kokushi = new Prediction();
-		
-//		System.out.println(tile_to_discardType(read_dropSTR("nd2pdwhd2mtwt5rpd5pt-whe9p2sg5rs3sw7s")));
-		
-//		System.out.println("Normal 1: " + score_2_percentage(normal1.normal_prob()));
-//		System.out.println("Normal 2: " + score_2_percentage(normal2.normal_prob()));
-//		System.out.println("Normal 3: " + score_2_percentage(normal3.normal_prob()));
-//		System.out.println("Normal 4: " + score_2_percentage(normal4.normal_prob()));
-//		System.out.println("Normal 5: " + score_2_percentage(normal5.normal_prob()));
-//		System.out.println("Normal 6: " + score_2_percentage(normal6.normal_prob()));
-//		System.out.println("Normal 7: " + score_2_percentage(normal7.normal_prob()));
-//		System.out.println("Flush 1: " + score_2_percentage(flush1.normal_prob()));
-//		System.out.println("Flush 2: " + score_2_percentage(flush2.normal_prob()));
-//		System.out.println("Flush 3: " + score_2_percentage(flush3.normal_prob()));
-//		System.out.println("Flush 4: " + score_2_percentage(flush4.normal_prob()));
-//		System.out.println("Flush 5: " + score_2_percentage(flush5.normal_prob()));
-//		System.out.println("Flush 6: " + score_2_percentage(flush6.normal_prob()));
-//		System.out.println("Flush 7: " + score_2_percentage(flush7.normal_prob()));
-//		System.out.println("Flush 8: " + score_2_percentage(flush8.normal_prob()));
-//		System.out.println("Flush 9: " + score_2_percentage(flush9.normal_prob()));
 		
 		int name_index = 0;
 		int hand_index = 1;
@@ -1123,27 +1151,8 @@ public class Prediction
 			System.out.println(name[name_index] + hand_index + ": ");
 			test_list.get(i).print();
 			System.out.println("flush score: " + test_list.get(i).flush_prob());
+			System.out.println("Kokushi score: " + test_list.get(i).kokushi_prob());
 			hand_index++;
 		}
-		
-//		System.out.println("Normal 1: " + score_2_percentage(normal1.flush_prob()));
-//		System.out.println("Normal 2: " + score_2_percentage(normal2.flush_prob()));
-//		System.out.println("Normal 3: " + score_2_percentage(normal3.flush_prob()));
-//		System.out.println("Normal 4: " + score_2_percentage(normal4.flush_prob()));
-//		System.out.println("Normal 5: " + score_2_percentage(normal5.flush_prob()));
-//		System.out.println("Normal 6: " + score_2_percentage(normal6.flush_prob()));
-//		System.out.println("Normal 7: " + score_2_percentage(normal7.flush_prob()));
-//		System.out.println("Flush 1: " + score_2_percentage(flush1.flush_prob()));
-//		System.out.println("Flush 2: " + score_2_percentage(flush2.flush_prob()));
-//		System.out.println("Flush 3: " + score_2_percentage(flush3.flush_prob()));
-//		System.out.println("Flush 4: " + score_2_percentage(flush4.flush_prob()));
-//		System.out.println("Flush 5: " + score_2_percentage(flush5.flush_prob()));
-//		System.out.println("Flush 6: " + score_2_percentage(flush6.flush_prob()));
-//		System.out.println("Flush 7: " + score_2_percentage(flush7.flush_prob()));
-//		System.out.println("Flush 8: " + score_2_percentage(flush8.flush_prob()));
-//		System.out.println("Flush 9: " + score_2_percentage(flush9.flush_prob()));
-//		x.normal_prob(read_dropSTR("nd2pdwhd2mtwt5rpd-whe9p2sg5rs3sw7s"), true);
-//		x.normal_prob(read_dropSTR("etetetetststststwtwtwtwtntntntnt"), true);
-//		x.normal_prob(read_dropSTR("whd1md2sdgt1st5md9sd4sd1mt9st"), true);
 	}
 }
