@@ -35,6 +35,11 @@ public class Player
 	public ArrayList<Double> dropPile_;
 	
 	/*
+	 * All the called Groups for this Player, it becomes public with exception to enclosed kan
+	 */
+	protected ArrayList<Group> called_groups_;
+	
+	/*
 	 * The current Playerhand of this player instance, has closed and open tiles in 2D ArrayList
 	 */
 	private PlayerHand playerHand_;
@@ -164,6 +169,17 @@ public class Player
 	public ArrayList<Double> getPlayerDrops()
 	{
 		return this.dropPile_;
+	}
+	
+	/**
+	 * @Info this ArrayList<Group> needs to be passed through MJ_game in order to
+	 * have correct Groups formatted
+	 * 
+	 * @return The ArrayList<Group> that are called and not within the hand
+	 */
+	public ArrayList<Group> getPlayerCalls()
+	{
+		return this.called_groups_;
 	}
 	
 	/**

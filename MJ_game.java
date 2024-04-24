@@ -24,7 +24,13 @@ public class MJ_game
 	 */
 	public ArrayList<ArrayList<Integer>> possible_tiles_ = new ArrayList<ArrayList<Integer>>();
 	
-	/*
+	/**
+	 * 0 == riichi mahjong
+	 * 1 == canto mahjong
+	 */
+	public int game_mode_;
+	
+	/**
 	 * The int value that represents the remaining amount of tiles that does include other Player's hand
 	 * When starting a game, this doesn't take into consideration 1st tile from dealer, 
 	 * first tile will come as first Compress_input
@@ -63,6 +69,11 @@ public class MJ_game
 	 * 3 = bugged game
 	 */
 	public int game_status_;
+	
+	/**
+	 * The prev_wind of the current game
+	 */
+	public int prev_wind;
 	
 	/**
 	 * @function This constructor does not take into consideration the player's starting hand and their first declaration
@@ -296,6 +307,29 @@ public class MJ_game
 	public int game_status()
 	{
 		return this.game_status_;
+	}
+	
+	/**
+	 * 
+	 * @param player_id The wind_id that corresponds to the Player wanting their calls
+	 * @return a ArrayList<Group> that represents the VISIBLE calls they have depending on the game_mode_
+	 */
+	public ArrayList<Group> get_validPlayerCalls(int player_id)
+	{
+		ArrayList<Group> all_calls = new ArrayList<Group>(this.all_players.get(player_id).getPlayerCalls());
+		switch(this.game_mode_)
+		{
+			case 1:
+				for(int i = 0; i < all_calls.size(); i++)
+				{
+					if(all_calls.get(i).concealed_)
+					{
+						all_calls.remove(i);
+						i--;
+					}
+				}
+		}
+		return all_calls;
 	}
 	
 	/**

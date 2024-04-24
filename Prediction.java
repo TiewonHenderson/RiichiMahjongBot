@@ -44,38 +44,42 @@ public class Prediction
 														   "bot_package" + File.separator +
 														   "Player_behaviors.txt");
 	
-	final double[][] type_scalars = {{2, 1.75, 1.0, 0.8} , {1.1, 1.1, 1.25, 1.5}, {0.15, 0.5, 1.5, 1.5}};
-	
 	/**
 	 * Used to indicate if tedashi is being tracked / inputed by user
 	 */
-	public boolean track_tedashi;
+	public boolean track_tedashi_;
 	
 	/**
 	 * If algorithm is looking into riichi mahjong, the discard of dora can raise suspicion on the Player status
 	 */
-	public int dora;
+	public int dora_;
 	
 	/**
 	 * The inputed drop_pile of the opponent
 	 */
-	public ArrayList<Double> drop_pile;
+	public ArrayList<Double> drop_pile_;
+	
+	/**
+	 * Used for searching index of drop pile where Player is confirmed ready (in riichi)
+	 */
+	protected int riichi_ = -1;
 	
 	/**
 	 * A private int AL that is responsible for storing unique tiles that were discarded
 	 */
-	private ArrayList<Integer> unique_tiles = new ArrayList<Integer>();
+	private ArrayList<Integer> unique_tiles_ = new ArrayList<Integer>();
 	
 	/**
 	 * A ordered orphan to simple tile type in order of game discard
+	 * element ArrayList<Integer>: index 0 == amt orphans, index 1 == amt simples
 	 */
-	private ArrayList<ArrayList<Integer>> orphan_ratio_list = new ArrayList<ArrayList<Integer>>();
+	private ArrayList<ArrayList<Integer>> orphan_ratio_list_ = new ArrayList<ArrayList<Integer>>();
 	
 	/**
 	 * A AL of ArrayList of 4 integers representing each suit and it's amount of Unique tiles
 	 * being discarded in each suit incrementing the index value
 	 */
-	private ArrayList<ArrayList<Integer>> suit_amt = new ArrayList<ArrayList<Integer>>();
+	private ArrayList<ArrayList<Integer>> suit_amt_ = new ArrayList<ArrayList<Integer>>();
 	
 	/**
 	 * Parameterized Constructor
@@ -86,22 +90,30 @@ public class Prediction
 	public Prediction(ArrayList<Double> drop_pile, int dora, boolean track_tedashi)
 	{
 		//sets drop_pile of 1 player to this prediction instance
-		this.drop_pile = new ArrayList<Double>(drop_pile);
+		this.drop_pile_ = new ArrayList<Double>(drop_pile);
 		
-		//Saves a list of unique tile_ids
-		for(double tile: drop_pile) this.unique_tiles.add((int)tile);
-		unique_tiles = new ArrayList<Integer>(new LinkedHashSet<Integer>(this.unique_tiles));
+		//Saves a list of unique tile_ids, also checks if riichi is present
+		for(int i = 0; i < drop_pile.size(); i++) 
+		{
+			this.unique_tiles_.add(drop_pile.get(i).intValue());
+			if(Double.toString(drop_pile.get(i)).charAt(Double.toString(drop_pile.get(i)).length() - 1) == '1')
+			{
+				this.riichi_ = i;
+			}
+		}		
+		this.unique_tiles_ = new ArrayList<Integer>(new LinkedHashSet<Integer>(this.unique_tiles_));
+		ArrayList<Integer> temp_unique_tile = new ArrayList<Integer>(this.unique_tiles_);
 		
 		//Will show amt of tile in each suit per turn
 		ArrayList<Integer> start = new ArrayList<Integer>();
 		for(int i = 0; i < 4; i++) start.add(0);
-		this.suit_amt.add(start);
+		this.suit_amt_.add(start);
 		
 		int orphan_count = 0;
 		int simple_count = 0;
-		for(int i = 0; i < this.drop_pile.size(); i++)
+		for(int i = 0; i < this.drop_pile_.size(); i++)
 		{
-			switch(tile_type(this.drop_pile.get(i)))
+			switch(tile_type(this.drop_pile_.get(i)))
 			{
 				//3,2 == honor, terminal
 				case 3:
@@ -114,29 +126,34 @@ public class Prediction
 					simple_count++;
 					break;
 			}
-			if(i < this.unique_tiles.size())
+			if(temp_unique_tile.size() > 0 && this.drop_pile_.get(i).intValue() == temp_unique_tile.get(0))
 			{
-				ArrayList<Integer> turn_suit_amt = new ArrayList<Integer>(this.suit_amt.get(i));
-				turn_suit_amt.set(this.unique_tiles.get(i).intValue()/9, turn_suit_amt.get(this.unique_tiles.get(i).intValue()/9) + 1);
-				this.suit_amt.add(turn_suit_amt);
+				ArrayList<Integer> turn_suit_amt = new ArrayList<Integer>(this.suit_amt_.get(i));
+				turn_suit_amt.set(temp_unique_tile.get(0).intValue()/9, turn_suit_amt.get(temp_unique_tile.get(0).intValue()/9) + 1);
+				this.suit_amt_.add(turn_suit_amt);
+				temp_unique_tile.remove(0);
+			}
+			else
+			{
+				this.suit_amt_.add(this.suit_amt_.get(this.suit_amt_.size() - 1));
 			}
 			
 			ArrayList<Integer> add_tiletype_count = new ArrayList<Integer>();
 			add_tiletype_count.add(orphan_count);
 			add_tiletype_count.add(simple_count);
-			orphan_ratio_list.add(add_tiletype_count);
+			orphan_ratio_list_.add(add_tiletype_count);
 		}
 		
 		//Only applicable to riichi mahjong
-		this.dora = dora;
+		this.dora_ = dora;
 		
 		//Option of the user where tedashi / tsumogiri is tracked, otherwise just tile_id
-		this.track_tedashi = track_tedashi;
+		this.track_tedashi_ = track_tedashi;
 	}
 	
 	public boolean add_tile(double new_tile)
 	{
-		drop_pile.add(new_tile);
+		drop_pile_.add(new_tile);
 		int tile_id = (int)new_tile;
 		
 		//invalid tile id
@@ -147,7 +164,7 @@ public class Prediction
 		
 		//checks if is unique tile
 		boolean unique = true;
-		for(int tile: this.unique_tiles)
+		for(int tile: this.unique_tiles_)
 		{
 			if(tile_id == tile)
 			{
@@ -157,11 +174,11 @@ public class Prediction
 		}
 		if(unique)
 		{
-			this.unique_tiles.add(tile_id);
+			this.unique_tiles_.add(tile_id);
 			ArrayList<Integer> next_suit_drop;
 			try
 			{
-				next_suit_drop = new ArrayList<Integer>(this.suit_amt.get(this.suit_amt.size() - 1));
+				next_suit_drop = new ArrayList<Integer>(this.suit_amt_.get(this.suit_amt_.size() - 1));
 			}
 			catch(IndexOutOfBoundsException e)
 			{
@@ -171,7 +188,7 @@ public class Prediction
 				next_suit_drop.set(tile_id/9, next_suit_drop.get(tile_id/9) + 1);
 			}
 			next_suit_drop.set(tile_id/9, next_suit_drop.get(tile_id/9) + 1);
-			this.suit_amt.add(next_suit_drop);
+			this.suit_amt_.add(next_suit_drop);
 		}
 		return true;
 	}
@@ -209,14 +226,14 @@ public class Prediction
 		double average_weight = 0.0;
 		for(int i = 1; i < 7; i++) 
 		{
-			if(i > this.orphan_ratio_list.size())
+			if(i > this.orphan_ratio_list_.size())
 			{
 				break;
 			}
 			
 			double orphan_ratio;
-			if(this.orphan_ratio_list.get(i-1).get(1) == 0){orphan_ratio = this.orphan_ratio_list.get(i-1).get(0).doubleValue();}
-			else{orphan_ratio = this.orphan_ratio_list.get(i-1).get(0).doubleValue() / this.orphan_ratio_list.get(i-1).get(1).doubleValue();}
+			if(this.orphan_ratio_list_.get(i-1).get(1) == 0){orphan_ratio = this.orphan_ratio_list_.get(i-1).get(0).doubleValue();}
+			else{orphan_ratio = this.orphan_ratio_list_.get(i-1).get(0).doubleValue() / this.orphan_ratio_list_.get(i-1).get(1).doubleValue();}
 			
 			average_weight += (orphan_ratio*((-4.0/3.0)*Math.log(i - 0.55) + Math.E));
 		}
@@ -229,7 +246,7 @@ public class Prediction
 		 * Middle / End layer: dependant on speed of hand
 		 * SEE Numerical_tools.weighted_variance_mean() documentation for more information
 		 */
-		double variance_score = Numerical_tools.weighted_variance_mean(this.suit_amt);
+		double variance_score = Numerical_tools.weighted_variance_mean(this.suit_amt_);
 		return final_prob + variance_score;
 	}
 	
@@ -278,21 +295,21 @@ public class Prediction
 		int assume_flush_suit = -1;
 		
 		ArrayList<Integer> last_suit_amt;
-		try{last_suit_amt = new ArrayList<Integer>(this.suit_amt.get(this.suit_amt.size() - 1));}
+		try{last_suit_amt = new ArrayList<Integer>(this.suit_amt_.get(this.suit_amt_.size() - 1));}
 		catch(IndexOutOfBoundsException  e) {return -99.99;}
 		
 		double tile_size_weight = 1.0; //allow 2 layered hands to be weighted up
 		
-		if(this.drop_pile.size() >= 8 && this.drop_pile.size() < 18)
+		if(this.drop_pile_.size() >= 8 && this.drop_pile_.size() < 18)
 		{
-			switch(this.drop_pile.size())
+			switch(this.drop_pile_.size())
 			{
 				case 8:
 				case 9:
-					tile_size_weight += 12.0/this.drop_pile.size();
+					tile_size_weight += 12.0/this.drop_pile_.size();
 					break;
 				default:
-					tile_size_weight += 18.0/this.drop_pile.size();
+					tile_size_weight += 18.0/this.drop_pile_.size();
 					break;
 			}
 		}
@@ -320,7 +337,7 @@ public class Prediction
 		}
 		if(decide_suit.size() > 1)
 		{
-			for(int i = 0; i < this.drop_pile.size(); i++)
+			for(int i = 0; i < this.drop_pile_.size(); i++)
 			{
 				if(decide_suit.size() == 1)
 				{
@@ -330,7 +347,7 @@ public class Prediction
 				for(int j = 0; j < decide_suit.size(); j++)
 				{
 					//If same suit present earlier, delete that suit from decision
-					if(this.drop_pile.get(i).intValue()/9 == decide_suit.get(j))
+					if(this.drop_pile_.get(i).intValue()/9 == decide_suit.get(j))
 					{
 						decide_suit.remove(j);
 					}
@@ -347,9 +364,9 @@ public class Prediction
 		double alg1_score = 0.0;			//the total score for this algorithm 1
 		double n = 1.15;					//the adaptive scalar responding to the discard order
 		int tild_id;
-		for(int i = 0; i < this.drop_pile.size(); i++)
+		for(int i = 0; i < this.drop_pile_.size(); i++)
 		{
-			tild_id = this.drop_pile.get(i).intValue();
+			tild_id = this.drop_pile_.get(i).intValue();
 			int suit = tild_id/9;
 			boolean is_flushsuit = false;
 			layer = i/6;
@@ -360,7 +377,7 @@ public class Prediction
 			if(is_flushsuit || (suit == 3 && layer == 0))
 			{
 				if(is_flushsuit){consec_nonflush_drop = 0;}
-				n *= layer_scalar[layer][tile_type(this.drop_pile.get(i))];
+				n *= layer_scalar[layer][tile_type(this.drop_pile_.get(i))];
 			}
 			else{nonflush_drop++; consec_nonflush_drop++;}
 			double current_grade = n * (1.5 * nonflush_drop/(2.75 + 70 * (Math.exp((-1 * consec_nonflush_drop))))) * tile_size_weight;
@@ -382,12 +399,12 @@ public class Prediction
 		double suit_weight = 0;			//the weight of the suit drop depending on layers, includes some honors
 		int nonsuit_amt = 0;			//the amount of tiles that don't belong in the assume suit
 		layer = 0;
-		for(int i = 0; i < this.drop_pile.size(); i++)
+		for(int i = 0; i < this.drop_pile_.size(); i++)
 		{
 			layer = i/4;
 			if(layer > 2) {layer = 2;}
 			
-			int tile_id = this.drop_pile.get(i).intValue();
+			int tile_id = this.drop_pile_.get(i).intValue();
 			
 			if(tile_id / 9 == assume_flush_suit) 
 			{
@@ -400,7 +417,7 @@ public class Prediction
 			if(i == 0 || suit_weight == 0) {suit_ratio.add((double)nonsuit_amt);}
 			else {suit_ratio.add((double)nonsuit_amt/(i * suit_weight));}
 		}
-		if(after_decoy_index == 0) {after_decoy_index = this.drop_pile.size();} //if the suit has never appeared, set equal to drop_pile size
+		if(after_decoy_index == 0) {after_decoy_index = this.drop_pile_.size();} //if the suit has never appeared, set equal to drop_pile size
 		
 		double ratio_sum = 0.0;
 		for(double ratio: suit_ratio) ratio_sum += ratio;
@@ -410,7 +427,7 @@ public class Prediction
 //		System.out.println("Ratio average: " + ratio_sum);
 //		System.out.println("Score bonus: " + (double)after_decoy_index/this.drop_pile.size());
 		
-		double alg2_score = ratio_sum + (double)after_decoy_index/this.drop_pile.size();
+		double alg2_score = ratio_sum + (double)after_decoy_index/this.drop_pile_.size();
 		if(alg2_score > 3.5) {alg2_score = 3.5;} //max range = [0,3.5]
 		
 		double final_score = alg1_score + alg2_score;
@@ -419,127 +436,231 @@ public class Prediction
 	}
 
 	/**
-	 * method depends on size of drop_pile:
-	 * if full size drop_pile, drop_pile.size > 15
-	 * 
-	 * select 1-3 pivot orphans if applicable
+	 * Algorithm 1: weighted_values by drop_pile index (higher score == less likely to be kokushi)
 	 * 
 	 * weight system of equations (let x = turn)
-	 * {x >= 9} 	-> -(1/6)x + 2.63013	(weight cap at 0.7)
-	 * {9 > x >= 0}	-> -(1.67) * (e^((x+3)/10) - 1) + 5
+	 * {x >= 6} 	-> -(1/10)x + 2.63013 		
+	 * {9 > x >= 0}	-> -(1.67) * (e^(x/20) - 1) + 5
+	 * 
+	 * How to separate kokushi with flush:
+	 * its more likely flush will still end up dropping terminals from other suits
+	 * while kokushi depending on speed would just keep all terminals
 	 * 
 	 * tile score:
 	 * 		> middle tile *= 0.05
 	 * 		> edge simple *= 0.65
-	 * 		> terminal	  *= 2
+	 * 		> terminal	  *= 2.55
 	 * 		> honor		  *= 3
 	 * 
-	 * this means higher score == more likely to be kokushi
+	 * Algorithm 2: Full drop_pile rm outlier
+	 * In proportion to amount of orphans in each layer (6 drop tiles)
+	 * if layer1+2/layer0 <= 0.5, remove those orphans from temp_drop_tiles in layer0 only
 	 * 
-	 * @return
+	 * Scan consecutive orphans (this hopes to catch flush discard terminals in layer 1 or layer 2)
+	 * max consecutive orphans scaled by e^(x/7)-1.73981: if result < 0, set alg2_score = 0
+	 * 
+	 * Algorithm 3 (temporary): First index honor
+	 * First honor index -> further end == more weight
+	 * let x = turn, y = First honor index
+	 * {6  > x >=  0} 	weight == x/7 * First honor index
+	 * {12 > x >=  6} 	weight == 2^((x+1)/6) * First honor index
+	 * {x >= 12}		weight == 5 (max)
+	 * 
+	 * to avoid higher weights of flushes, divide by variance of suits (exclude honors)
+	 * 
+	 * 
+	 * final score = (Algorithm 1)= [0,2] (Algorithm 2) = [-0.75, 5] (Algorithm 3) = [-3,1.75]
+	 * @return return score range [-3.75, 8.75], where higher means more probable for kokushi
 	 */
 	public double kokushi_prob()
 	{
-		final double[] scalars = {0.05,0.65,2,3};
+		//Algorithm 1 (higher non-adjusted score == less likely to be kokushi)
+		final double[] scalars = {0.05,0.55,2.55,3};
+		ArrayList<Integer> orphan_index = new ArrayList<Integer>();
 		ArrayList<Double> weighted_values = new ArrayList<Double>();
-		ArrayList<Double> weighted_ratios = new ArrayList<Double>();
+		int first_honor_index = -1; //For algorithm 3
 		double weight = 0.0;
-		double sum = 0.0;
-		for(int i = 0; i < this.drop_pile.size(); i++) 
+		double alg1_score = 0.0;
+		for(int i = 0; i < this.drop_pile_.size(); i++) 
 		{
-			if(i >= this.drop_pile.size()/2.0)
+			if(i >= 6)
 			{
-				weight = (-1/6) * i + 2.63013;
-				if(weight < 0.7) {weight = 0.7;}
+				weight = (-1/10.0) * i + 2.63013;
+				if(weight < 0) {weight = 0;}
 			}
 			else
 			{
-				weight = (-1.67)*(Math.exp((i+3.0)/10.0) - 1) + 5;
+				weight = (-1.67)*(Math.exp(i/20.0) - 1) + 5;
 			}
-			
-			sum += weight * scalars[tile_type(this.drop_pile.get(i))];
-			weighted_values.add(weight * scalars[tile_type(this.drop_pile.get(i))]);
+			switch(tile_type(this.drop_pile_.get(i)))
+			{
+				case 2:
+				case 3:
+					orphan_index.add(i);
+					break;
+			}
+			if(first_honor_index == -1 && tile_type(this.drop_pile_.get(i)) == 3) {first_honor_index = i;} //For algorithm 3
+			alg1_score += weight * scalars[tile_type(this.drop_pile_.get(i))];
+			weighted_values.add(weight * scalars[tile_type(this.drop_pile_.get(i))]);
 		}
+		alg1_score = (this.drop_pile_.size()/6 * 6)/alg1_score;
 		
-		int layer = 0;
-		double weighted_ratios_sum = 0.0;
-		double ratio = 0.0;
-		for(int i = 0; i < this.orphan_ratio_list.size(); i++)
+		//Algorithm 2
+		double alg2_score = 0.0;
+		int consec_simples = 0;
+		switch(orphan_index.size())
 		{
-			layer = i/6;
-			//index 0 == amt orphans, index 1 == amt simples
-			if(this.orphan_ratio_list.get(i).get(1) == 0)
-			{
-				if(layer == 0) 
-				{ratio = this.orphan_ratio_list.get(i).get(0).doubleValue() * Math.abs(i - 6);}
-				else{ratio = this.orphan_ratio_list.get(i).get(0).doubleValue();}
-			}
-			else{ratio = this.orphan_ratio_list.get(i).get(0).doubleValue()/this.orphan_ratio_list.get(i).get(1);}
-			if(i < this.drop_pile.size()){ratio *= scalars[tile_type(this.drop_pile.get(i))];}
-			weighted_ratios_sum += ratio;
-			weighted_ratios.add(ratio);
-		}
-		System.out.println(sum/this.drop_pile.size());
-		return weighted_ratios_sum/this.drop_pile.size();
-	}
-	
-	/**
-	 * 
-	 * @param drop_pile
-	 * @return
-	 */
-	public double normal_progress_score()
-	{
-		final double[] normal_scalars = {2, 1.55, 1.0, 0.75};
-		ArrayList<ArrayList<Double>> tedashi_weight;
-		if(this.track_tedashi){tedashi_weight = this.tedashi_weight(tile_to_discardType(this.drop_pile));}
-		else
-		{
-			tedashi_weight = new ArrayList<ArrayList<Double>>();
-			for(int i = 0; i < this.drop_pile.size(); i++)
-			{
+			case 0:
+				consec_simples = this.drop_pile_.size();
+				break;
+			case 1:
+				consec_simples = orphan_index.get(0);
+				if(orphan_index.get(0) - this.drop_pile_.size() > consec_simples)
+				{
+					consec_simples = orphan_index.get(0) - this.drop_pile_.size();
+				}
+				break;
+			case 2:
+				consec_simples = orphan_index.get(0);
+				int[] dif_list = {
+						orphan_index.get(1) - orphan_index.get(0),
+						this.drop_pile_.size() - orphan_index.get(1)
+				};
+				for(int dif : dif_list)
+				{
+					if(dif > consec_simples)
+					{
+						consec_simples = dif;
+					}
+				}
+				break;
+			default:
 				/*
-				 * since tedashi and tsumogiri arent tracked, theyre treated equal
-				 * base weight formula = e^((x-7)/3)+(x/15)
+				 * removes outliers (early orphan discards that don't fit)
+				 * note: only applies to full discard piles that can convey more information
 				 */
-				ArrayList<Double> base_weight = new ArrayList<Double>();
-				base_weight.add(Math.exp(((i-7.0)/3.0))+(i/15.0));
-				base_weight.add(Math.exp(((i-7.0)/3.0))+(i/15.0));
-				tedashi_weight.add(base_weight);
-			}
+				int max_consec = 0;
+				if(this.drop_pile_.size() >= 18)
+				{
+					ArrayList<Double> temp_drop_pile = new ArrayList<Double>(this.drop_pile_);
+					ArrayList<Integer> orphan_layer_list = new ArrayList<Integer>();
+					ArrayList<Integer> layer_0_index = new ArrayList<Integer>();
+					int non_start_layer_sum = 0;
+					for(int i = 0; i < 4; i++) orphan_layer_list.add(0);
+					for(int i = 0; i < orphan_index.size(); i++) 
+					{
+						orphan_layer_list.set(orphan_layer_list.get(orphan_index.get(i)/6), orphan_layer_list.get(orphan_index.get(i)/6) + 1);
+						if(orphan_index.get(i)/6 > 0) {non_start_layer_sum++;}
+						else {layer_0_index.add(orphan_index.get(i));}
+					}
+					if(orphan_layer_list.get(0) > 0 && (double)orphan_layer_list.get(0)/non_start_layer_sum <= 0.5)
+					{
+						for(int i = 0; i < layer_0_index.size(); i++) 
+						{temp_drop_pile.remove(layer_0_index.get(i) - i);}
+					}
+					for(int i = 0; i < temp_drop_pile.size(); i++)
+					{
+						switch(tile_type(temp_drop_pile.get(i)))
+						{
+							case 0:
+							case 1:
+								consec_simples++;
+								break;
+							case 2:
+							case 3:
+								if(consec_simples > max_consec)
+								{
+									max_consec = consec_simples;
+								}
+								consec_simples = 0;
+								break;
+						}
+					}
+				}
+				else
+				{
+					for(int i = 0; i < this.drop_pile_.size(); i++)
+					{
+						switch(tile_type(this.drop_pile_.get(i)))
+						{
+							case 0:
+							case 1:
+								consec_simples++;
+								break;
+							case 2:
+							case 3:
+								if(consec_simples > max_consec)
+								{
+									max_consec = consec_simples;
+								}
+								consec_simples = 0;
+								break;
+						}
+					}
+				}
+				consec_simples = max_consec;
+				break;
 		}
 		
-		double ret_score = 0.0;
-		double check_discardtype = 0.0;
-		double dora_scalar = 1.5;
-		if(this.dora == -1) {dora_scalar = 1;}
-		
-		ArrayList<Double> tile_weights = new ArrayList<Double>();
-		
-		for(int index = 0; index < this.drop_pile.size(); index++)
+		/*
+		 * Algorithm 3
+		 * First honor index -> further end == more weight
+		 * let x = turn, y = First honor index
+		 * {6  > x >=  0} 	x/7 * First honor index
+		 * {12 > x >=  6} 	2^((x+1)/6) * First honor index
+		 * {x >= 12}		max 5
+		 */
+		int sum_non_honor = 0;
+		int first_honor_suit_list = -1;
+		for(int i = 0; i < this.suit_amt_.size(); i++)
 		{
-			double tile = this.drop_pile.get(index);
-			check_discardtype = tile - (int)tile;
-			if(check_discardtype >= 0.5)	//tedashi
+			if(this.suit_amt_.get(i).get(3) > 0)
 			{
-				tile_weights.add(normal_scalars[tile_type(tile)] * tedashi_weight.get(index).get(0) + 1.5);
-			}
-			else							//tsumogiri
-			{
-				tile_weights.add(normal_scalars[tile_type(tile)] * tedashi_weight.get(index).get(1) + 0.5);
-			}
-			if(this.dora == (int)tile)
-			{
-				tile_weights.set(tile_weights.size() - 1, tile_weights.get(tile_weights.size() - 1) * dora_scalar);
+				first_honor_suit_list = i;
+				for(int j = 0; j < 3; j++) sum_non_honor += this.suit_amt_.get(i).get(j);
+				break;
 			}
 		}
-		
-		for(int i = 0; i < tile_weights.size(); i++)
+		double suit_variance = 0.0;
+		//No honors detected, depends on size of drop_pile
+		if(first_honor_index == -1) 
 		{
-			System.out.println("tile: " + this.drop_pile.get(i) + "\tWeight: " + tile_weights.get(i) + "\tDiscard weight: " + tedashi_weight.get(i));
+			first_honor_index = this.drop_pile_.size();
+			first_honor_suit_list = this.suit_amt_.size();
+			suit_variance = Numerical_tools.calc_variance(Numerical_tools.upcast_AL_int(new ArrayList<Integer>(this.suit_amt_.get(this.suit_amt_.size() - 1).subList(0, 3))));
+			for(int j = 0; j < 3; j++) sum_non_honor += this.suit_amt_.get(this.suit_amt_.size() - 1).get(j);
 		}
+		else {suit_variance = Numerical_tools.calc_variance(Numerical_tools.upcast_AL_int(new ArrayList<Integer>(this.suit_amt_.get(first_honor_suit_list).subList(0, 3))));;}
 		
-		return ret_score;
+		//First tile discard should have suit_variance factor = 0
+		if(first_honor_index == 0) {suit_variance = 0;}
+		else{suit_variance = 2.0/(Math.exp(2 * (suit_variance - 3.5)/5.0) + 1);}
+	
+		double weight_1st_index = 0.0;
+		
+		if(first_honor_index < 6){weight_1st_index = first_honor_index/7.0;}
+		else if(12 > first_honor_index && first_honor_index >= 6){weight_1st_index = Math.pow(2, (first_honor_index + 1)/6.0);}
+		else if(first_honor_index >= 12){weight_1st_index = 5;}
+		//Range = [0.0,6.604367777117163]
+		double alg3_score = ((double)sum_non_honor/this.unique_tiles_.size() * weight_1st_index) + suit_variance;
+		
+		//Optimize each score of importance
+		
+		if(alg1_score < 0.1) {alg1_score = 0;}			//too insignificant to consider score
+		alg1_score *= this.drop_pile_.size()/6;
+		if(alg1_score > 2) {alg1_score = 2;} 			//range = [0,2.0]
+		
+		/*
+		 * Consecutive weight formula: let x = consec_simples
+		 * e^(x/7)-1.73981 if < 0, set alg2_score = 0
+		 */
+		alg2_score = Math.exp((consec_simples/7.0)) - 1.73981;
+		if(alg2_score > 5) {alg2_score = 5;} 			//range = [-0.75, 5]
+		
+		alg3_score = (0.7196 * alg3_score - 3);
+		if(alg3_score > 1.75) {alg3_score = 1.75;} 		//range = [-3,1.75]
+		
+		return alg1_score + alg2_score + alg3_score;
 	}
 	
 	/**
@@ -652,7 +773,7 @@ public class Prediction
 	{
 		final String[] honor = {"E","S","W","N","Wh","G","R"}; ArrayList<String> print_str = new ArrayList<String>(); 
 		int signal = 0; boolean riichi = false; boolean tedashi = false;
-		for(double tile: this.drop_pile){
+		for(double tile: this.drop_pile_){
 			String this_tile = "";
 			int tile_id = (int)(tile);
 			if(tile - tile_id >= 0.5){tedashi = true;} if((tile * 100 - ((int)(tile * 100))) > 0.1){signal += 1;}
@@ -1021,58 +1142,31 @@ public class Prediction
 			
 			return (weight_var_mean - 5.0) * -0.75;
 		}
-		
-		/**
-		 * 
-		 * @param indexed_suit_list a 2D ArrayList where each ArrayList 
-		 * represents amount of unique tiles drop in each suit per turn
-		 * @return Same format as param indexed_suit_list but instead each element represents it's mean difference
-		 */
-		public static ArrayList<ArrayList<Double>> index_unique_outlier(ArrayList<ArrayList<Integer>> indexed_suit_list)
+		public static double percent_out_total(ArrayList<Double> tiles, int hand_type, int suited)
 		{
-			ArrayList<ArrayList<Double>> ordered_variance = new ArrayList<ArrayList<Double>>();
-			for(int i = 0; i < indexed_suit_list.size(); i++)
+			int is_tile_type = 0;
+			for(int i = 0; i < tiles.size(); i++)
 			{
-				double mean = calc_mean(upcast_AL_int(indexed_suit_list.get(i)));
-				ArrayList<Double> dist_2_mean = new ArrayList<Double>();
-				for(int suit_unique_drops: indexed_suit_list.get(i)) 
-					dist_2_mean.add(Math.abs(suit_unique_drops - mean));
-				ordered_variance.add(dist_2_mean);
-			}
-			return ordered_variance;
-		}
-		
-		/**
-		 * 
-		 * @param indexed_suit_list a 2D ArrayList where each ArrayList 
-		 * represents amount of unique tiles drop in each suit per turn
-		 * @return The lowest amt unique tiles in suit in each turn 
-		 */
-		public static ArrayList<Integer> least_amt_suit(ArrayList<ArrayList<Integer>> indexed_suit_list, int bias_suit, boolean include_honor)
-		{
-			ArrayList<Integer> min_suit = new ArrayList<Integer>();
-			int min;
-			for(int i = 0; i < indexed_suit_list.size(); i++)
-			{
-				min = 0;
-				for(int j = 0; j < indexed_suit_list.get(i).size(); j++) 
+				switch(hand_type)
 				{
-					if(!include_honor && j == 3) {break;}
-					if((indexed_suit_list.get(i).get(min) > indexed_suit_list.get(i).get(j)) || 
-					   (indexed_suit_list.get(i).get(min) == indexed_suit_list.get(i).get(j) && j == bias_suit))
-					{
-						min = j;
-					}
+					case 0:
+						if(tile_type(tiles.get(i)) < 2){is_tile_type++;}
+						break;
+					case 1:
+						if(tiles.get(i).intValue()/9 == suited){is_tile_type++;}
+						break;
+					case 2:
+						if(tile_type(tiles.get(i)) >= 2){is_tile_type++;}
+						break;
 				}
-				min_suit.add(min);
 			}
-			return min_suit;
+			return is_tile_type/(double)tiles.size();
 		}
 	}
 	public static void main(String[] args)
 	{	
 		//Hand: 115r6789p123678sckqo (4,7p)
-		Prediction normal1 = new Prediction(read_dropSTR("wdnd5md3md2ptgd7sd3sd4md"), -1, false);
+		Prediction normal1 = new Prediction(read_dropSTR("wdndrdrdrdgdgdgdededed"), -1, false);
 		//Hand: 45567m33789sckq111zo (3,6m)
 		Prediction normal2 = new Prediction(read_dropSTR("nd2pd7pd1md9md8sdwht5rpt2sdst3pt1st6ptgt"), -1, false);
 		//Hand: 789m234678p78s11zckqo (6,9s)
@@ -1086,7 +1180,7 @@ public class Prediction
 		//Hand: 78m567789p33789sckqo (6,9m)
 		Prediction normal7 = new Prediction(read_dropSTR("9mdrd4st9sdrt2pd-w4m4p5m1s5rm4p6s5p"), -1, false);
 		
-		Prediction flush1 = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd2pd3pd4pd5pd6pd7pd8pd9pd"), -1, false);
+		Prediction flush1 = new Prediction(read_dropSTR("2md3md4md5md6md7md8md2pd3pd4pd5pd6pd7pd8pd"), -1, false);
 		
 		//Hand: 9s123567778sckq555zo (no ten)
 //		Prediction flush1 = new Prediction(read_dropSTR("4md9md3md3mtrd6mdsd3pd6pd6pt8pd"), -1, false);
@@ -1116,6 +1210,8 @@ public class Prediction
 		Prediction kokushi2 =  new Prediction(read_dropSTR("7md5md7pd8pd9md4md6pd2sd7md3st9pd6pt1mded-wh5p6p1s5s"), -1, false);
 		//Hand: 9m19p19s12345677zkqo (1m kokushi wait)
 		Prediction kokushi3 =  new Prediction(read_dropSTR("6sd5st4st7md6md5md8mt4pd5pd1sdwhd5rptwt"), -1, false);
+		//Fake
+		Prediction kokushi4 =  new Prediction(read_dropSTR("2md2pd2sd3md3pd3sd4md4pd4sd5md5pd5sd6md6pd6sd7md7pd7sd8md8pd8sd"), -1, false);
 		
 		Prediction extreme = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd1sd1zd-"), -1, false);
 
@@ -1127,7 +1223,7 @@ public class Prediction
 		test_list.add(flush3);test_list.add(flush4);test_list.add(flush5);
 		test_list.add(flush6);test_list.add(flush7);test_list.add(flush8);
 		test_list.add(flush9);test_list.add(seven_pairs1);test_list.add(kokushi1);
-		test_list.add(kokushi2);test_list.add(kokushi3);test_list.add(extreme);
+		test_list.add(kokushi2);test_list.add(kokushi3);test_list.add(kokushi4);test_list.add(extreme);
 		
 		int name_index = 0;
 		int hand_index = 1;
@@ -1149,7 +1245,6 @@ public class Prediction
 					break;
 			}
 			System.out.println(name[name_index] + hand_index + ": ");
-			test_list.get(i).print();
 			System.out.println("flush score: " + test_list.get(i).flush_prob());
 			System.out.println("Kokushi score: " + test_list.get(i).kokushi_prob());
 			hand_index++;
