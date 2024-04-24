@@ -34,6 +34,11 @@ public class Player
      */
 	public ArrayList<Double> dropPile_;
 	
+	/**
+	 * The visible amount of tile per tile_id for this instance of Player
+	 */
+	protected ArrayList<Integer> tile_market_;
+	
 	/*
 	 * All the called Groups for this Player, it becomes public with exception to enclosed kan
 	 */

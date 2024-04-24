@@ -41,7 +41,7 @@ public class Compress_input
 	private int tile_ID_;
 	private ArrayList<Integer> used_tiles_ = new ArrayList<Integer>();
 	private ArrayList<Integer> declared_flowers_ = new ArrayList<Integer>();
-	
+	private static Scanner console_scan;
 	public Compress_input(String input_str, MJ_game current_game)
 	{
 		/*
@@ -239,5 +239,60 @@ public class Compress_input
 	public boolean is_validMove()
 	{
 		return this.valid_move_;
+	}
+	
+	/**
+	 * synchronized stops other threads from running until this function is complete, 
+	 * it continues the threads afterwards
+	 * 
+	 * @info
+	 * white dragon is always char == 'h'
+	 * The input string can either be formatted as: 
+	 * mode 1: per move tiles
+	 *	   tsumogiri 	== 1 copy of the symbol 	(i.e 6m [1 copy of 6])
+	 *	   tedashi		== 2 copies of the symbol	(i.e 66m [2 copies of 6])
+	 *	   Honors:
+	 *	   input the letter representation of the tile,
+	 *	   e = east tsumogiri
+	 *	   w = west tsumogiri
+	 * 
+	 * Flowers are considered at the end of the game, do not input
+	 * 
+	 * mode 2: sequential amount of moves:
+	 * 		tsumogiri 	== tile + "t"
+	 * 		tedashi		== tile + "d"
+	 * 
+	 * mode 3: single calls
+	 * - with "q" == somebody called
+	 * - with type of call "c" = chi, "p" = pon, "k" = "kan", "r" = "ron"
+	 * - with wind_id of player that called
+	 * 
+	 * i.e qp2 or qc1 (it will take the previous tile and consider that called)
+	 * 			sequential call
+	 * 
+	 * A String sequence can look like this
+	 * inputed wind_id = 2
+	 * 3md7mt8pt{htqp1} takes previous discard as call
+	 * 
+	 * @return A sequential String that represents
+	 */
+	public static synchronized String console_input(int wind_id)
+	{
+		System.out.println("Input drop tile or sequence of drop tiles: ");
+		String input = "";
+		while(input.isEmpty())
+		{
+			console_scan = new Scanner(System.in);
+			input = console_scan.nextLine();
+		}
+		return input;
+	}
+	
+	/**
+	 * 
+	 */
+	public static ArrayList<Double> inputed_tiles(String console_input)
+	{
+		
 	}
 }

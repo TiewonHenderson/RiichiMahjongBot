@@ -60,12 +60,25 @@ public class Tile_map
 	
 	//Kokushi map is just not discarding any Orphan tiles
 	
-	public 
+	/**
+	 * Saved the current game which this Tile_map belongs to
+	 */
+	public MJ_game current_game_;
 	
-	//The visibile amount of tile per tile_id
-	protected ArrayList<Integer> tile_market_;
+	/**
+	 * Saved the current Prediction to the Player corresponding to the inputted wind_id
+	 */
+	protected Prediction current_predictions_;
 	
-	//When assigned to a opponent Player, this will store numbers [0,255] that shows [genbutsu, extreme danger]
+	/**
+	 * The wind id of the opponent Player this Tile_map would corresponding against
+	 */
+	protected int wind_id_;
+	
+	
+	/**
+	 * When assigned to a opponent Player, this will store numbers [0,255] that shows [genbutsu, extreme danger]
+	 */
 	protected ArrayList<Integer> danger_market_;
 	
 	/**
@@ -80,6 +93,9 @@ public class Tile_map
 	
 	public Tile_map(Prediction player_judgements, int opponent, MJ_game this_game)
 	{
+		this.current_game_ = this_game;
+		this.wind_id_ = opponent;
+		this.current_predictions_ = player_judgements;
 		ArrayList<Group> possible_calls = this_game.get_validPlayerCalls(opponent);
 		if(possible_calls.size() > 0)
 		{
@@ -118,9 +134,9 @@ public class Tile_map
 	public ArrayList<Double> score_percentage(ArrayList<Group> called_groups)
 	{
 		ArrayList<Double> return_percent_score = new ArrayList<Double>();
+		Set<Integer> suit_set = new HashSet<Integer>();
 		for(int i = 0; i <= 20; i++) return_percent_score.add(0.0);
 		if(called_groups.size() == 0) {return return_percent_score;}
-		
 		//Default if call groups has elements, hand cannot be concealed
 		return_percent_score.set(6, -1.0);
 		return_percent_score.set(17, -1.0);
@@ -132,7 +148,7 @@ public class Tile_map
 			switch(group_info[0])
 			{
 				case 0: //not a complete group
-					return return_percent_score;
+					return new ArrayList<Double>();
 				case 1:	//sequence
 					if(return_percent_score.get(7) == -1)
 					{
@@ -152,9 +168,18 @@ public class Tile_map
 					}
 					break;
 			}
-			switch()
+			switch(group_info[1])
 			{
-			
+				case -1:
+					return new ArrayList<Double>();
+				case 0:
+				case 1:
+				case 2:
+					suit_set.add(group_info[1]);
+					break;
+				case 3:
+					if(called_groups.get(i).get_groupTiles().get(0) == )
+					
 			}
 		}
 	}
