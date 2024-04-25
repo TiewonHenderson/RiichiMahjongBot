@@ -68,6 +68,8 @@ public class Player
 		this.seatWind_ = wind_id;
 		this.dropPile_ = new ArrayList<Double>();
 		this.playerHand_ = new PlayerHand();
+		this.tile_market_ = new ArrayList<Integer>();
+		for(int i = 0; i <= 33; i++) tile_market_.add(4);
 	}
 	
 	/**
@@ -203,6 +205,21 @@ public class Player
 	public ArrayList<Group> getPlayerCalls()
 	{
 		return this.called_groups_;
+	}
+	
+	public boolean update_tile_map(int tile_id, int new_amt)
+	{
+		if(this.tile_market_.get(tile_id) == 0)
+		{
+			return false;
+		}
+		this.tile_market_.set(tile_id, this.tile_market_.get(tile_id) - 1);
+		return true;
+	}
+	
+	public int get_tile_map_id(int tile_id)
+	{
+		return this.tile_market_.get(tile_id);
 	}
 	
 	/**
@@ -604,6 +621,18 @@ public class Player
 		}
 		
 		/**
+		 * Used to create Opponent Players
+		 * @param is_opponent a boolean that represents if this PlayerHand belongs to a Opponent
+		 */
+		public PlayerHand(boolean is_opponent)
+		{
+			this.currentHand_ = new ArrayList<Integer>();
+			for(int i = 0; i < 13; i++) currentHand_.add(-1);
+			this.declaredGroups_ = new ArrayList<Group>();
+			this.mjSTRhand_ = "?????????????";
+		}
+		
+		/**
 		 * Used to clone a Player's Hand
 		 * @param clone A PlayerHand wanted to be copy to another instance
 		 */
@@ -729,6 +758,7 @@ public class Player
 		{
 			try
 			{
+				if(declaredGroups_.size() > 4) {return false;}
 				this.declaredGroups_.add(new Group(new_group));
 				return true;
 			}

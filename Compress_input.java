@@ -15,8 +15,7 @@ public class Compress_input
 	
 	public static void main(String[] args)
 	{
-		System.out.println(Console_io.get_tile_value("e"));
-		MJ_game random_game = new MJ_game(0);
+		MJ_game random_game = new MJ_game();
 		random_game.set_game_mode(0);
 		random_game.set_windID_turn(2);
 		/*
@@ -32,7 +31,7 @@ public class Compress_input
 		 *		2			tedashi			(-1)		1m		1md q+e
 		 *		3 			add kan			(4)			East	q+e
 		 */
-		Queue<Command> cmd_q = Console_io.inputed_move("edqp32md6sdqc19mdq?3p1mdq+e",random_game);
+		Queue<Command> cmd_q = Console_io.inputed_move("edqp32md6sdqcl9mdq?3p1mdq+e",random_game);
 		while(!cmd_q.isEmpty())
 		{
 			System.out.println("-----------------------------------");
@@ -230,6 +229,7 @@ public class Compress_input
 			int call_type = -1;
 			int player = -1;	//assigned to a valid wind_id if called by that person, -1 for no call
 			int wind_id_turn = current_game.get_current_windID_turn();		//wind_id_turn doesn't ma
+			char chi_dif = 'n';
 			
 			/*
 			 * Single called tile
@@ -244,7 +244,13 @@ public class Compress_input
 			 * 		5 = "?" = "concealed kan", 
 			 * - with wind_id of player that called
 			 * 
-			 * i.e qp2 or qc1 (it will take the previous tile and consider that called)
+			 * i.e qp2 or qk1 (it will take the previous tile and consider that called), 
+			 * qc since only next player can chi, increment turn_wind_id, next index represents char of chi_dif
+			 * let x = tile_id
+			 * 'l' == x - 2, x - 1
+			 * 'm' == x - 1, x + 1
+			 * 'r' == x + 1, x + 2
+			 * 
 			 * 			sequential call
 			 * 
 			 * cases: q?(canto); q?5m(riichi); q+5m; qx5m
@@ -285,7 +291,7 @@ public class Compress_input
 							break;
 						}
 					}
-					Command add_cmd = new Command(-1, input_type, false, player, call_type, current_game.game_mode_);
+					Command add_cmd = new Command(-1, input_type, false, player, call_type, 'n', current_game.game_mode_);
 					if(current_game.game_mode_ == 0)
 					{
 						for(int i = console_input.length()-1; i >= 0; i--)
@@ -331,13 +337,13 @@ public class Compress_input
 				 *		3			tedashi			(-1)		2s		2sd
 				 *	
 				 *	Riichi Mahjong
-				 *	start 2 -> edqp32md6sdqc19mdq?3p1mdq+e
+				 *	start 2 -> edqp32md6sdqcl9mdq?3p1mdq+e
 				 *		wind_id		cmd				call_type	tile	sequence left
 				 *		2			tedashi			(-1)		27		ed qp32md6sdqc09mdq?3p1md4mdq+e
 				 *		3			pon				(1)			27		qp3 2md6sdqc09mdq?3p1md4mdq+e
 				 *		3			tedashi 		(-1)		1		2md 6sdqc09mdq?3p1md4mdq+e
 				 *		0			tedashi			(-1)		23		6sd qc09mdq?3p1md4mdq+e
-				 *		1 			chi				(0)			23		qc1 9mdq?3p1md4mdq+e
+				 *		1 			chi				(0)			23		qcl 9mdq?3p1md4mdq+e
 				 *		1			tedashi			(-1)		8		9md q?3p1md4mdq+e
 				 *		2			conceal kan		(5)			11		q?3p 1md4mdq+e
 				 *		2			tedashi			(-1)		0		1md q+e
@@ -377,6 +383,19 @@ public class Compress_input
 										if(console_input.charAt(i + 1) == call_char[j])
 										{
 											call_type = j;
+											if(j == 0)
+											{
+												if(i + 2 >= console_input.length() && Character.isDigit(console_input.charAt(i+2)))
+												{
+//													throw new Exception();	//no player given throw exception and input again
+												}
+												chi_dif = console_input.charAt(i + 2);
+												wind_id_turn++;
+												if(wind_id_turn > 3) {wind_id_turn = 0;}
+												input_cmd_id = 1;
+												i += 2;
+												break;
+											}
 											if(j <= 3)	//No more tiles future to offer
 											{
 												if(i + 2 >= console_input.length() && Character.isDigit(console_input.charAt(i+2)))
@@ -417,31 +436,31 @@ public class Compress_input
 									temp_input_collecter += console_input.charAt(i);
 									continue;
 							}
-							System.out.println("\ninput_cmd_id: " + input_cmd_id);
-							System.out.println("tile_val: " + (int)tile_val);
-							System.out.println("call_type: " + call_type + "\n");
+//							System.out.println("\ninput_cmd_id: " + input_cmd_id);
+//							System.out.println("tile_val: " + (int)tile_val);
+//							System.out.println("call_type: " + call_type + "\n");
 							
 							switch(input_cmd_id)
 							{
 								case 1:
-									add_cmd = new Command(-1, 0, false, player, call_type, current_game.game_mode_);
+									add_cmd = new Command(-1, 0, false, player, call_type, chi_dif, current_game.game_mode_);
 									break;
 								case 2:
 									int input_type_index = 1;
 									if(call_type == 5) {input_type_index = 2;}
 									if(current_game.game_mode_ == 0 || call_type == 4)
 									{
-										System.out.println((int)tile_val);
-										add_cmd = new Command((int)tile_val, input_type_index, false, wind_id_turn, call_type, current_game.game_mode_);
+//										System.out.println((int)tile_val);
+										add_cmd = new Command((int)tile_val, input_type_index, false, wind_id_turn, call_type, chi_dif, current_game.game_mode_);
 									}
 									else if(call_type == 5)
 									{
-										add_cmd = new Command(-1, input_type_index, false, wind_id_turn, 5, current_game.game_mode_);
+										add_cmd = new Command(-1, input_type_index, false, wind_id_turn, 5, chi_dif, current_game.game_mode_);
 									}
 									break;
 								case 3:
 									tile_val += get_tile_value(temp_input_collecter);
-									add_cmd = new Command((int)tile_val, 3, Numerical_tools.is_tedashi(tile_val), wind_id_turn, -1, current_game.game_mode_);
+									add_cmd = new Command((int)tile_val, 3, Numerical_tools.is_tedashi(tile_val), wind_id_turn, -1, chi_dif, current_game.game_mode_);
 									if(current_game.game_mode_ == 0)
 									{
 										add_cmd.set_red_5(Numerical_tools.is_red_5(tile_val));
@@ -465,6 +484,7 @@ public class Compress_input
 							temp_input_collecter = "";
 							call_type = -1;
 							add_cmd = null;
+							chi_dif = 'n';
 						}
 					}
 					else				//Single input always drop
@@ -473,7 +493,7 @@ public class Compress_input
 						
 						if(tile_val != -1)
 						{
-							Command add_cmd = new Command((int)tile_val, 3, Numerical_tools.is_tedashi(tile_val), wind_id_turn, -1, current_game.game_mode_);
+							Command add_cmd = new Command((int)tile_val, 3, Numerical_tools.is_tedashi(tile_val), wind_id_turn, -1, 'n', current_game.game_mode_);
 							if(current_game.game_mode_ == 0)
 							{
 								add_cmd.set_red_5(Numerical_tools.is_red_5(tile_val));
@@ -624,17 +644,8 @@ public class Compress_input
 			 * wind_id_turn remains the same unless someone robs kan with kokushi
 			 */
 			CONCEALED_QUAD,
-			DROP,				//Increment/loop wind_id_turn
+			DROP				//Increment/loop wind_id_turn
 		}
-		/**
-		 * Range: [0,33] represents the id of the tile
-		 */
-		public int tile_id_;
-		
-		/**
-		 * represents false = tsumogiri, true = tedashi
-		 */
-		public boolean tedashi_;	
 		
 		/**
 		 * A integer ID that represents call type:
@@ -644,8 +655,32 @@ public class Compress_input
 		 * 	3 = "ron", 
 		 * 	4 = "concealed kan", 
 		 * 	5 = "added kan"
+		 * -1 == 6 = "drop"
 		 */
-		public int call_type_;
+		enum call_type
+		{
+			CHI,
+			PON,
+			CALL_KAN,
+			RON,
+			ADD_KAN,
+			HIDDEN_KAN,
+			NOT_CALL
+		}
+		/**
+		 * Range: [0,33] represents the id of the tile
+		 */
+		public int tile_id_ = -1;
+		
+		/**
+		 * represents false = tsumogiri, true = tedashi
+		 */
+		public boolean tedashi_;	
+
+		/**
+		 * The call_type of this command if applicable
+		 */
+		public call_type call_type_;
 		
 		/**
 		 * The wind_id that performed this action
@@ -675,6 +710,15 @@ public class Compress_input
 		public int game_mode_ = -1;
 		
 		/**
+		 * Instead of adding two extra tiles, this will extend towards the chi_dif
+		 * i.e if:
+		 * chi_dif == -1, 	its (x-2)	(x-1)	x
+		 * chi_dif == 0, 	its (x-1)	x		(x+2)
+		 * chi_dif == +1, 	its x		(x+1)	(x-2)
+		 */
+		public int chi_dif_;
+		
+		/**
 		 * Null command, default constuctor
 		 */
 		public Command()
@@ -689,9 +733,11 @@ public class Compress_input
 		 * @param input_id		refers to the input command of the console input, this reflects to enum input_type values index
 		 * @param tedashi 		false == tsumogiri, true = tedashi
 		 * @param player_id		the wind_id of the Player that perform this action
-		 * @param call_type		the type of call of this tile
+		 * @param call_type_id	the type of call of this tile that is represented by the call_type ID
+		 * @param chi_dif		the direction the chi goes depending on the tile_id	(inputs == l,m,r)
+		 * @param game_mode		the variant of mahjong that is current happening
 		 */
-		public Command(int tile_id, int input_id, boolean tedashi, int player_id, int call_type, int game_mode)
+		public Command(int tile_id, int input_id, boolean tedashi, int player_id, int call_type_id, char chi_dif, int game_mode)
 		{
 			switch(input_id)
 			{
@@ -706,9 +752,26 @@ public class Compress_input
 					}
 				case 0:
 					this.game_mode_ = game_mode;
-					this.call_type_ = call_type;
-					if(input_id >= 3) {this.call_type_ = -1;}
+					if(call_type_id < 0 || call_type_id > 5) {this.call_type_ = call_type.values()[6];}
+					else {this.call_type_ = call_type.values()[call_type_id];}
+					if(input_id >= 3) {this.call_type_ = call_type.values()[6];}
 					this.input_ = input_type.values()[input_id];
+			}
+			if(call_type_id == 0 && chi_dif != 'n')
+			{
+				final char[] chi_char = {'l', 'm','r'};
+				for(int i = 0; i < chi_char.length; i++)
+				{
+					if(chi_dif == chi_char[i])
+					{
+						this.chi_dif_ = i - 1;
+						break;
+					}
+				}
+			}
+			else
+			{
+				this.chi_dif_ = -99;
 			}
 			this.player_wind_id_ = player_id;
 			
@@ -720,11 +783,13 @@ public class Compress_input
 		 * @param tile_id 		refers to the tile value, with include decimals to indi
 		 * @param tedashi 		false == tsumogiri, true = tedashi
 		 * @param player_id		the wind_id of the Player that perform this action
-		 * @param call_type		the type of call of this tile
+		 * @param call_type_id	the type of call of this tile that is represented by the call_type ID
+		 * @param chi_dif		the direction the chi goes depending on the tile_id	(inputs == l,m,r)
 		 * @param red_five		if this tile is considered in riichi mahjong a red dora 5
 		 * @param riichi		if the Player declared riichi on this specific tile (doesn't matter if called)
+		 * @param game_mode		the variant of mahjong that is current happening
 		 */
-		public Command(int tile_id, int input_id, boolean tedashi, int player_id, int call_type, boolean red_five, boolean riichi, int game_mode)
+		public Command(int tile_id, int input_id, boolean tedashi, int player_id, int call_type_id, char chi_dif, boolean red_five, boolean riichi, int game_mode)
 		{
 			switch(input_id)
 			{
@@ -739,16 +804,49 @@ public class Compress_input
 					}
 				case 0:
 					this.game_mode_ = game_mode;
-					this.call_type_ = call_type;
-					if(input_id >= 3) {this.call_type_ = -1;}
+					if(call_type_id < 0 || call_type_id > 5) {this.call_type_ = call_type.values()[6];}
+					else {this.call_type_ = call_type.values()[call_type_id];}
+					if(input_id >= 3) {this.call_type_ = call_type.values()[6];}
 					this.input_ = input_type.values()[input_id];
 			}
-			
+			if(call_type_id == 0 && chi_dif != 'n')
+			{
+				final char[] chi_char = {'l', 'm','r'};
+				for(int i = 0; i < chi_char.length; i++)
+				{
+					if(chi_dif == chi_char[i])
+					{
+						this.chi_dif_ = i;
+						break;
+					}
+				}
+			}
+			else
+			{
+				this.chi_dif_ = -99;
+			}
 			this.player_wind_id_ = player_id;
 			
 			this.game_mode_ = 0;
 			this.red_5_ = red_five;
 			this.riichi_ = riichi;
+		}
+		
+		/**
+		 * Clone constructor
+		 * @param clone A Command to clone
+		 */
+		public Command(Command clone)
+		{
+			this.call_type_ = clone.call_type_;
+			this.chi_dif_ = clone.chi_dif_;
+			this.game_mode_ = clone.game_mode_;
+			this.input_ = clone.input_;
+			this.player_wind_id_ = clone.player_wind_id_;
+			this.red_5_ = clone.red_5_;
+			this.riichi_ = clone.riichi_;
+			this.tedashi_ = clone.tedashi_;
+			this.tile_id_ = clone.tile_id_;
 		}
 		
 		public boolean set_tile_id(int tile_id)
@@ -761,10 +859,10 @@ public class Compress_input
 		{
 			this.tedashi_ = tedashi;
 		}
-		public boolean set_call_type(int call_type)
+		public boolean set_call_type(int call_type_id)
 		{
-			if(call_type < 0 || call_type > 5) {return false;}
-			this.call_type_ = call_type;
+			if(call_type_id < 0 || call_type_id > 5) {return false;}
+			this.call_type_ = call_type.values()[call_type_id];
 			return true;
 		}
 		public boolean set_player_wind_id(int wind_id)
@@ -803,6 +901,7 @@ public class Compress_input
 			String info = "Tile_ID: " + this.tile_id_ + 
 						  "\nTedashi: " + this.tedashi_ + 
 						  "\nCall_type: " + this.call_type_ + 
+						  "\nChi_shape: " + this.chi_dif_ + 
 						  "\nPlayer_wind_ID: " + this.player_wind_id_ +
 						  "\nInput_CMD_Type: " + this.input_ +
 						  "\nIs red 5: " + this.red_5_ +

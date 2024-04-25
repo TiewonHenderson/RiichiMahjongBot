@@ -2,7 +2,9 @@ package bot_package;
 
 import java.util.*;
 import bot_package.Compress_input;
+import bot_package.Compress_input.Command;
 import bot_package.Compress_input.Console_io;
+import bot_package.Group.Hidden_Kan;
 
 /**
  * Game_system doesn't 
@@ -60,7 +62,7 @@ public class MJ_game
 	/**
 	 * This stores the move history of a given game
 	 */
-	public Compress_input move_history_;
+	public ArrayList<Integer> discard_history_;
 	
 	/**
 	 * This will be the counter responsible for whose turn it currently is
@@ -82,19 +84,46 @@ public class MJ_game
 	public int prevalent_wind_;
 	
 	/**
+	 * The wind id of the User
+	 */
+	public int user_wind_;
+	
+	/**
+	 * Default constructor
+	 */
+	public MJ_game()
+	{
+		this.wind_ID_turn_ = 0;
+		this.game_status_ = 0;
+		this.prevalent_wind_ = 0;
+		this.user_wind_ = 0;
+		this.game_mode_ = 0;
+	}
+	/**
 	 * @function This constructor does not take into consideration the player's starting hand and their first declaration
 	 * 			 of flowers and recovering tiles
 	 * 
 	 * @param wind_ID This input is the current Player that would input their hand while everyone else is unknown
 	 * 
-	 * This default constructor will start a new game, so all the fields would be set to a fresh wall
+	 * This starting constructor will start a new game, so all the fields would be set to a fresh wall
 	 */
 	public MJ_game(int game_mode)
 	{
 		String[] info = Prepare_MJ_game.get_all_info(this.console_io_stream);
+		switch(game_mode)
+		{
+			case 0:
+				//total - dead_wall - nondealer hands - dealer hand
+				this.total_wall_tiles_ = 136 - 14 - (3 * 13) - 14; 
+				break;
+			case 1:
+				this.total_wall_tiles_ = 136 - (3 * 13) - 14; 
+				break;
+		}
 		this.wind_ID_turn_ = 0;
 		this.game_status_ = 0;
-		this.prevalent_wind_ =  Prepare_MJ_game.wind_2_int(info[1])[0];
+		this.prevalent_wind_ = Prepare_MJ_game.wind_2_int(info[1])[0];
+		this.user_wind_ = Prepare_MJ_game.wind_2_int(info[1])[1];
 		this.game_mode_ = game_mode;
 		//Index 0 == hand, index 1 == winds
 		
@@ -181,7 +210,7 @@ public class MJ_game
 	 * Accessor method to get amount of tiles left in the wall itself
 	 * @return The total number of tiles left from THE WALL, not total visible tiles
 	 */
-	public int total_tiles_left()
+	public int get_total_tiles_left()
 	{
 		return this.total_wall_tiles_;
 	}
@@ -195,6 +224,19 @@ public class MJ_game
 		this.total_wall_tiles_ = new_amt;
 	}
 	
+	/**
+	 * 
+	 * @return true if total number of tiles was decremented, false if no tiles to decrement
+	 */
+	public boolean decrement_tiles_left()
+	{
+		if(this.total_wall_tiles_ > 0)
+		{
+			this.total_wall_tiles_--;
+			return true;
+		}
+		return false;
+	}
 	/**
 	 * Accessor method to get all Players within a ArrayList
 	 * @return An ArrayList of Players where each index would be the Player's respective wind_ID
@@ -260,11 +302,51 @@ public class MJ_game
 		return this.game_status_;
 	}
 	
-	/**
-	 * 
-	 * @param player_id The wind_id that corresponds to the Player wanting their calls
-	 * @return a ArrayList<Group> that represents the VISIBLE calls they have depending on the game_mode_
-	 */
+	public boolean loop_queue_cmds(Queue<Command> all_commands)
+	{
+		Command prev_cmd = null;
+		while(!all_commands.isEmpty())
+		{
+			Command current_cmd = all_commands.poll();
+			switch(current_cmd.input_)
+			{
+				case CONCEALED_QUAD:
+					if(current_cmd.tile_id_ != -1)
+					{
+						this.all_players.get(this.user_wind_).update_tile_map(current_cmd.tile_id_, 0);
+						ArrayList<Integer> group_list = new ArrayList<Integer>();
+						for(int i = 0; i < 4; i++) group_list.add(current_cmd.tile_id_);
+						this.all_players.get(current_cmd.player_wind_id_).getPlayerHand().addDeclaredGroups(new Group(group_list, true, true));
+					}
+					else
+					{
+						this.all_players.get(current_cmd.player_wind_id_).getPlayerHand().addDeclaredGroups(new Hidden_Kan(current_cmd.player_wind_id_, -1));
+					}
+					this.set_tiles_left(this.get_total_tiles_left() - 4);
+					break;
+				case CALLED_PREVIOUS:
+					int prev_tile_id = -1;
+					if(prev_cmd == null)
+					{
+						prev_tile_id = discard_history_.get(discard_history_.size() - 1);
+					}
+					else
+					{
+						prev_tile_id = prev_cmd.tile_id_;
+					}
+					switch(current_cmd.call_type_)
+					{
+						
+					}
+					break;
+				case ADDED_QUAD:
+					break;
+				case DROP:
+			}
+			prev_cmd = new Command(current_cmd);
+		}
+	}
+	
 	public ArrayList<Group> get_validPlayerCalls(int player_id)
 	{
 		ArrayList<Group> all_calls = new ArrayList<Group>(this.all_players.get(player_id).getPlayerCalls());
@@ -273,7 +355,7 @@ public class MJ_game
 			case 1:
 				for(int i = 0; i < all_calls.size(); i++)
 				{
-					if(all_calls.get(i).concealed_)
+					if(all_calls.get(i).concealed_ || Group.group_status(all_calls.get(i)) < 1)
 					{
 						all_calls.remove(i);
 						i--;
@@ -282,7 +364,7 @@ public class MJ_game
 		}
 		return all_calls;
 	}
- 	
+	
 	public static class Prepare_MJ_game
 	{
 		/**

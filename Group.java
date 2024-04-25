@@ -37,11 +37,46 @@ public class Group extends Scoring
 	/**
 	 * int[] object Compatible Constructor for Group obj
 	 * @param in_group A typical 3/4 tile int[] that represents a tile group
+	 * @param declared mainly focused on concealed kan as the hand still remains concealed but kan is declared
 	 * @param concealed Declare whether the group is concealed
 	 */
 	public Group(int[] in_group, boolean declared, boolean concealed)
 	{
 		for(int i = 0; i < in_group.length; i++) tile_list_.add(in_group[i]);
+		this.declared_ = declared;
+		this.concealed_ = concealed;
+	}
+	
+	/**
+	 * 
+	 * @param in_group A String representation of the Group, use ',' to separate tiles
+	 * @param declared mainly focused on concealed kan as the hand still remains concealed but kan is declared
+	 * @param concealed Declare whether the group is concealed
+	 */
+	public Group(String in_group, boolean declared, boolean concealed)
+	{
+		ArrayList<Integer> group = new ArrayList<Integer>();
+		String temp_holder = "";
+		for(int i = 0; i < in_group.length(); i++)
+		{
+			if(in_group.charAt(i) == ',')
+			{
+				try 
+				{
+					group.add(Integer.parseInt(temp_holder));
+					temp_holder = "";
+				}
+				catch(NumberFormatException e)
+				{
+					temp_holder = "";
+					break;
+				}
+			}
+			else
+			{
+				temp_holder += in_group.charAt(i);
+			}
+		}
 		this.declared_ = declared;
 		this.concealed_ = concealed;
 	}
@@ -56,7 +91,7 @@ public class Group extends Scoring
 		this.declared_ = false;
 		this.concealed_ = true;
 	}
-	
+
 	/**
 	 * Default value for concealed is true
 	 * @param in_group A typical 3/4 tile int[] that represents a tile group
@@ -1017,6 +1052,25 @@ public class Group extends Scoring
 		for(String key: all_groupSearch.keySet())
 		{
 			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
+		}
+	}
+	public static class Hidden_Kan extends Group
+	{
+		private int tile_id_;	//set -1 if cannot see
+		public int wind_id_;	//whoever declared the concealed kan
+		
+		public Hidden_Kan(int wind_id, int tile_id)
+		{
+			this.wind_id_ = wind_id;
+			this.tile_id_ = tile_id;
+		}
+		public int get_tile_id()
+		{
+			return this.tile_id_;
+		}
+		public void set_tile_id(int new_tile_id)
+		{
+			this.tile_id_ = new_tile_id;
 		}
 	}
 	public static void main(String[] args)
