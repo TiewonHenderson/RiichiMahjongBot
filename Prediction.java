@@ -775,8 +775,8 @@ public class Prediction
 		int signal = 0; boolean riichi = false; boolean tedashi = false;
 		for(double tile: this.drop_pile_){
 			String this_tile = "";
-			int tile_id = (int)(tile);
-			if(tile - tile_id >= 0.5){tedashi = true;} if((tile * 100 - ((int)(tile * 100))) > 0.1){signal += 1;}
+			tedashi = Numerical_tools.is_tedashi(tile);
+			if((tile * 100 - ((int)(tile * 100))) > 0.1){signal += 1;}
 			if(Double.toString(tile).charAt(Double.toString(tile).length() - 1) == '1'){signal += 2;}
 			if(((int)tile) / 9 >= 3){this_tile += honor[(int)tile % 9];}
 			else
@@ -946,9 +946,9 @@ public class Prediction
 		for(double tile: drop_pile)
 		{
 			int tile_id = (int)(tile);
-			if(tile - tile_id >= 0.5){tedashi = true;}
-			if((tile * 100 - ((int)(tile * 100))) > 0.1){signal += 1;}
-			if(Double.toString(tile).charAt(Double.toString(tile).length() - 1) == '1'){signal += 2;}
+			Numerical_tools.is_tedashi(tile);
+			if(Numerical_tools.is_red_5(tile)){signal += 1;}
+			if(Numerical_tools.is_riichi(tile_id)){signal += 2;}
 			if(((int)tile) / 9 >= 3)
 			{
 				return_str += honor[(int)tile % 9];
@@ -1162,6 +1162,33 @@ public class Prediction
 			}
 			return is_tile_type/(double)tiles.size();
 		}
+		public static boolean is_red_5(double tile_val)
+		{
+			if(((int)tile_val) % 9 != 4) {return false;}
+			String last_index = Integer.toString((int)(tile_val * 1000));
+			if(last_index.charAt(last_index.length() - 1) == '5')
+			{
+				return true;
+			}
+			return false;
+		}
+		public static boolean is_riichi(double tile_val)
+		{
+			String last_index = Double.toString(tile_val);
+			if(last_index.charAt(last_index.length() - 1) == '1')
+			{
+				return true;
+			}
+			return false;
+		}
+		public static boolean is_tedashi(double tile_val)
+		{
+			if(tile_val - (int)tile_val >= 0.5)
+			{
+				return true;
+			}
+			return false;
+		}
 	}
 	public static void main(String[] args)
 	{	
@@ -1245,9 +1272,11 @@ public class Prediction
 					break;
 			}
 			System.out.println(name[name_index] + hand_index + ": ");
+			System.out.println(test_list.get(i).drop_pile_);
 			System.out.println("flush score: " + test_list.get(i).flush_prob());
 			System.out.println("Kokushi score: " + test_list.get(i).kokushi_prob());
 			hand_index++;
 		}
+		System.out.println(Numerical_tools.is_red_5(4.005));
 	}
 }

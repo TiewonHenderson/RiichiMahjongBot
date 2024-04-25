@@ -22,12 +22,6 @@ public class Player
 	 */
 	public int seatWind_;
 
-	/*
-     * Integer list to keep track of drawn flowers, each index represent each unique flower
-     * Use seatWind to determine what flower is the player's good flower (10^seatWind)
-     */
-    public int[] flower_ = new int[4];
-
     /**
      * An ArrayList that represents the drop tile history of this instance of Player
      * The reasoning behind Double and not Integer is 0.0 == tsumogiri, 0.5 == tedashi, 0.25 == tsumogiri riichi, 0.75 == tedashi riichi
@@ -35,14 +29,19 @@ public class Player
 	public ArrayList<Double> dropPile_;
 	
 	/**
-	 * The visible amount of tile per tile_id for this instance of Player
-	 */
-	protected ArrayList<Integer> tile_market_;
-	
-	/*
 	 * All the called Groups for this Player, it becomes public with exception to enclosed kan
 	 */
-	protected ArrayList<Group> called_groups_;
+	public ArrayList<Group> called_groups_;
+	
+	/**
+	 * Set this Player's opponent_Player true if the Player is not the user
+	 */
+	public boolean opponent_Player_ = true;
+	
+	/**
+	 * The visible amount of tile per tile_id for this instance of Player
+	 */
+	private ArrayList<Integer> tile_market_;
 	
 	/*
 	 * The current Playerhand of this player instance, has closed and open tiles in 2D ArrayList
@@ -54,29 +53,54 @@ public class Player
 	 */
 	public Player()
 	{
-		int random_wind = (int)(Math.random() * 4);
-		this.playerName_ = wind.values()[random_wind] + " PLAYER";
-		this.seatWind_ = random_wind;
+		this.seatWind_ = -1;
 		this.dropPile_ = new ArrayList<Double>();
 		this.playerHand_ = new PlayerHand();
 	}
 	
-	public Player(int wind_ID, String specific_name, MJ_game input_game)
+	/**
+	 * Simple constructor for the purpose of creating a opponent Player
+	 * @param wind_id the Player's wind_id of this instance of Player
+	 */
+	public Player(int wind_id)
+	{
+		this.playerName_ = wind.values()[wind_id] + " PLAYER";
+		this.seatWind_ = wind_id;
+		this.dropPile_ = new ArrayList<Double>();
+		this.playerHand_ = new PlayerHand();
+	}
+	
+	/**
+	 * Complex constructor for the purpose of loading a new Player of the User
+	 * @param wind_id 		the wind_id of this Player
+	 * @param Name	  		the alotted name of this current Player
+	 * @param mj_STR  		the mj_STR where the User's hand is inputed String format to start a MJ_game
+	 * @param input_game	the MJ_game this Player belongs to
+	 */
+	public Player(int wind_id, String Name, String mj_STR, MJ_game input_game)
+	{
+		this.playerName_ = Name;
+		this.seatWind_ = wind_id;
+		this.playerHand_ = new PlayerHand(mj_STR);
+		this.dropPile_ = new ArrayList<Double>();
+	}
+	
+	public Player(int wind_id, String specific_name, MJ_game input_game)
 	{
 		//Invalid input for wind_ID would just result in default constructor
-		if(wind_ID < 0 || wind_ID > 3)
+		if(wind_id < 0 || wind_id > 3)
 		{
-			int random_wind = (int)(Math.random() * 4);
-			this.playerName_ = wind.values()[random_wind] + " PLAYER";
-			this.seatWind_ = random_wind;
+			this.seatWind_ = -1;
+			this.dropPile_ = new ArrayList<Double>();
+			this.playerHand_ = new PlayerHand();
 		}
 		else
 		{
 			//If empty String provided, put default name
-			if(specific_name.length() == 0){this.playerName_ = wind.values()[wind_ID] + " PLAYER";}
+			if(specific_name.length() == 0){this.playerName_ = wind.values()[wind_id] + " PLAYER";}
 			else {this.playerName_ = specific_name;}
 			
-			this.seatWind_ = wind_ID;
+			this.seatWind_ = wind_id;
 		}
 		//Default initialize
 		this.dropPile_ = new ArrayList<Double>();
@@ -91,7 +115,6 @@ public class Player
 		this.seatWind_ = clone.seatWind_;
 		this.dropPile_ = new ArrayList<Double>(clone.dropPile_);
 		this.playerHand_ = new PlayerHand(clone.playerHand_);
-		this.flower_ = clone.flower_;
 	}
 	
 	/*
@@ -112,16 +135,6 @@ public class Player
 	}
 	
 	/**
-	 * Mutator method to set the flower corresponding to it's index as an inputed amount
-	 * @param index The index (would represent the flower number [index + 1]) to set new amount for this instance of Player
-	 * @param new_amt The amount of declared flowers for this instance of Player
-	 */
-	public void set_flower(int index, int new_amt)
-	{
-		this.flower_[index] = new_amt;
-	}
-	
-	/**
 	 * Mutator method by adding the inputed tile at the end of this instance of Player drop_pile List
 	 * @param tile_ID The new tile that was dropped by this instance of Player
 	 */
@@ -137,6 +150,11 @@ public class Player
 	public void set_drop_pile(ArrayList<Double> new_droppile)
 	{
 		this.dropPile_ = new_droppile;
+	}
+	
+	public void set_user_opponent(boolean value)
+	{
+		this.opponent_Player_ = value;
 	}
 	
 	/**
@@ -488,7 +506,7 @@ public class Player
 	 * Used to store currentHand of assigned player
 	 * String representation of current player hand
 	 */
-	static class PlayerHand
+	protected static class PlayerHand
 	{
 		/*
 		 * The ArrayList<Integer> representation of the PlayerHand

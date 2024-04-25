@@ -10,7 +10,8 @@ public class Group extends Scoring
 	public boolean declared_; //mainly to separate declared quads
 	public boolean concealed_;
 	
-	public static char[] suit_reference = {'m','p','s','z'};
+	public static final char[] suit_reference = {'m','p','s','z'};
+	public static final char[] wind_reference = {'e','s','w','n'};
 	
 	/*
 	 * Default Constructor

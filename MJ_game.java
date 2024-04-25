@@ -1,7 +1,8 @@
 package bot_package;
 
 import java.util.*;
-
+import bot_package.Compress_input;
+import bot_package.Compress_input.Console_io;
 
 /**
  * Game_system doesn't 
@@ -15,14 +16,25 @@ public class MJ_game
 	
 	/**
 	 * The user interface for the bot algorithm
+	 * @todo Future UI implementation
 	 */
 	private Panel_Manager in_out_system_;
+	
+	/**
+	 * A beta console input output stream used for extremely compressed commands
+	 */
+	private Compress_input.Console_io console_io_stream;
+	
+	/**
+	 * This ArrayList stores all the tiles that were visibly dropped, this includes if it was called and used
+	 */
+	public ArrayList<Double> all_drop_tiles_ = new ArrayList<Double>();
 	
 	/**
 	 * Possible_tiles: 			used for the searching algorithm to see what tiles are left
 	 * total_nonbonus_tiles: 	used to reference for how far the current game is progressing
 	 */
-	public ArrayList<ArrayList<Integer>> possible_tiles_ = new ArrayList<ArrayList<Integer>>();
+	public ArrayList<Integer> possible_tiles_ = new ArrayList<Integer>();
 	
 	/**
 	 * 0 == riichi mahjong
@@ -44,17 +56,11 @@ public class MJ_game
 	 * of remaining called Group possible (4 == no declared Group)
 	 */
 	public int[] player_status_ = new int[4];
-	
-	/*
-	 * The list of possible flowers that is either in other Player's hand or in the wall
-	 * Each index represents the amount of flowers not visible
-	 */
-	public ArrayList<Integer> possible_flowers_; 
 
 	/**
 	 * This stores the move history of a given game
 	 */
-	public Stack<Compress_input> move_history_;
+	public Compress_input move_history_;
 	
 	/**
 	 * This will be the counter responsible for whose turn it currently is
@@ -73,7 +79,7 @@ public class MJ_game
 	/**
 	 * The prev_wind of the current game
 	 */
-	public int prev_wind;
+	public int prevalent_wind_;
 	
 	/**
 	 * @function This constructor does not take into consideration the player's starting hand and their first declaration
@@ -83,39 +89,26 @@ public class MJ_game
 	 * 
 	 * This default constructor will start a new game, so all the fields would be set to a fresh wall
 	 */
-	public MJ_game()
+	public MJ_game(int game_mode)
 	{
+		String[] info = Prepare_MJ_game.get_all_info(this.console_io_stream);
+		this.wind_ID_turn_ = 0;
 		this.game_status_ = 0;
-		this.in_out_system_ = new Panel_Manager(this);							// sets in_out_system_
+		this.prevalent_wind_ =  Prepare_MJ_game.wind_2_int(info[1])[0];
+		this.game_mode_ = game_mode;
+		//Index 0 == hand, index 1 == winds
 		
-		for(int i = 0; i < 4; i++) 
+		for(int i = 0; i < 4; i++)
 		{
-			this.possible_tiles_.add(new ArrayList<Integer>());					// sets possible_tiles_
-			int max = 9;
-			switch(i) //Used to add numbered suit and honor suit separately
+			if(i != Prepare_MJ_game.wind_2_int(info[1])[1])
 			{
-				case 3:
-					max = 7;
-				default:
-					for(int j = 0; j < max; j++) this.possible_tiles_.get(i).add(4);
-					break;
+				this.all_players.add(new Player(i));
 			}
-			this.all_players.add(new Player(i, "", this));						// sets all_players_
-			if(i == this.in_out_system_.get_windID())
+			else
 			{
-				// sets custom name from Prototype UI to User wind_ID
-				this.all_players.get(i).set_Player_name(this.in_out_system_.get_username());
+				this.all_players.add(new Player(i, "USER", info[0], this));
 			}
 		}
-		this.total_wall_tiles_ = 136 - (4 * 13);								// sets total_wall_tiles (thus without Player tiles)
-		for(int i = 0; i < 4; i++) 
-		{
-			this.player_status_[i] = 0;											// sets player_status_
-			this.possible_flowers_.add(2);										// sets possible_flowers_
-		}
-		
-		this.move_history_ = new Stack<Compress_input>();						// sets move_history_
-		
 	}
 	
 	/**
@@ -143,13 +136,7 @@ public class MJ_game
 	 */
 	public MJ_game(String[] Player_str_list, ArrayList<Integer> droptile_list)
 	{
-		for(int i = 0; i < Player_str_list.length; i++)
-		{
-			int wind_ID = element_translator.windchar_to_int(Player_str_list[i].charAt(0));
-			all_players.add(new Player(wind_ID, "", this));
-			
-		}
-		this.in_out_system_ = new Panel_Manager(this);						// sets in_out_system_
+		
 	}
 	
 	/**
@@ -172,27 +159,23 @@ public class MJ_game
 	 * concealed kongs are revealed, but before suit indicator add 'x'
 	 * 
 	 */
-	public MJ_game(String[] Player_str_list, ArrayList<Integer> droptile_list)
-	{
-		
-	}
 	
 	/**
 	 * Accessor method to get all non-visible tiles
 	 * @return Every tile in a suit by suit ArrayList<Integer> format that are not visible
 	 */
-	public ArrayList<ArrayList<Integer>> get_possible_tiles()
+	public ArrayList<Integer> get_possible_tiles()
 	{
 		return this.possible_tiles_;
 	}
 	
 	/**
-	 * Mutator method for the whole non-visible tiles 2D ArrayList
-	 * @param new_possible_tiles A whole new 2D ArrayList of indexes with ratios equivalent to the [suit][play_val]
+	 * Mutator method for the whole non-visible tiles sequential ArrayList
+	 * @param new_possible_tiles A whole new non-visible tiles sequential ArrayList where index represents the tile_id
 	 */
-	public void set_possible_tiles(ArrayList<ArrayList<Integer>> new_possible_tiles)
+	public void set_possible_tiles(ArrayList<Integer> new_possible_tiles)
 	{
-		this.possible_tiles_ = new ArrayList<ArrayList<Integer>>(new_possible_tiles);
+		this.possible_tiles_ = new ArrayList<Integer>(new_possible_tiles);
 	}
 	/**
 	 * Accessor method to get amount of tiles left in the wall itself
@@ -239,45 +222,7 @@ public class MJ_game
 	{
 		this.player_status_[player_index] = new_status; 
 	}
-	/**
-	 * Accessor method to get an ArrayList of the possible flowers, 0 == all of that flowers are used
-	 * @return Returns a list of 4 elements representing the amount of flowers left for the index representation
-	 * 			of that seasoned flower, i.e flower 1 == index 0; flower 4 == index 3
-	 */
-	public ArrayList<Integer> get_possible_flowers()
-	{
-		return this.possible_flowers_;
-	}
 	
-	/**
-	 * Mutator method to change 1 element in possible_flowers_
-	 * @param flower_index The flower index that wants to be changed
-	 * @param new_amt The new amount of flower for a certain flower number (index = flower num - 1)
-	 */
-	public void set_possible_flower(int flower_index, int new_amt)
-	{
-		this.possible_flowers_.set(flower_index, new_amt);
-	}
-	
-	/**
-	 * Accessor method to get move_history_
-	 * @return Return a ArrayList of all the previous moves that occured during this MJ_game
-	 */
-	public Stack<Compress_input> get_move_history()
-	{
-		return this.move_history_;
-	}
-	
-	/**
-	 * Removes the top of the move stack, thus the previously added Compress_input
-	 */
-	public void remove_previous_move()
-	{
-		if(this.move_history_.size() > 0)
-		{
-			this.move_history_.pop();
-		}
-	}
 	/**
 	 * Accessor method to get current turn for a certain wind_ID
 	 * @return The current wind_id that is allowed to go (in other words, the integer that represent which Player's turn)
@@ -295,6 +240,12 @@ public class MJ_game
 	{
 		this.wind_ID_turn_ = new_windID;
 	}
+	
+	public void set_game_mode(int game_mode)
+	{
+		this.game_mode_ = game_mode;
+	}
+	
 	/**
 	 * 0 = new game
 	 * 1 = mid game
@@ -331,123 +282,63 @@ public class MJ_game
 		}
 		return all_calls;
 	}
-	
-	/**
-	 * 
-	 * @param new_turn The new turn that was just perform in order to update MJ_game in real time
-	 * @return	True if the input was valid and was added properly, false otherwise and was not added
-	 */
- 	public boolean add_move(Compress_input new_turn)
+ 	
+	public static class Prepare_MJ_game
 	{
- 		if(!new_turn.is_validMove()) {return false;}
- 		
- 		//Adds the valid turn into move_history
- 		this.move_history_.push(new_turn);
- 		
-		//Removes input tile from wall
-		int suit = new_turn.get_tileID() / 9;
-		int index = new_turn.get_tileID() % 9;
-		
-		//No tiles to offer, no tiles remove, return false
-		if(this.possible_tiles_.get(suit).get(index) == 0)
+		/**
+		 * Prioritized indicators
+		 * "m", "p", "s", "z" to add respective tile_id for the group/tiles
+		 * ^^^ Refer to Group.suit_reference
+		 *  "c", "k", "q", and "o" to determine which ArrayList to add into
+		 *  
+		 * @param io_stream the IO stream responsible for Scanner inputs
+		 * @return a mj_str that is translatable using Player.convert_mjSTR()
+		 */
+		public static String get_hand_str(Console_io io_stream)
 		{
-			return false;
+			return io_stream.console_hand_input();
 		}
-		this.possible_tiles_.get(suit).set(index, this.possible_tiles_.get(suit).get(index) - 1);
 		
-		//Checks the same conditions for used_tiles
-		for(int i = 0; i < new_turn.get_used_tiles().size(); i++)
+		/**
+		 * 
+		 * @param io_stream the IO stream responsible for Scanner inputs
+		 * @return A two length String that represents index 0 == prevalent wind, index 1 == seat wind
+		 */
+		public static String get_wind_str(Console_io io_stream)
 		{
-			suit = new_turn.get_used_tiles().get(i) / 9;
-			index = new_turn.get_used_tiles().get(i) % 9;
-			if(this.possible_tiles_.get(suit).get(index) == 0)
+			return io_stream.console_wind_input();
+		}
+		
+		/**
+		 * 
+		 * @param io_stream the IO stream responsible for Scanner inputs
+		 * @return A list of all the minimal info needed to start a typically MJ game
+		 */
+		public static String[] get_all_info(Console_io io_stream)
+		{
+			String[] ret_list = {get_hand_str(io_stream), get_wind_str(io_stream)};
+			return ret_list;
+		}
+		
+		/**
+		 * 
+		 * @param wind_input A two length String that represents index 0 == prevalent wind, index 1 == seat wind
+		 * @return a 2 indexed list where the wind symbols are translated into their wind_id
+		 */
+		public static int[] wind_2_int(String wind_input)
+		{
+			int[] return_list = new int[wind_input.length()];
+			for(int i = 0; i < wind_input.length(); i++)
 			{
-				return false;
+				for(int j = 0; j < Group.wind_reference.length; j++)
+				{
+					if(wind_input.charAt(i) == Group.wind_reference[j])
+					{
+						return_list[i] = j;
+					}
+				}
 			}
-			this.possible_tiles_.get(suit).set(index, this.possible_tiles_.get(suit).get(index) - 1);
+			return return_list;
 		}
-		
-		// valid Move already checks if there are possible flowers, since true, it's safe to remove flowers
-		for(int i = 0; i < new_turn.get_flower_list().size(); i++)
-		{
-			this.possible_flowers_.set(new_turn.get_flower_list().get(i), this.possible_flowers_.get(new_turn.get_flower_list().get(i)) - 1);
-		}
-		
-		
-		switch(new_turn.get_decision())
-		{
-			//All increment by 1 cases ([0,1] == drop + [2] == seq call)
-			case 0:
-			case 1:
-			case 2:
-				
-				if(this.wind_ID_turn_ == 3)
-				{
-					this.wind_ID_turn_ = 0;
-				}
-				else
-				{
-					this.wind_ID_turn_++;
-				}
-				break;
-				
-			//All any but current Player cases ([3,4] = pon/kan calls)
-			case 3:
-			case 4:
-				this.wind_ID_turn_ = new_turn.get_windID();
-				break;
-				
-			//ron/tsumo is ALL Players
-			case 7:
-				//Get Player index -> Scoring.java
-				this.game_status_ = 2;
-				break;
-		}
-		return true;
 	}
- 	
- 	public String loop_next_input() 
- 	{
- 		
- 	}
- 	
- 	static class element_translator
- 	{
- 		/**
- 		 * 
- 		 * @param wind_char The wind_char that wants to be represented as int wind_ID
- 		 * @return the int value corresponding to a value char of wind_char ('e,s,w,n','0,1,2,3') otherwise return -1
- 		 */
- 		public static int windchar_to_int(char wind_char)
- 		{
- 			if(Character.isAlphabetic(wind_char))
- 			{
- 				switch(Character.toLowerCase(wind_char))
- 				{
- 					case 'e':
- 						return 0;
- 					case 's':
- 						return 1;
- 					case 'w':
- 						return 2;
- 					case 'n':
- 						return 3;
- 				}
- 			}
- 			else if(Character.isDigit(wind_char))
- 			{
- 				int input_num = Character.getNumericValue(wind_char);
- 				if(input_num > 3)
- 				{
- 					return 3;
- 				}
- 				else if(input_num < 0)
- 				{
- 					return 0;
- 				}
- 				return input_num;
- 			}
- 			return -1;
- 		}
- 	}
 }
