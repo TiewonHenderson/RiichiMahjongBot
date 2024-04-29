@@ -39,6 +39,11 @@ public class Player
 	public boolean opponent_Player_ = true;
 	
 	/**
+	 * Sets if this Player is the winner of a specific MJ_game
+	 */
+	public boolean is_winner = false;
+	
+	/**
 	 * The visible amount of tile per tile_id for this instance of Player
 	 */
 	private ArrayList<Integer> tile_market_;
@@ -163,7 +168,7 @@ public class Player
 	 * 
 	 * @return The PlayerHand object that has information of this Player's hand
 	 */
-	public PlayerHand getPlayerHand()
+	public PlayerHand get_PlayerHand()
 	{	
 		return this.playerHand_;
 	}
@@ -173,7 +178,7 @@ public class Player
 	 * @param in_playhand The new hand to set onto this instance of Player
 	 * @return True if the mutator method was successful, false otherwise
 	 */
-	public boolean setPlayerHand(PlayerHand in_playhand)
+	public boolean set_PlayerHand(PlayerHand in_playhand)
 	{
 		try
 		{
@@ -215,6 +220,11 @@ public class Player
 		}
 		this.tile_market_.set(tile_id, this.tile_market_.get(tile_id) - 1);
 		return true;
+	}
+	
+	public boolean decrement_map_index(int tile_id)
+	{
+		return this.update_tile_map(tile_id, this.tile_market_.get(tile_id) - 1);
 	}
 	
 	public int get_tile_map_id(int tile_id)
@@ -372,7 +382,7 @@ public class Player
 	 */
 	public static String convert_PlayerHand(PlayerHand playerhand)
 	{
-		return convert_PlayerHand(playerhand.getCurrentHand(), playerhand.getDeclaredGroup());
+		return convert_PlayerHand(playerhand.get_current_hand(), playerhand.get_declared_group());
 	}
 	
 	/**
@@ -621,18 +631,6 @@ public class Player
 		}
 		
 		/**
-		 * Used to create Opponent Players
-		 * @param is_opponent a boolean that represents if this PlayerHand belongs to a Opponent
-		 */
-		public PlayerHand(boolean is_opponent)
-		{
-			this.currentHand_ = new ArrayList<Integer>();
-			for(int i = 0; i < 13; i++) currentHand_.add(-1);
-			this.declaredGroups_ = new ArrayList<Group>();
-			this.mjSTRhand_ = "?????????????";
-		}
-		
-		/**
 		 * Used to clone a Player's Hand
 		 * @param clone A PlayerHand wanted to be copy to another instance
 		 */
@@ -689,15 +687,15 @@ public class Player
 		{
 			PlayerHand temp_obj = convert_mjSTR(in_STRformat);
 			
-			this.currentHand_ = temp_obj.getCurrentHand();
-			this.declaredGroups_ = temp_obj.getDeclaredGroup();
+			this.currentHand_ = temp_obj.get_current_hand();
+			this.declaredGroups_ = temp_obj.get_declared_group();
 			this.mjSTRhand_ = new String(in_STRformat);
 		}
 		
 		/*
 		 * Returns the current ArrayList<Integer> of the Player's inside_hand
 		 */
-		public ArrayList<Integer> getCurrentHand()
+		public ArrayList<Integer> get_current_hand()
 		{
 			return this.currentHand_;
 		}
@@ -707,7 +705,7 @@ public class Player
 		 * This however does include the concealed declared quads that would consider the hand
 		 * still be concealed
 		 */
-		public ArrayList<Group> getDeclaredGroup()
+		public ArrayList<Group> get_declared_group()
 		{
 			return this.declaredGroups_;
 		}
@@ -717,7 +715,7 @@ public class Player
 		 * @param in_newHand The new hand to be set to this instance
 		 * @return True if the new inside hand has been set to the PlayerHand, false if error was raised
 		 */
-		public boolean setCurrentHand(ArrayList<Integer> in_newHand)
+		public boolean set_current_hand(ArrayList<Integer> in_newHand)
 		{
 			try
 			{
@@ -736,7 +734,7 @@ public class Player
 		 * @param in_newGroups The new ArrayList<Group> for this PlayerHand instance
 		 * @return True if the new_groups has been set, false if an error was raised
 		 */
-		public boolean setDeclaredGroup(ArrayList<Group> in_newGroups)
+		public boolean set_declared_group(ArrayList<Group> in_newGroups)
 		{
 			try
 			{
@@ -754,7 +752,7 @@ public class Player
 		 * @param new_group SINGULAR group to be added to this instance of PlayerHand
 		 * @return True if the new Group was added, false if an error was raised
 		 */
-		public boolean addDeclaredGroups(Group new_group)
+		public boolean add_declared_group(Group new_group)
 		{
 			try
 			{
@@ -770,11 +768,23 @@ public class Player
 		
 		/**
 		 * 
-		 * @return
+		 * @return 
 		 */
-		protected HashMap<String, String> get_currentGroups()
+		public HashMap<String, String> get_currentGroups()
 		{
 			return this.update_Groups_;
+		}
+		
+		public boolean update_added_quad(int fourth_tile)
+		{
+			for(int i = 0; i < this.declaredGroups_.size(); i++)
+			{
+				if(this.declaredGroups_.get(i).get_groupTiles().get(0) == fourth_tile)
+				{
+					return this.declaredGroups_.get(i).upgrade_pon();
+				}
+			}
+			return false;
 		}
 		
 		/**
@@ -785,25 +795,25 @@ public class Player
 			String ret_string = "Concealed Hand: (";
 			try
 			{
-				for(int i = 0; i < this.getCurrentHand().size(); i++)
+				for(int i = 0; i < this.get_current_hand().size(); i++)
 				{
-					if(i == this.getCurrentHand().size() - 1)
+					if(i == this.get_current_hand().size() - 1)
 					{
-						ret_string += this.getCurrentHand().get(i) + ")\n";
+						ret_string += this.get_current_hand().get(i) + ")\n";
 						break;
 					}
-					ret_string += this.getCurrentHand().get(i) + ", ";
+					ret_string += this.get_current_hand().get(i) + ", ";
 				}
 				
 				ret_string += "Declared Groups: ";
-				for(int i = 0; i < this.getDeclaredGroup().size(); i++)
+				for(int i = 0; i < this.get_declared_group().size(); i++)
 				{
-					if(i == this.getCurrentHand().size() - 1)
+					if(i == this.get_current_hand().size() - 1)
 					{
-						ret_string += this.getDeclaredGroup().get(i) + ")\n";
+						ret_string += this.get_declared_group().get(i) + ")\n";
 						break;
 					}
-					ret_string += this.getDeclaredGroup().get(i) + ", ";
+					ret_string += this.get_declared_group().get(i) + ", ";
 				}
 				ret_string += "\nmjSTR format: " + this.mjSTRhand_;
 				return ret_string;
@@ -930,6 +940,80 @@ public class Player
 			return return_ArrayList;
 		}
 	}
+	public static class HiddenHand extends PlayerHand
+	{
+		/**
+		 * This is to reference the amount of tiles the opponent has in their current hand
+		 */
+		public int tile_amt_;
+		
+		/**
+		 * This is in reference to the MJ_game variant that is being played:
+		 * Difference = 
+		 * concealed kan 
+		 */
+		public int game_mode_;
+		
+		/**
+		 * Starting opponent hand constructor
+		 * @param game_mode the int id that represents which mahjong variant is being played
+		 */
+		public HiddenHand(int game_mode) 
+		{
+			this.tile_amt_ = 13;
+			this.game_mode_ = game_mode;
+		}
+		
+		/**
+		 * 
+		 * @param custom_tile_amt a custom amount of tiles in hand
+		 * @param visible_groups  the visible groups that is presumes corresponds to the custom_tile_amt
+		 * @param game_mode the int id that represents which mahjong variant is being played
+		 */
+		public HiddenHand(int custom_tile_amt, ArrayList<Group> visible_groups, int game_mode)
+		{
+			this.tile_amt_ = custom_tile_amt;
+			this.game_mode_ = game_mode;
+			for(int i = 0; i < visible_groups.size(); i++)
+			{
+				if(!this.add_declared_group(visible_groups.get(i)))
+				{
+					this.set_declared_group(new ArrayList<Group>());
+					this.tile_amt_ = 13;
+					break;
+				}
+			}
+		}
+		
+		public int get_amt_tiles()
+		{
+			return this.tile_amt_;
+		}
+		
+		public boolean set_amt_tiles(int new_tile_amt)
+		{
+			if(new_tile_amt > 0 && new_tile_amt < 15)
+			{
+				this.tile_amt_ = new_tile_amt;
+				return true;
+			}
+			return false;
+		}
+		
+		public boolean add_declared_group(Group new_group)
+		{
+			if(!new_group.declared_)
+			{
+				return false;
+			}
+			if(Group.group_status(new_group) >= 2)
+			{
+				this.declaredGroups_.add(new_group);
+				return true;
+			}
+			return false;
+		}
+	}
 	public static void main(String[] args)
 	{
 		ArrayList<Group> declared_groups = new ArrayList<Group>();
@@ -956,8 +1040,8 @@ public class Player
 		
 		PlayerHand test_PHand = new PlayerHand(fake_hand, declared_groups);
 		
-		System.out.println(test_PHand.getDeclaredGroup());
-		System.out.println(test_PHand.getCurrentHand());
+		System.out.println(test_PHand.get_declared_group());
+		System.out.println(test_PHand.get_current_hand());
 		System.out.println("Refresh groupSN" + test_PHand.refresh_GroupSN());
 		for(String key: test_PHand.get_currentGroups().keySet())
 		{

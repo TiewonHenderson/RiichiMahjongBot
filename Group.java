@@ -377,6 +377,16 @@ public class Group extends Scoring
 		return returnList;
 	}
 	
+	public boolean upgrade_pon()
+	{
+		if(this.getGroupInfo()[0] == 3 && this.getGroupInfo()[2] == 2)
+		{
+			this.tile_list_.add(this.tile_list_.get(0));
+			return true;
+		}
+		return false;
+	}
+	
 	/*
 	 * Used to make an ArrayList<Integer> with int[]
 	 */

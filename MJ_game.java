@@ -5,6 +5,7 @@ import bot_package.Compress_input;
 import bot_package.Compress_input.Command;
 import bot_package.Compress_input.Console_io;
 import bot_package.Group.Hidden_Kan;
+import bot_package.Player.PlayerHand;
 
 /**
  * Game_system doesn't 
@@ -39,6 +40,26 @@ public class MJ_game
 	public ArrayList<Integer> possible_tiles_ = new ArrayList<Integer>();
 	
 	/**
+	 * Only applies to this.game_mode_ == 0 for Riichi mahjong games
+	 * returns empty String for any other cases
+	 */
+	public ArrayList<Integer> dora_indicators_ = new ArrayList<Integer>();
+	
+	/**
+	 * This is a universal integer that only applies to riichi mahjong, there are ONLY two cases to use this
+	 * Called / Added Kan: 
+	 * drop_turn_b4_add_dora = 1 
+	 * 
+	 * Concealed Kan:
+	 * drop_turn_b4_add_dora = 0 
+	 * 
+	 * After every turn, check if drop_turn_b4_add_dora == 0,
+	 * if drop_turn_b4_add_dora > 0, decrement
+	 * if drop_turn_b4_add_dora == 0, run MJ_game_get_info.get_instant_dora_indicator()
+	 */
+	public static int drop_turn_b4_add_dora = -1;
+	
+	/**
 	 * 0 == riichi mahjong
 	 * 1 == canto mahjong
 	 */
@@ -58,11 +79,6 @@ public class MJ_game
 	 * of remaining called Group possible (4 == no declared Group)
 	 */
 	public int[] player_status_ = new int[4];
-
-	/**
-	 * This stores the move history of a given game
-	 */
-	public ArrayList<Integer> discard_history_;
 	
 	/**
 	 * This will be the counter responsible for whose turn it currently is
@@ -109,7 +125,7 @@ public class MJ_game
 	 */
 	public MJ_game(int game_mode)
 	{
-		String[] info = Prepare_MJ_game.get_all_info(this.console_io_stream);
+		String[] info = MJ_game_get_info.get_all_info(this.console_io_stream);
 		switch(game_mode)
 		{
 			case 0:
@@ -122,14 +138,14 @@ public class MJ_game
 		}
 		this.wind_ID_turn_ = 0;
 		this.game_status_ = 0;
-		this.prevalent_wind_ = Prepare_MJ_game.wind_2_int(info[1])[0];
-		this.user_wind_ = Prepare_MJ_game.wind_2_int(info[1])[1];
+		this.prevalent_wind_ = MJ_game_get_info.wind_2_int(info[1])[0];
+		this.user_wind_ = MJ_game_get_info.wind_2_int(info[1])[1];
 		this.game_mode_ = game_mode;
 		//Index 0 == hand, index 1 == winds
 		
 		for(int i = 0; i < 4; i++)
 		{
-			if(i != Prepare_MJ_game.wind_2_int(info[1])[1])
+			if(i != MJ_game_get_info.wind_2_int(info[1])[1])
 			{
 				this.all_players.add(new Player(i));
 			}
@@ -138,6 +154,7 @@ public class MJ_game
 				this.all_players.add(new Player(i, "USER", info[0], this));
 			}
 		}
+		this.init_game();
 	}
 	
 	/**
@@ -288,6 +305,16 @@ public class MJ_game
 		this.game_mode_ = game_mode;
 	}
 	
+	public boolean add_dora_indicator(int tile_id)
+	{
+		if(this.game_mode_ == 0 && this.dora_indicators_.size() < 5)
+		{
+			this.dora_indicators_.add(tile_id);
+			return true;
+		}
+		return false;
+	}
+	
 	/**
 	 * 0 = new game
 	 * 1 = mid game
@@ -302,49 +329,143 @@ public class MJ_game
 		return this.game_status_;
 	}
 	
-	public boolean loop_queue_cmds(Queue<Command> all_commands)
+	public int loop_queue_cmds(Queue<Command> all_commands)
 	{
 		Command prev_cmd = null;
-		while(!all_commands.isEmpty())
+		try
 		{
-			Command current_cmd = all_commands.poll();
-			switch(current_cmd.input_)
+			while(!all_commands.isEmpty())
 			{
-				case CONCEALED_QUAD:
-					if(current_cmd.tile_id_ != -1)
-					{
-						this.all_players.get(this.user_wind_).update_tile_map(current_cmd.tile_id_, 0);
+				Command current_cmd = all_commands.poll();
+				double tile_val = current_cmd.tile_id_;
+				switch(current_cmd.input_)
+				{
+					case CONCEALED_QUAD:
+						if(current_cmd.tile_id_ != -1)//tile visible in riichi mahjong
+						{
+							this.get_all_Players().get(this.user_wind_).update_tile_map(current_cmd.tile_id_, 0);
+							ArrayList<Integer> group_list = new ArrayList<Integer>();
+							for(int i = 0; i < 4; i++) group_list.add(current_cmd.tile_id_);
+							this.all_players.get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, true));
+						}
+						else//tild_id == -1 if game_mode_ == 1
+						{
+							this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Hidden_Kan(current_cmd.player_wind_id_, -1));
+						}
+						this.set_tiles_left(this.get_total_tiles_left() - 4);
+						break;
+					case CALLED_PREVIOUS:
 						ArrayList<Integer> group_list = new ArrayList<Integer>();
-						for(int i = 0; i < 4; i++) group_list.add(current_cmd.tile_id_);
-						this.all_players.get(current_cmd.player_wind_id_).getPlayerHand().addDeclaredGroups(new Group(group_list, true, true));
-					}
-					else
-					{
-						this.all_players.get(current_cmd.player_wind_id_).getPlayerHand().addDeclaredGroups(new Hidden_Kan(current_cmd.player_wind_id_, -1));
-					}
-					this.set_tiles_left(this.get_total_tiles_left() - 4);
-					break;
-				case CALLED_PREVIOUS:
-					int prev_tile_id = -1;
-					if(prev_cmd == null)
-					{
-						prev_tile_id = discard_history_.get(discard_history_.size() - 1);
-					}
-					else
-					{
-						prev_tile_id = prev_cmd.tile_id_;
-					}
-					switch(current_cmd.call_type_)
-					{
-						
-					}
-					break;
-				case ADDED_QUAD:
-					break;
-				case DROP:
+						int prev_tile_id = -1;
+						if(prev_cmd == null)
+						{
+							prev_tile_id = this.all_drop_tiles_.get(this.all_drop_tiles_.size() - 1).intValue();
+						}
+						else
+						{
+							prev_tile_id = prev_cmd.tile_id_;
+						}
+						//previous drop would had already remove same index tile_visibility by 1, 
+						switch(current_cmd.call_type_)
+						{
+							case CHI:
+								
+								if(current_cmd.chi_dif_ == 0)
+								{
+									group_list.add(prev_tile_id - 1);
+									group_list.add(prev_tile_id + 1);
+								}
+								else
+								{
+									group_list.add(prev_tile_id + (current_cmd.chi_dif_ * 2));
+									group_list.add(prev_tile_id + current_cmd.chi_dif_);
+								}
+								for(Integer visible_tile: group_list) 
+									this.get_all_Players().get(this.user_wind_).decrement_map_index(visible_tile);
+								group_list.add(prev_tile_id);
+								this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
+								this.wind_ID_turn_++;
+								
+								break;
+							case CALL_KAN:
+								this.get_all_Players().get(this.user_wind_).decrement_map_index(prev_tile_id);
+								group_list.add(prev_tile_id);
+								if(this.game_mode_ == 0)
+								{
+									drop_turn_b4_add_dora = 1;
+								}
+							case PON:
+								
+								for(int i = 0; i < 2; i++)
+								{
+									this.get_all_Players().get(this.user_wind_).decrement_map_index(prev_tile_id);
+									group_list.add(prev_tile_id);
+								}
+								group_list.add(prev_tile_id);
+								this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
+								this.wind_ID_turn_ = current_cmd.player_wind_id_;
+								
+								break;
+							case RON:
+								
+								this.get_all_Players().get(current_cmd.player_wind_id_).is_winner = true;
+								this.game_status_ = 2;
+								all_commands = new LinkedList<Command>();
+								HashMap<Integer, String> revealing_hands = MJ_game_get_info.get_end_hands(this.console_io_stream);
+								for(int key: revealing_hands.keySet())
+								{
+									if(key == this.user_wind_)
+									{
+										continue;
+									}
+									else
+									{
+										this.get_all_Players().get(key).set_PlayerHand(new PlayerHand(revealing_hands.get(key)));
+									}
+								}
+								
+								return 2;
+						}
+						break;
+					case ADDED_QUAD:
+						this.all_drop_tiles_.add(tile_val);
+						this.decrement_tiles_left();
+						this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().update_added_quad(current_cmd.tile_id_);
+						this.get_all_Players().get(this.user_wind_).decrement_map_index(current_cmd.tile_id_);
+						break;
+					case DROP:
+						if(current_cmd.tedashi_)
+						{
+							tile_val += 0.5;
+						}
+						if(current_cmd.riichi_)
+						{
+							tile_val += 0.0001;
+						}
+						if(current_cmd.red_5_)
+						{
+							tile_val += 0.05;
+						}
+						this.all_drop_tiles_.add(tile_val);
+						this.decrement_tiles_left();
+						this.get_all_Players().get(this.user_wind_).decrement_map_index(current_cmd.tile_id_);
+				}
+				if(drop_turn_b4_add_dora == 0)
+				{
+					this.add_dora_indicator(MJ_game_get_info.get_instant_dora_indicator(this.console_io_stream));
+					drop_turn_b4_add_dora = -1;
+				}
+				else if(drop_turn_b4_add_dora > 0) {drop_turn_b4_add_dora--;}
+				prev_cmd = new Command(current_cmd);
 			}
-			prev_cmd = new Command(current_cmd);
 		}
+		catch(Exception e) {return 3;}
+		return 1;
+	}
+	
+	public int init_game() 
+	{
+		this.game_status_ = this.loop_queue_cmds(Console_io.inputed_move(this.console_io_stream.console_hand_input(), this));
 	}
 	
 	public ArrayList<Group> get_validPlayerCalls(int player_id)
@@ -365,7 +486,7 @@ public class MJ_game
 		return all_calls;
 	}
 	
-	public static class Prepare_MJ_game
+	public static class MJ_game_get_info
 	{
 		/**
 		 * Prioritized indicators
@@ -390,7 +511,74 @@ public class MJ_game
 		{
 			return io_stream.console_wind_input();
 		}
+	
+		/**
+		 * @info only applies to Riichi mahjong games
+		 * @param io_stream the IO stream responsible for Scanner inputs
+		 * @return A two length String that represents index 0 == prevalent wind, index 1 == seat wind
+		 */
+		public static int get_instant_dora_indicator(Console_io io_stream)
+		{
+			String user_input = "";
+			while(true)
+			{
+				System.out.println("Input new dora_indicator: ");
+				user_input = io_stream.console_universal_ret_str();
+				try
+				{
+					int input_num = Integer.parseInt(user_input);
+					if(input_num > -1 && input_num < 34)
+					{
+						return input_num;
+					}
+				}
+				catch(Exception e) {}
+			}
+		}
 		
+		/**
+		 * @info the input should be in MJ_str format where visible calls are separate
+		 * 		 input format:
+		 * 		 seat_wind_char + MJ_str
+		 * 		 This means the hands can be inputed in any order so long as the other 3 unique winds are added
+		 * @param io_stream the IO stream responsible for Scanner inputs
+		 * @return A HashMap where integer represent the wind_id of the corresponding inputed char with the MJ_str
+		 */
+		public static HashMap<Integer,String> get_end_hands(Console_io io_stream)
+		{
+			HashMap<Integer, String> return_map = new HashMap<Integer, String>();
+			String needed_indicators = "ckq";
+			String user_input = "";
+			while(return_map.keySet().size() < 3)
+			{
+				System.out.println("Hand1: ");
+				user_input = io_stream.console_universal_ret_str();
+				if(Character.isAlphabetic(user_input.charAt(0)) && user_input.charAt(user_input.length()) == 'o')
+				{
+					for(int i = 0; i < user_input.length(); i++)
+					{
+						if(needed_indicators.length() > 0 && user_input.charAt(i) == needed_indicators.charAt(0))
+						{
+							needed_indicators = needed_indicators.substring(1);
+						}
+					}
+					if(needed_indicators.isEmpty())
+					{
+						for(int i = 0; i < Group.wind_reference.length; i++)
+						{
+							if(user_input.charAt(0) == Group.wind_reference[i])
+							{
+								if(!return_map.keySet().contains(i))
+								{
+									return_map.put(i, user_input.substring(1));
+								}
+							}
+						}
+					}
+				}
+			}
+			return return_map;
+		}
 		/**
 		 * 
 		 * @param io_stream the IO stream responsible for Scanner inputs
