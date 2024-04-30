@@ -6,18 +6,18 @@ import bot_package.Prediction.Numerical_tools;
 
 public class Compress_input 
 {
-	public MJ_game current_game_;
+	public MJ_round current_game_;
 	
-	public Compress_input(MJ_game current_game)
+	public Compress_input(MJ_round current_game)
 	{
 		this.current_game_ = current_game;
 	}
 	
 	public static void main(String[] args)
 	{
-		MJ_game random_game = new MJ_game();
-		random_game.set_game_mode(0);
-		random_game.set_windID_turn(2);
+		MJ_round random_round = new MJ_round();
+		random_round.set_game_mode(0);
+		random_round.set_windID_turn(2);
 		/*
 		 * start 2 -> edqp32md6sdqc19mdq?3p1mdq+e
 		 *		wind_id		cmd				call_type	tile	sequence left
@@ -31,7 +31,7 @@ public class Compress_input
 		 *		2			tedashi			(-1)		1m		1md q+e
 		 *		3 			add kan			(4)			East	q+e
 		 */
-		Queue<Command> cmd_q = Console_io.inputed_move("edqp32md6sdqcl9mdq?3p1mdq+e",random_game);
+		Queue<Command> cmd_q = Console_io.inputed_move("edqp32md6sdqcl9mdq?3p1mdq+e",random_round);
 		while(!cmd_q.isEmpty())
 		{
 			System.out.println("-----------------------------------");
@@ -218,7 +218,7 @@ public class Compress_input
 		 * 
 		 * index 1 = tile_id + discard type
 		 */
-		public static Queue<Command> inputed_move(String console_input, MJ_game current_game)
+		public static Queue<Command> inputed_move(String console_input, MJ_round current_game)
 		{
 			Queue<Command> command_list = new LinkedList<Command>();
 			if(console_input.isEmpty())
@@ -653,19 +653,15 @@ public class Compress_input
 		 * 	1 = pon, 
 		 * 	2 = "kan", 
 		 * 	3 = "ron", 
-		 * 	4 = "concealed kan", 
-		 * 	5 = "added kan"
-		 * -1 == 6 = "drop"
+		 * 	4 = none
 		 */
-		enum call_type
+		enum prev_call_type
 		{
 			CHI,
 			PON,
 			CALL_KAN,
 			RON,
-			ADD_KAN,
-			HIDDEN_KAN,
-			NOT_CALL
+			NONE
 		}
 		/**
 		 * Range: [0,33] represents the id of the tile
@@ -680,7 +676,7 @@ public class Compress_input
 		/**
 		 * The call_type of this command if applicable
 		 */
-		public call_type call_type_;
+		public prev_call_type prev_call_type_ = prev_call_type.NONE;
 		
 		/**
 		 * The wind_id that performed this action
@@ -739,10 +735,10 @@ public class Compress_input
 		 */
 		public Command(int tile_id, int input_id, boolean tedashi, int player_id, int call_type_id, char chi_dif, int game_mode)
 		{
+			this.tedashi_ = tedashi;
+			this.tile_id_ = tile_id;
 			switch(input_id)
 			{
-				default:
-					this.tedashi_ = tedashi;
 				case 1:
 					this.tile_id_ = tile_id;
 				case 2:
@@ -752,10 +748,9 @@ public class Compress_input
 					}
 				case 0:
 					this.game_mode_ = game_mode;
-					if(call_type_id < 0 || call_type_id > 5) {this.call_type_ = call_type.values()[6];}
-					else {this.call_type_ = call_type.values()[call_type_id];}
-					if(input_id >= 3) {this.call_type_ = call_type.values()[6];}
+					this.prev_call_type_ = prev_call_type.values()[call_type_id];
 					this.input_ = input_type.values()[input_id];
+					break;
 			}
 			if(call_type_id == 0 && chi_dif != 'n')
 			{
@@ -791,10 +786,10 @@ public class Compress_input
 		 */
 		public Command(int tile_id, int input_id, boolean tedashi, int player_id, int call_type_id, char chi_dif, boolean red_five, boolean riichi, int game_mode)
 		{
+			this.tedashi_ = tedashi;
+			this.tile_id_ = tile_id;
 			switch(input_id)
 			{
-				default:
-					this.tedashi_ = tedashi;
 				case 1:
 					this.tile_id_ = tile_id;
 				case 2:
@@ -804,10 +799,9 @@ public class Compress_input
 					}
 				case 0:
 					this.game_mode_ = game_mode;
-					if(call_type_id < 0 || call_type_id > 5) {this.call_type_ = call_type.values()[6];}
-					else {this.call_type_ = call_type.values()[call_type_id];}
-					if(input_id >= 3) {this.call_type_ = call_type.values()[6];}
+					this.prev_call_type_ = prev_call_type.values()[call_type_id];
 					this.input_ = input_type.values()[input_id];
+					break;
 			}
 			if(call_type_id == 0 && chi_dif != 'n')
 			{
@@ -838,7 +832,7 @@ public class Compress_input
 		 */
 		public Command(Command clone)
 		{
-			this.call_type_ = clone.call_type_;
+			this.prev_call_type_ = clone.prev_call_type_;
 			this.chi_dif_ = clone.chi_dif_;
 			this.game_mode_ = clone.game_mode_;
 			this.input_ = clone.input_;
@@ -861,8 +855,8 @@ public class Compress_input
 		}
 		public boolean set_call_type(int call_type_id)
 		{
-			if(call_type_id < 0 || call_type_id > 5) {return false;}
-			this.call_type_ = call_type.values()[call_type_id];
+			if(call_type_id < 0 || call_type_id > 4) {return false;}
+			this.prev_call_type_ = prev_call_type.values()[call_type_id];
 			return true;
 		}
 		public boolean set_player_wind_id(int wind_id)
@@ -900,7 +894,7 @@ public class Compress_input
 		{
 			String info = "Tile_ID: " + this.tile_id_ + 
 						  "\nTedashi: " + this.tedashi_ + 
-						  "\nCall_type: " + this.call_type_ + 
+						  "\nCall_type: " + this.prev_call_type_ + 
 						  "\nChi_shape: " + this.chi_dif_ + 
 						  "\nPlayer_wind_ID: " + this.player_wind_id_ +
 						  "\nInput_CMD_Type: " + this.input_ +

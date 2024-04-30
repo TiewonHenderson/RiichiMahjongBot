@@ -39,11 +39,6 @@ public class Player
 	public boolean opponent_Player_ = true;
 	
 	/**
-	 * Sets if this Player is the winner of a specific MJ_game
-	 */
-	public boolean is_winner = false;
-	
-	/**
 	 * The visible amount of tile per tile_id for this instance of Player
 	 */
 	private ArrayList<Integer> tile_market_;
@@ -64,35 +59,38 @@ public class Player
 	}
 	
 	/**
-	 * Simple constructor for the purpose of creating a opponent Player
+	 * Simple constructor for the purpose of creating an opponent Player
 	 * @param wind_id the Player's wind_id of this instance of Player
+	 * @param game_mode the int id that represents which mahjong variant is being played
 	 */
-	public Player(int wind_id)
+	public Player(int wind_id, int game_mode)
 	{
 		this.playerName_ = wind.values()[wind_id] + " PLAYER";
 		this.seatWind_ = wind_id;
+		this.opponent_Player_ = true;
 		this.dropPile_ = new ArrayList<Double>();
-		this.playerHand_ = new PlayerHand();
+		this.playerHand_ = new HiddenHand(game_mode);
 		this.tile_market_ = new ArrayList<Integer>();
-		for(int i = 0; i <= 33; i++) tile_market_.add(4);
 	}
+	
 	
 	/**
 	 * Complex constructor for the purpose of loading a new Player of the User
 	 * @param wind_id 		the wind_id of this Player
 	 * @param Name	  		the alotted name of this current Player
-	 * @param mj_STR  		the mj_STR where the User's hand is inputed String format to start a MJ_game
-	 * @param input_game	the MJ_game this Player belongs to
+	 * @param mj_STR  		the mj_STR where the User's hand is inputed String format to start a MJ_round
+	 * @param game_mode the int id that represents which mahjong variant is being played
 	 */
-	public Player(int wind_id, String Name, String mj_STR, MJ_game input_game)
+	public Player(int wind_id, String Name, String mj_STR, int game_mode)
 	{
 		this.playerName_ = Name;
 		this.seatWind_ = wind_id;
+		this.opponent_Player_ = false;
 		this.playerHand_ = new PlayerHand(mj_STR);
 		this.dropPile_ = new ArrayList<Double>();
 	}
 	
-	public Player(int wind_id, String specific_name, MJ_game input_game)
+	public Player(int wind_id, String specific_name, MJ_round input_game)
 	{
 		//Invalid input for wind_ID would just result in default constructor
 		if(wind_id < 0 || wind_id > 3)
@@ -202,7 +200,7 @@ public class Player
 	}
 	
 	/**
-	 * @Info this ArrayList<Group> needs to be passed through MJ_game in order to
+	 * @Info this ArrayList<Group> needs to be passed through MJ_round in order to
 	 * have correct Groups formatted
 	 * 
 	 * @return The ArrayList<Group> that are called and not within the hand
@@ -382,7 +380,7 @@ public class Player
 	 */
 	public static String convert_PlayerHand(PlayerHand playerhand)
 	{
-		return convert_PlayerHand(playerhand.get_current_hand(), playerhand.get_declared_group());
+		return convert_PlayerHand(playerhand.get_current_hand(), playerhand.get_declaredGroups());
 	}
 	
 	/**
@@ -416,7 +414,7 @@ public class Player
 			 */
 			ArrayList<Integer> group_index = new ArrayList<Integer>();
 			ArrayList<Integer> sorted_groupindex;
-			for(Group declared_group: declared_groups) if(declared_group.getGroupInfo()[1] != -1) {group_index.add(declared_group.getGroupInfo()[1]);}
+			for(Group declared_group: declared_groups) if(declared_group.get_Group_info()[1] != -1) {group_index.add(declared_group.get_Group_info()[1]);}
 			sorted_groupindex = Group.sortArray(group_index);
 			
 			if(group_index.size() != sorted_groupindex.size())
@@ -450,17 +448,17 @@ public class Player
 		{
 			Group group = declared_list.get(rev_groupi);
 			ArrayList<Integer> temp_list = group.get_groupTiles();
-			if(group.getGroupInfo()[1] == -1 || group.get_groupTiles().size() < 3) //Don't add invalid/incomplete groups
+			if(group.get_Group_info()[1] == -1 || group.get_groupTiles().size() < 3) //Don't add invalid/incomplete groups
 			{
 				declared_list.remove(rev_groupi); //Removed invalid groups
 				rev_groupi--;
 				continue;
 			}
-			if(group.getGroupInfo()[0] == 3) //Dont add any declared quads, add in future
+			if(group.get_Group_info()[0] == 3) //Dont add any declared quads, add in future
 			{continue;}
 			
 			//(String cast) -> (char[] suit_list) -> (declared_group suit index in getGroupInfo())
-			ret_string += Character.toString(Group.suit_reference[group.getGroupInfo()[1]]);
+			ret_string += Character.toString(Group.suit_reference[group.get_Group_info()[1]]);
 			
 			for(int i = temp_list.size() - 1; i >= 0; i--)
 			{
@@ -479,7 +477,7 @@ public class Player
 				continue;
 			}
 			ArrayList<Integer> temp_list = group.get_groupTiles();
-			ret_string += Character.toString(Group.suit_reference[group.getGroupInfo()[1]]);
+			ret_string += Character.toString(Group.suit_reference[group.get_Group_info()[1]]);
 			
 			for(int i = temp_list.size() - 1; i >= 0; i--)
 			{
@@ -496,7 +494,7 @@ public class Player
 		{
 			Group group = declared_list.get(remain_groupi);
 			ArrayList<Integer> temp_list = group.get_groupTiles();
-			ret_string += Character.toString(Group.suit_reference[group.getGroupInfo()[1]]);
+			ret_string += Character.toString(Group.suit_reference[group.get_Group_info()[1]]);
 			
 			for(int i = temp_list.size() - 1; i >= 0; i--)
 			{
@@ -535,6 +533,13 @@ public class Player
 	 */
 	protected static class PlayerHand
 	{
+		
+		/*
+		 * The declaredGroups of this PlayerHand, what PlayerHand represents is not just
+		 * the concealed part of what the Player is playing on, but the Entire hand
+		 */
+		public ArrayList<Group> declaredGroups_; 
+		
 		/*
 		 * The ArrayList<Integer> representation of the PlayerHand
 		 * Integer values should only range from [0,33]
@@ -546,12 +551,6 @@ public class Player
 		 * A use for this String could be Logging, Display, Saved as starting hand indicator
 		 */
 		private String mjSTRhand_; 
-		
-		/*
-		 * The declaredGroups of this PlayerHand, what PlayerHand represents is not just
-		 * the concealed part of what the Player is playing on, but the Entire hand
-		 */
-		public ArrayList<Group> declaredGroups_; 
 		
 		/*
 		 * 	update_Groups itself represents ArrayList<ArrayList<Group>> for each groupSN case, 
@@ -625,8 +624,8 @@ public class Player
 		 */
 		public PlayerHand()
 		{
-			this.currentHand_ = new ArrayList<Integer>();
 			this.declaredGroups_ = new ArrayList<Group>();
+			this.currentHand_ = new ArrayList<Integer>();
 			this.mjSTRhand_ = "";
 		}
 		
@@ -636,8 +635,8 @@ public class Player
 		 */
 		public PlayerHand(PlayerHand clone)
 		{
-			this.currentHand_ = new ArrayList<Integer>(clone.currentHand_);
 			this.declaredGroups_ = new ArrayList<Group>(clone.declaredGroups_);
+			this.currentHand_ = new ArrayList<Integer>(clone.currentHand_);
 			this.mjSTRhand_ = new String(clone.mjSTRhand_);
 			this.update_Groups_ = new HashMap<String, String>(clone.update_Groups_);
 			this.updated_searches_ = clone.updated_searches_;
@@ -649,8 +648,8 @@ public class Player
 		 */
 		public PlayerHand(ArrayList<Integer> in_hand)
 		{
-			this.currentHand_ = new ArrayList<Integer>(in_hand);
 			this.declaredGroups_ = new ArrayList<Group>();
+			this.currentHand_ = new ArrayList<Integer>(in_hand);
 			this.mjSTRhand_ = convert_PlayerHand(in_hand, this.declaredGroups_);
 		}
 		
@@ -661,8 +660,8 @@ public class Player
 		 */
 		public PlayerHand(ArrayList<Integer> in_hand, ArrayList<Group> declared_groups)
 		{
-			this.currentHand_ = new ArrayList<Integer>(in_hand);
 			this.declaredGroups_ = new ArrayList<Group>(declared_groups);
+			this.currentHand_ = new ArrayList<Integer>(in_hand);
 			this.mjSTRhand_ = convert_PlayerHand(in_hand, declared_groups);
 		}
 		
@@ -688,7 +687,7 @@ public class Player
 			PlayerHand temp_obj = convert_mjSTR(in_STRformat);
 			
 			this.currentHand_ = temp_obj.get_current_hand();
-			this.declaredGroups_ = temp_obj.get_declared_group();
+			this.declaredGroups_ = temp_obj.get_declaredGroups();
 			this.mjSTRhand_ = new String(in_STRformat);
 		}
 		
@@ -705,7 +704,7 @@ public class Player
 		 * This however does include the concealed declared quads that would consider the hand
 		 * still be concealed
 		 */
-		public ArrayList<Group> get_declared_group()
+		public ArrayList<Group> get_declaredGroups()
 		{
 			return this.declaredGroups_;
 		}
@@ -806,14 +805,14 @@ public class Player
 				}
 				
 				ret_string += "Declared Groups: ";
-				for(int i = 0; i < this.get_declared_group().size(); i++)
+				for(int i = 0; i < this.get_declaredGroups().size(); i++)
 				{
 					if(i == this.get_current_hand().size() - 1)
 					{
-						ret_string += this.get_declared_group().get(i) + ")\n";
+						ret_string += this.get_declaredGroups().get(i) + ")\n";
 						break;
 					}
-					ret_string += this.get_declared_group().get(i) + ", ";
+					ret_string += this.get_declaredGroups().get(i) + ", ";
 				}
 				ret_string += "\nmjSTR format: " + this.mjSTRhand_;
 				return ret_string;
@@ -931,10 +930,10 @@ public class Player
 			
 			for(Group group: in_groups)
 			{
-				if(Group.group_status(group) != -3 && group.getGroupInfo()[1] != -1) //To re-confirm the Group/suit is not invalid
+				if(Group.group_status(group) != -3 && group.get_Group_info()[1] != -1) //To re-confirm the Group/suit is not invalid
 				{
 					//group.getGroupInfo()[1] == suit index
-					return_ArrayList.get(group.getGroupInfo()[1]).add(group);
+					return_ArrayList.get(group.get_Group_info()[1]).add(group);
 				}
 			}
 			return return_ArrayList;
@@ -948,7 +947,7 @@ public class Player
 		public int tile_amt_;
 		
 		/**
-		 * This is in reference to the MJ_game variant that is being played:
+		 * This is in reference to the MJ_round variant that is being played:
 		 * Difference = 
 		 * concealed kan 
 		 */
@@ -1040,7 +1039,7 @@ public class Player
 		
 		PlayerHand test_PHand = new PlayerHand(fake_hand, declared_groups);
 		
-		System.out.println(test_PHand.get_declared_group());
+		System.out.println(test_PHand.get_declaredGroups());
 		System.out.println(test_PHand.get_current_hand());
 		System.out.println("Refresh groupSN" + test_PHand.refresh_GroupSN());
 		for(String key: test_PHand.get_currentGroups().keySet())

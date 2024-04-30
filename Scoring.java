@@ -90,6 +90,7 @@ public class Scoring
 	 * @param all_groups all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
 	 * @return The integer score if all groups inputed, if there were any declared quads (concealed or opened), this will add a point
 	 * 		   all kongs return 6, here would add 4 kongs to total up 4 quads hand
+	 * 		   returns scores = [0,4] inclusive
 	 */
 	public static int quad_amount(ArrayList<Group> all_groups)
 	{
@@ -97,7 +98,7 @@ public class Scoring
 		int return_score = 0;
 		for(int i = 0; i < all_groups.size(); i++)
 		{
-			if(all_groups.get(i).getGroupInfo()[0] == 3 && all_groups.get(i).declared_)
+			if(all_groups.get(i).get_Group_info()[0] == 3 && all_groups.get(i).declared_)
 			{
 				return_score++;
 			}
@@ -111,7 +112,8 @@ public class Scoring
 	 * 			 return depending on var temp_counter
 	 * 
 	 * @param all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
-	 * @return The integer score that would represent what the inputed ArrayList<Group> would represent
+	 * @return The integer score that would represent what the inputed ArrayList<Group> would represent. 
+	 * 		   return scores = {5, 3, 2, 1, 0}
 	 */
 	public static int dragon_score(ArrayList<Group> all_groups)
 	{
@@ -157,6 +159,7 @@ public class Scoring
 	 * 
 	 * @param all_groups all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
 	 * @return The integer score of only searched 4 big/small winds from all_groups, returns corresponding score, otherwise 0
+	 * 		   return scores = {10, 6, 0}
 	 */
 	public static int four_wind_score(ArrayList<Group> all_groups)
 	{
@@ -218,7 +221,7 @@ public class Scoring
 		for(int i = 0; i < all_groups.size(); i++)
 		{
 			if(!group_type[0] && !group_type[1]) {return 0;} //No possible cases
-			switch(all_groups.get(i).getGroupInfo()[0])
+			switch(all_groups.get(i).get_Group_info()[0])
 			{
 				case 1: //Checks completed sequences
 					group_type[1] = false;
@@ -264,6 +267,7 @@ public class Scoring
 	 * @param all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
 	 * @return A integer representation of the score all_groups is being checked for, this algorithm checks if the given
 	 * 		   groups are mixed,full suited, or even all honors
+	 * 		   return score = {6, 5, 3, 0}
 	 */
 	public static int mix_full_suit(ArrayList<Group> all_groups)
 	{
@@ -312,6 +316,7 @@ public class Scoring
 	 * 
 	 * @param all_groups all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
 	 * @return A score corresponding to what was found in all the groups, see scoring reference for more details
+	 * 		   return scores = {7, 2, 0}
 	 */
 	public static int term_honors(ArrayList<Group> all_groups)
 	{
@@ -320,7 +325,7 @@ public class Scoring
 		int[] term_reference = {0,8,9,17,18,26}; //Honors > 26
 		for(int i = 0; i < all_groups.size(); i++)
 		{
-			if(all_groups.get(i).getGroupInfo()[0] > 1) //Must be triplet
+			if(all_groups.get(i).get_Group_info()[0] > 1) //Must be triplet
 			{
 				boolean is_term = false;
 				int tile = all_groups.get(i).get_groupTiles().get(0);
@@ -360,6 +365,7 @@ public class Scoring
 	 * 
 	 * @param all_groups all_groups all_groups An ArrayList<Group> of all groups, which includes concealed/open and undeclared/declared
 	 * @return An integer score that only represents if all_groups only include concealed triplets as completed groups, 0 otherwise
+	 * 		   return scores = {6, 0}
 	 */
 	public static int concealed_triplets(ArrayList<Group> all_groups)
 	{
@@ -373,7 +379,7 @@ public class Scoring
 					pair_passed = true;
 					continue;
 				}
-				if(all_groups.get(i).getGroupInfo()[0] >= 2) //Checks if is concealed triplet/quad
+				if(all_groups.get(i).get_Group_info()[0] >= 2) //Checks if is concealed triplet/quad
 				{
 					continue;
 				}
@@ -455,11 +461,11 @@ public class Scoring
 		 */
 		public static String search_7pairs(Player.PlayerHand in_PlayerHand)
 		{
-			if(in_PlayerHand.getDeclaredGroup().size() > 0)
+			if(in_PlayerHand.get_declaredGroups().size() > 0)
 			{
 				return "NULL";
 			}
-			return search_7pairs(in_PlayerHand.getCurrentHand());
+			return search_7pairs(in_PlayerHand.get_current_hand());
 		}
 		
 		/**
@@ -533,11 +539,11 @@ public class Scoring
 		 */
 		public static String search_orphans(Player.PlayerHand in_PlayerHand)
 		{
-			if(in_PlayerHand.getDeclaredGroup().size() > 0)
+			if(in_PlayerHand.get_declaredGroups().size() > 0)
 			{
 				return "NULL";
 			}
-			return search_orphans(in_PlayerHand.getCurrentHand());
+			return search_orphans(in_PlayerHand.get_current_hand());
 		}
 		
 		/**
@@ -904,9 +910,37 @@ public class Scoring
 	 * A Local class that will include all the scoring algorithm within Scoring,
 	 * the reason for separation from Scoring class itself is separating functional code into different descriptive classes
 	 */
-	class Scoring_Algorithm
+	public static class Scoring_Algorithm
 	{
-		
+		/**
+		 * @info
+		 * A function that runs all functions that takes in declared groups
+		 * index		possible scores			representation
+		 * 0			{0,1}					1: concealed
+		 * 1			[0,4]					1,2,3,4: amount quads
+		 * 2			{0,1,2,3,5}				1,2: amount dragon triplets; 3: shousangen; 5: daisangen
+		 * 3			{0,6,10}				6: shousuushii; 10: daisuushii
+		 * 4			{0,1,3,9}				1: all sequences; 3: all triplets; 9: all quads
+		 * 5			{0,3,5,6}				3: half flush; 5: all honors; 6: full flush
+		 * 6			{0,2,7}					2: term/honor; 7: all terminal
+		 * 7			{0,6}					6: 4 concealed triplets
+		 * 
+		 * @param declared_groups
+		 * @return
+		 */
+		public static int[] declared_scoring(ArrayList<Group> declared_groups)
+		{
+			int[] score_list = new int[8];
+			score_list[0] = concealed(declared_groups);
+			score_list[1] = quad_amount(declared_groups);
+			score_list[2] = dragon_score(declared_groups);
+			score_list[3] = four_wind_score(declared_groups);
+			score_list[4] = group_type_score(declared_groups);
+			score_list[5] = mix_full_suit(declared_groups);
+			score_list[6] = term_honors(declared_groups);
+			score_list[7] = concealed_triplets(declared_groups);
+			return score_list;
+		}
 	}
 	public static void main(String[] args)
 	{
@@ -987,24 +1021,24 @@ public class Scoring
 		}
 		for(int i = 0; i < example_groupSN_list.size(); i++)
 		{	ArrayList<Group> temp_groups = new ArrayList<Group>();
-			for(Group group: example_groupSN_list.get(i).getDeclaredGroup()) temp_groups.add(group);
+			for(Group group: example_groupSN_list.get(i).get_declaredGroups()) temp_groups.add(group);
 //			System.out.println("New hand: " + example_pHand.getCurrentHand());
 			
 			System.out.println(	"mjString: " + example_hand_list[i]	);
 			System.out.println(	score_name_list[i] + " Hand: " + example_groupSN_list.get(i).progress_score() );
-			System.out.println(	"Current Hand: " + example_groupSN_list.get(i).getCurrentHand() );
+			System.out.println(	"Current Hand: " + example_groupSN_list.get(i).get_current_hand() );
 			System.out.println(	"Best concealed groups: " + example_groupSN_list.get(i).get_fastestGroups() );
 			for(Group group: example_groupSN_list.get(i).get_fastestGroups()) 
 			{
 				temp_groups.add(group);
 			}
 			System.out.println("Best groupSN:  " + Group.ArrayList_to_groupSN(temp_groups));
-			System.out.println(	"CHITOI Score: " + Unique_GroupSearch.seven_pairs_score(Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).getCurrentHand())) + 
-							   	", 7 Pairs Search: " + Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).getCurrentHand()) );
-			System.out.println(	"Orphan Score: " + Unique_GroupSearch.orphan_score(Unique_GroupSearch.search_orphans(example_groupSN_list.get(i).getCurrentHand())) + 
-								", Orphan Search: " + Unique_GroupSearch.search_orphans(example_groupSN_list.get(i).getCurrentHand()) );
-			System.out.println(	"Nine gates score: " + Unique_GroupSearch.ninegates_score(Unique_GroupSearch.search_ninegates(example_groupSN_list.get(i).getCurrentHand())) + 
-								", Nine gates Search: " + Unique_GroupSearch.search_ninegates(example_groupSN_list.get(i).getCurrentHand()) );
+			System.out.println(	"CHITOI Score: " + Unique_GroupSearch.seven_pairs_score(Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).get_current_hand())) + 
+							   	", 7 Pairs Search: " + Unique_GroupSearch.search_7pairs(example_groupSN_list.get(i).get_current_hand()) );
+			System.out.println(	"Orphan Score: " + Unique_GroupSearch.orphan_score(Unique_GroupSearch.search_orphans(example_groupSN_list.get(i).get_current_hand())) + 
+								", Orphan Search: " + Unique_GroupSearch.search_orphans(example_groupSN_list.get(i).get_current_hand()) );
+			System.out.println(	"Nine gates score: " + Unique_GroupSearch.ninegates_score(Unique_GroupSearch.search_ninegates(example_groupSN_list.get(i).get_current_hand())) + 
+								", Nine gates Search: " + Unique_GroupSearch.search_ninegates(example_groupSN_list.get(i).get_current_hand()) );
 			System.out.println(	"\n\n");
 		}
 	}

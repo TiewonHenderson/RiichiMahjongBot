@@ -664,6 +664,50 @@ public class Prediction
 	}
 	
 	/**
+	 *	@info ArrayList score index:
+	 * 	0: Dragon Groups -> 1													
+	 *	1: Small 3 Dragons -> 3													
+	 *	2: Big 3 Dragons -> 5 													
+	 *	3: Rotation Wind -> 1 (from gamestatus)									
+	 *	4: Seat Wind -> 1 (from player seatwind + 1) 							
+	 *	5: Kongs -> 1								
+	 *	6: All Seq -> 1														
+	 *	7: All Pon -> 3														
+	 *	8: Mix Suit -> 3 														
+	 *	9: All Terms/Honors -> 2 (5 - 3; from pung game)						
+	 *	10: Full Suit -> 6 		
+	 *	-------------------------------------
+	 *	11: All Terminals -> 5 (10 - 2 - 3; all term/honors, from pung game)	
+	 *	12: All Honors -> 5 (10 - 2 - 3; from pung game, all term/honors)		
+	 *	13: 4 little winds -> 6 												
+	 *	14: 4 big winds ->10 (13 - 3; from pung game)										
+	 *	15: 4 quads -> 10 (13 - 3; from pung game
+	 *
+	 * @param called_groups The list of called_groups from a Player opponent
+	 * @param tile_market any valid visible tile_market of a Player
+	 * @return a HashMap<Integer, Double> that has doubles as percentage chance of the Player having that score
+	 * 		   double ranges from [0,1.0] where 1.0 == 100% has that point, 0.0 == 0% has that point
+	 */
+	public ArrayList<Double> called_prediction(ArrayList<Group> called_groups, ArrayList<Integer> tile_market)
+	{
+		ArrayList<Double> return_percent_score = new ArrayList<Double>();
+		for(int i = 0; i <= 15; i++) return_percent_score.add(0.0);
+		if(called_groups.size() == 0) {return return_percent_score;}
+		int[] scoring_alg = Scoring.Scoring_Algorithm.declared_scoring(called_groups);
+		/*Dragon Groups*/
+		
+		//Dragon points (can only be 0.0 or 1.0)
+		if(scoring_alg[2] > 0) {return_percent_score.set(0, 1.0);}
+		
+		//Shousangen
+		switch(scoring_alg[2])
+		{
+			case 1:
+				break;
+		}
+	}
+	
+	/**
 	 * @info
 	 * How progression typically occurs
 	 * start == multiple tedashi to get rid of useless tiles

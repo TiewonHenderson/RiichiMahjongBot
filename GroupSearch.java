@@ -128,7 +128,7 @@ public class GroupSearch extends Group
 	 */
 	public static HashMap<String, String> search_all_groupSN(PlayerHand playHand, boolean only_isolatePair)
 	{
-		ArrayList<ArrayList<Integer>> suit_list = suitDivide(playHand.getCurrentHand());
+		ArrayList<ArrayList<Integer>> suit_list = suitDivide(playHand.get_current_hand());
 		
 		/*
 		 * Searches for isolates pairs
@@ -213,7 +213,7 @@ public class GroupSearch extends Group
 		
 		//Where the hands gets pairs removed/ no pairs removed
 		HashMap<Integer, ArrayList<Integer>> allPossible_hands = new HashMap<Integer, ArrayList<Integer>>();
-		allPossible_hands.put(-1, new ArrayList<Integer>(playHand.getCurrentHand())); //No pairs removed
+		allPossible_hands.put(-1, new ArrayList<Integer>(playHand.get_current_hand())); //No pairs removed
 		
 		//The returning data of HashMap<groupSN_ID, groupSN>
 		HashMap<String, String> return_data = new HashMap<String, String>();
@@ -229,7 +229,7 @@ public class GroupSearch extends Group
 					//Substring = inclusive start index to exclusive i(where the ',' is)
 					int remove_pair = Integer.parseInt(isolatePairs.substring(start_index,i)); //Convert the pair from String to int
 					int remove_counter = 0; //Confirms only the pair was removed
-					ArrayList<Integer> temp_hand = new ArrayList<Integer>(playHand.getCurrentHand()); //Make sure copy is altered, not actual hand
+					ArrayList<Integer> temp_hand = new ArrayList<Integer>(playHand.get_current_hand()); //Make sure copy is altered, not actual hand
 					for(int j = 0; j < temp_hand.size(); j++)
 					{
 						if(remove_counter == 2)
@@ -289,7 +289,7 @@ public class GroupSearch extends Group
 				{
 					int remove_pair = Integer.parseInt(pairs.substring(start_index,i));
 					int remove_counter = 0;
-					ArrayList<Integer> temp_hand = new ArrayList<Integer>(playHand.getCurrentHand());
+					ArrayList<Integer> temp_hand = new ArrayList<Integer>(playHand.get_current_hand());
 					for(int j = 0; j < temp_hand.size(); j++)
 					{
 						if(remove_counter == 2)

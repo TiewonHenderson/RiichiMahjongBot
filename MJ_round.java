@@ -10,18 +10,12 @@ import bot_package.Player.PlayerHand;
 /**
  * Game_system doesn't 
  */
-public class MJ_game
+public class MJ_round
 {
 	/**
 	 * This ArrayList will keep track of all Players of this current MJ game
 	 */
 	private ArrayList<Player> all_players = new ArrayList<Player>();
-	
-	/**
-	 * The user interface for the bot algorithm
-	 * @todo Future UI implementation
-	 */
-	private Panel_Manager in_out_system_;
 	
 	/**
 	 * A beta console input output stream used for extremely compressed commands
@@ -55,7 +49,7 @@ public class MJ_game
 	 * 
 	 * After every turn, check if drop_turn_b4_add_dora == 0,
 	 * if drop_turn_b4_add_dora > 0, decrement
-	 * if drop_turn_b4_add_dora == 0, run MJ_game_get_info.get_instant_dora_indicator()
+	 * if drop_turn_b4_add_dora == 0, run MJ_round_get_info.get_instant_dora_indicator()
 	 */
 	public static int drop_turn_b4_add_dora = -1;
 	
@@ -105,9 +99,14 @@ public class MJ_game
 	public int user_wind_;
 	
 	/**
+	 * This would represent which wind_id player is the winner
+	 */
+	public int winner_wind_id = -1;
+	
+	/**
 	 * Default constructor
 	 */
-	public MJ_game()
+	public MJ_round()
 	{
 		this.wind_ID_turn_ = 0;
 		this.game_status_ = 0;
@@ -119,13 +118,13 @@ public class MJ_game
 	 * @function This constructor does not take into consideration the player's starting hand and their first declaration
 	 * 			 of flowers and recovering tiles
 	 * 
-	 * @param wind_ID This input is the current Player that would input their hand while everyone else is unknown
+	 * @param game_mode the int id that represents which mahjong variant is being played
 	 * 
 	 * This starting constructor will start a new game, so all the fields would be set to a fresh wall
 	 */
-	public MJ_game(int game_mode)
+	public MJ_round(int game_mode)
 	{
-		String[] info = MJ_game_get_info.get_all_info(this.console_io_stream);
+		String[] info = MJ_round_get_info.get_all_info(this.console_io_stream);
 		switch(game_mode)
 		{
 			case 0:
@@ -138,20 +137,20 @@ public class MJ_game
 		}
 		this.wind_ID_turn_ = 0;
 		this.game_status_ = 0;
-		this.prevalent_wind_ = MJ_game_get_info.wind_2_int(info[1])[0];
-		this.user_wind_ = MJ_game_get_info.wind_2_int(info[1])[1];
+		this.prevalent_wind_ = MJ_round_get_info.wind_2_int(info[1])[0];
+		this.user_wind_ = MJ_round_get_info.wind_2_int(info[1])[1];
 		this.game_mode_ = game_mode;
 		//Index 0 == hand, index 1 == winds
 		
 		for(int i = 0; i < 4; i++)
 		{
-			if(i != MJ_game_get_info.wind_2_int(info[1])[1])
+			if(i != MJ_round_get_info.wind_2_int(info[1])[1])
 			{
-				this.all_players.add(new Player(i));
+				this.all_players.add(new Player(i, this.game_mode_));
 			}
 			else
 			{
-				this.all_players.add(new Player(i, "USER", info[0], this));
+				this.all_players.add(new Player(i, "USER", info[0], this.game_mode_));
 			}
 		}
 		this.init_game();
@@ -180,7 +179,7 @@ public class MJ_game
 	 * @param Player_str_list A 4 element list with the combine String with the same format as String example above
 	 * @param droptile_list A ArrayList of tile_IDs that represents all the drop tiles by Players, does not include called Groups
 	 */
-	public MJ_game(String[] Player_str_list, ArrayList<Integer> droptile_list)
+	public MJ_round(String[] Player_str_list, ArrayList<Integer> droptile_list)
 	{
 		
 	}
@@ -329,7 +328,7 @@ public class MJ_game
 		return this.game_status_;
 	}
 	
-	public int loop_queue_cmds(Queue<Command> all_commands)
+	public int take_queue_cmds(Queue<Command> all_commands)
 	{
 		Command prev_cmd = null;
 		try
@@ -366,10 +365,9 @@ public class MJ_game
 							prev_tile_id = prev_cmd.tile_id_;
 						}
 						//previous drop would had already remove same index tile_visibility by 1, 
-						switch(current_cmd.call_type_)
+						switch(current_cmd.prev_call_type_)
 						{
 							case CHI:
-								
 								if(current_cmd.chi_dif_ == 0)
 								{
 									group_list.add(prev_tile_id - 1);
@@ -385,7 +383,6 @@ public class MJ_game
 								group_list.add(prev_tile_id);
 								this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
 								this.wind_ID_turn_++;
-								
 								break;
 							case CALL_KAN:
 								this.get_all_Players().get(this.user_wind_).decrement_map_index(prev_tile_id);
@@ -404,14 +401,12 @@ public class MJ_game
 								group_list.add(prev_tile_id);
 								this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
 								this.wind_ID_turn_ = current_cmd.player_wind_id_;
-								
 								break;
 							case RON:
-								
-								this.get_all_Players().get(current_cmd.player_wind_id_).is_winner = true;
+								this.winner_wind_id = 
 								this.game_status_ = 2;
 								all_commands = new LinkedList<Command>();
-								HashMap<Integer, String> revealing_hands = MJ_game_get_info.get_end_hands(this.console_io_stream);
+								HashMap<Integer, String> revealing_hands = MJ_round_get_info.get_end_hands(this.console_io_stream);
 								for(int key: revealing_hands.keySet())
 								{
 									if(key == this.user_wind_)
@@ -423,7 +418,6 @@ public class MJ_game
 										this.get_all_Players().get(key).set_PlayerHand(new PlayerHand(revealing_hands.get(key)));
 									}
 								}
-								
 								return 2;
 						}
 						break;
@@ -452,7 +446,7 @@ public class MJ_game
 				}
 				if(drop_turn_b4_add_dora == 0)
 				{
-					this.add_dora_indicator(MJ_game_get_info.get_instant_dora_indicator(this.console_io_stream));
+					this.add_dora_indicator(MJ_round_get_info.get_instant_dora_indicator(this.console_io_stream));
 					drop_turn_b4_add_dora = -1;
 				}
 				else if(drop_turn_b4_add_dora > 0) {drop_turn_b4_add_dora--;}
@@ -465,7 +459,21 @@ public class MJ_game
 	
 	public int init_game() 
 	{
-		this.game_status_ = this.loop_queue_cmds(Console_io.inputed_move(this.console_io_stream.console_hand_input(), this));
+		while(this.game_status_ < 2)
+		{
+			this.game_status_ = this.take_queue_cmds(Console_io.inputed_move(this.console_io_stream.console_hand_input(), this));
+			switch(this.game_status_)
+			{
+				case 1:		//Mid game
+					
+					break;
+				case 2: 	//Complete game
+					break;
+				case 3:		//Bugged game
+					break;
+			}
+		}
+		return this.game_status_;
 	}
 	
 	public ArrayList<Group> get_validPlayerCalls(int player_id)
@@ -486,7 +494,7 @@ public class MJ_game
 		return all_calls;
 	}
 	
-	public static class MJ_game_get_info
+	public static class MJ_round_get_info
 	{
 		/**
 		 * Prioritized indicators
@@ -609,6 +617,12 @@ public class MJ_game
 				}
 			}
 			return return_list;
+		}
+		
+		public static Queue<Command> get_input_cmd(Console_io io_stream, MJ_round current_round)
+		{
+			System.out.print("in: ");
+			return Console_io.inputed_move(io_stream.console_universal_ret_str(), current_round);
 		}
 	}
 }

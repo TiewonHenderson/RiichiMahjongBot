@@ -121,7 +121,7 @@ public class Group extends Scoring
 	 * 			index 1 = group suit, i.e -1 = invalid/mixed, 0 = mans, 1 = pins, 2 = sous, 3 = honors
 	 * 			index 2 = group concealed, i.e 0 = concealed/undeclared, 1 = concealed/declared, 2 = open/declared, (open/undeclared is impossible)
 	 */
-	public int[] getGroupInfo()
+	public int[] get_Group_info()
 	{
 		int[] return_data = {-3, -1, 0};
 		if(this.tile_list_.size() <= 0)
@@ -306,6 +306,32 @@ public class Group extends Scoring
 	}
 	
 	/**
+	 * @info
+	 * int[] index representation
+	 * 0:	group_type
+	 * 1:	center_tile		(for chi, no different for triplet/quad)
+	 * 2:	concealed 		(1/0 boolean value)
+	 * 3:	declared		(1/0 boolean value)
+	 * 
+	 * @param in_group a Group object to return information about
+	 * @return a int[] that returns key information about the provided Group
+	 */
+	public static int[] group_info(Group in_group)
+	{
+		int[] return_data = new int[4];
+		
+		return_data[0] = group_status(in_group);
+		
+		if(return_data[0] > 0){return_data[1] = in_group.get_groupTiles().get(1);}
+		else if(return_data[0] != -3){return_data[1] = in_group.get_groupTiles().get(0);}
+		
+		if(in_group.concealed_) {return_data[2] = 1;} else {return_data[2] = 0;}
+		
+		if(in_group.declared_) {return_data[3] = 1;} else {return_data[3] = 0;}
+		
+		return return_data;
+	}
+	/**
 	 * 
 	 * @param in_arraylist A input of an ArrayList<Integer> that needs to be sorted
 	 * @return A sorted ArrayList<Integer> of the original inputted ArrayList<Integer>
@@ -379,7 +405,7 @@ public class Group extends Scoring
 	
 	public boolean upgrade_pon()
 	{
-		if(this.getGroupInfo()[0] == 3 && this.getGroupInfo()[2] == 2)
+		if(this.get_Group_info()[0] == 3 && this.get_Group_info()[2] == 2)
 		{
 			this.tile_list_.add(this.tile_list_.get(0));
 			return true;
@@ -934,7 +960,7 @@ public class Group extends Scoring
 		 */
 		int group_status = group_status(in_group.get_groupTiles());
 		ArrayList<Integer> return_array = new ArrayList<Integer>();
-		int suit = in_group.getGroupInfo()[1];
+		int suit = in_group.get_Group_info()[1];
 		if(group_status == -3 || group_status >= 1)
 		{
 			return return_array;
@@ -1004,11 +1030,11 @@ public class Group extends Scoring
 	public static void test()
 	{
 		Player example_player = new Player();
-		example_player.setPlayerHand(new Player.PlayerHand());
+		example_player.set_PlayerHand(new Player.PlayerHand());
 		//segment 1
 		int[] singlesuit_hand = {9,9,10,13,14,15,17,17,17};
 		ArrayList<Integer> single_suit_example = sortArray(createArrayList(singlesuit_hand));
-		example_player.getPlayerHand().setCurrentHand(single_suit_example);
+		example_player.get_PlayerHand().set_current_hand(single_suit_example);
 		
 //		System.out.println("example 1: " + single_suit_example);
 //		System.out.println("Convert to matrix: " + convert_to_matrix(single_suit_example));
@@ -1018,12 +1044,12 @@ public class Group extends Scoring
 		System.out.println("Search only SequencesRL: " + GroupSearch.list_SequenceSearch(single_suit_example, true));
 		System.out.println("Search only triplets: " + GroupSearch.list_TripletSearch(single_suit_example));
 		System.out.println("From groupSN to ArrayList<Group>: " + groupSN_to_ArrayList(GroupSearch.list_GroupSearch(single_suit_example, false)));
-		System.out.println("search_all_groupSN of Playerhand: " + GroupSearch.search_all_groupSN(example_player.getPlayerHand()) + "\n\n");
+		System.out.println("search_all_groupSN of Playerhand: " + GroupSearch.search_all_groupSN(example_player.get_PlayerHand()) + "\n\n");
 		
 		//segment 2
 		int[] complex_hand = {0,0,1,3,7,7,15,15,16,16,17,17,27,27};
 		ArrayList<Integer> complex_example = sortArray(createArrayList(complex_hand));
-		example_player.getPlayerHand().setCurrentHand(complex_example);
+		example_player.get_PlayerHand().set_current_hand(complex_example);
 		
 		System.out.println("Complex example hand: " + complex_example);
 		ArrayList<ArrayList<Integer>> suit_list = suitDivide(complex_example);
@@ -1037,7 +1063,7 @@ public class Group extends Scoring
 			System.out.println("Search only SequencesRL: " + GroupSearch.list_SequenceSearch(suits, true));
 			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_TripletSearch(suits));
 		}
-		HashMap<String, String> all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
+		HashMap<String, String> all_groupSearch = GroupSearch.search_all_groupSN(example_player.get_PlayerHand(), false);
 		for(String key: all_groupSearch.keySet())
 		{
 			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
@@ -1045,7 +1071,7 @@ public class Group extends Scoring
 		
 		int[] completed_groups = {0,0,0,0,1,2,3,4,5,6,7,8,8,8};
 		ArrayList<Integer> completeGroup_example = sortArray(createArrayList(completed_groups));
-		example_player.getPlayerHand().setCurrentHand(completeGroup_example);
+		example_player.get_PlayerHand().set_current_hand(completeGroup_example);
 		System.out.println("CompleteGroups example: " + completeGroup_example);
 		suit_list = suitDivide(completeGroup_example);
 		for(ArrayList<Integer> suits : suit_list)
@@ -1058,7 +1084,7 @@ public class Group extends Scoring
 			System.out.println("Search only SequencesRL: " + GroupSearch.list_SequenceSearch(suits, true));
 			System.out.println("Search only triplets (groupSN): " + GroupSearch.list_TripletSearch(suits));
 		}
-		all_groupSearch = GroupSearch.search_all_groupSN(example_player.getPlayerHand(), false);
+		all_groupSearch = GroupSearch.search_all_groupSN(example_player.get_PlayerHand(), false);
 		for(String key: all_groupSearch.keySet())
 		{
 			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
