@@ -31,7 +31,7 @@ public class Compress_input
 		 *		2			tedashi			(-1)		1m		1md q+e
 		 *		3 			add kan			(4)			East	q+e
 		 */
-		Queue<Command> cmd_q = Console_io.inputed_move("edqp32md6sdqcl9mdq?3p1mdq+e",random_round);
+		Queue<Command> cmd_q = Console_io.inputed_move("edqp02md6sdqcl9mdq?3p1mdq+e5rpdqt3m",random_round);
 		while(!cmd_q.isEmpty())
 		{
 			System.out.println("-----------------------------------");
@@ -44,7 +44,7 @@ public class Compress_input
 		public boolean scanner_closed = false;
 		private Scanner console_scan_;
 		private static final char[] honor_char = {'e','s','w','n','h','g','r'};
-		private static final char[] call_char = {'c','p','k','r','+','?'};
+		private static final char[] call_char = {'c','p','k','r','+','?', 't'};
 		
 		/**
 		 * Encapsulated Scanner for console input
@@ -77,12 +77,15 @@ public class Compress_input
 		 * mode 3: single calls
 		 * - with "q" == somebody called
 		 * - with type of call 
+		 * 	prev_call_tile:
 		 * 		"c" = chi, 
 		 * 		"p" = pon, 
 		 * 		"k" = "kan", 
 		 * 		"r" = "ron", 
+		 * 	self_declare_tiles:
 		 * 		"?" = "concealed kan", 
 		 * 		"+" = "added kan"
+		 * 		"t" = "tsumo"
 		 * 
 		 * - with wind_id of player that called
 		 * 
@@ -265,33 +268,53 @@ public class Compress_input
 						if(call_char[i] == console_input.charAt(1)) 
 						{
 							call_type = i;
-							if(call_type <= 3)
+							switch(call_type)
 							{
-								input_type = 0;
-								if(console_input.length() > 2)
-								{
-									player = Character.getNumericValue(console_input.charAt(2));
-								}
-								else
-								{
-//									throw new Exception();	//no player given throw exception and input again
-								}
-								wind_id_turn = player;
-							}
-							else if(call_type == 4)
-							{
-								input_type = 1;
-								player = wind_id_turn;
-							}
-							else if(call_type == 5)
-							{
-								input_type = 2;
-								player = wind_id_turn;
+								case 0:
+									input_type = 0;
+									player = wind_id_turn + 1;
+									wind_id_turn = player;
+									if(player > 3) {player = 0;}
+									if(console_input.length() > 2)
+									{
+										chi_dif = console_input.charAt(2);
+									}
+									else
+									{
+										chi_dif = 'm';
+									}
+									break;
+								case 1:
+								case 2:
+								case 3:
+									input_type = 0;
+									if(console_input.length() > 2)
+									{
+										player = Character.getNumericValue(console_input.charAt(2));
+									}
+									else
+									{
+//										throw new Exception();	//no player given throw exception and input again
+									}
+									wind_id_turn = player;
+									break;
+								case 4:
+									input_type = 1;
+									player = wind_id_turn;
+									break;
+								case 5:
+									input_type = 2;
+									player = wind_id_turn;
+									break;
+								case 6:
+									input_type = 4;
+									player = wind_id_turn;
+									break;
 							}
 							break;
 						}
 					}
-					Command add_cmd = new Command(-1, input_type, false, player, call_type, 'n', current_game.game_mode_);
+					Command add_cmd = new Command(-1, input_type, false, player, call_type, chi_dif, current_game.game_mode_);
 					if(current_game.game_mode_ == 0)
 					{
 						for(int i = console_input.length()-1; i >= 0; i--)
@@ -380,53 +403,55 @@ public class Compress_input
 									 */
 									for(int j = 0; j < call_char.length; j++)
 									{
-										if(console_input.charAt(i + 1) == call_char[j])
+										if(console_input.charAt(i + 1) == call_char[j]) //CHI doesn't need wind_id_turn increment, drop already increment
 										{
 											call_type = j;
-											if(j == 0)
+											switch(call_type)
 											{
-												if(i + 2 >= console_input.length() && Character.isDigit(console_input.charAt(i+2)))
-												{
-//													throw new Exception();	//no player given throw exception and input again
-												}
-												chi_dif = console_input.charAt(i + 2);
-												wind_id_turn++;
-												if(wind_id_turn > 3) {wind_id_turn = 0;}
-												input_cmd_id = 1;
-												i += 2;
-												break;
-											}
-											if(j <= 3)	//No more tiles future to offer
-											{
-												if(i + 2 >= console_input.length() && Character.isDigit(console_input.charAt(i+2)))
-												{
-//													throw new Exception();	//no player given throw exception and input again
-												}
-												player = Character.getNumericValue(console_input.charAt(i + 2));
-												wind_id_turn = player;
-												input_cmd_id = 1;
-												i += 2;
-												break;
-											}
-											else if(j == 4 || current_game.game_mode_ == 0)
-											{
-												input_cmd_id = 2;
-												String temp_string = "";
-												for(int k = i + 2; k < console_input.length(); k++)
-												{
-													temp_string += console_input.charAt(k);
-													tile_val = get_tile_value(temp_string);
-													if(tile_val != -1)
+												case 0:
+													if(i + 2 >= console_input.length() && Character.isDigit(console_input.charAt(i+2)))
 													{
-														i = k;
+	//													throw new Exception();	//no player given throw exception and input again
+													}
+													chi_dif = console_input.charAt(i + 2);
+													player = wind_id_turn;
+													input_cmd_id = 1;
+													i += 2;
+													break;
+												case 1:
+												case 2:
+												case 3:
+													if(i + 2 >= console_input.length() && Character.isDigit(console_input.charAt(i+2)))
+													{
+//														throw new Exception();	//no player given throw exception and input again
+													}
+													player = Character.getNumericValue(console_input.charAt(i + 2));
+													wind_id_turn = player;
+													input_cmd_id = 1;
+													i += 2;
+													break;
+												case 5:
+													if(current_game.game_mode_ != 0)
+													{
+														input_cmd_id = 2;
+														tile_val = -1;
 														break;
 													}
-												}
-											}
-											else
-											{
-												input_cmd_id = 2;
-												tile_val = -1;
+												case 6:
+												case 4:
+													input_cmd_id = 2;
+													String temp_string = "";
+													for(int k = i + 2; k < console_input.length(); k++)
+													{
+														temp_string += console_input.charAt(k);
+														tile_val = get_tile_value(temp_string);
+														if(tile_val != -1)
+														{
+															i = k;
+															break;
+														}
+													}
+													break;
 											}
 											break;
 										}
@@ -439,7 +464,6 @@ public class Compress_input
 //							System.out.println("\ninput_cmd_id: " + input_cmd_id);
 //							System.out.println("tile_val: " + (int)tile_val);
 //							System.out.println("call_type: " + call_type + "\n");
-							
 							switch(input_cmd_id)
 							{
 								case 1:
@@ -448,14 +472,18 @@ public class Compress_input
 								case 2:
 									int input_type_index = 1;
 									if(call_type == 5) {input_type_index = 2;}
-									if(current_game.game_mode_ == 0 || call_type == 4)
+									if(call_type == 6)
+									{
+										add_cmd = new Command((int)tile_val, 4, false, wind_id_turn, 4, chi_dif, current_game.game_mode_);
+									}
+									else if(current_game.game_mode_ == 0 || call_type == 4)
 									{
 //										System.out.println((int)tile_val);
-										add_cmd = new Command((int)tile_val, input_type_index, false, wind_id_turn, call_type, chi_dif, current_game.game_mode_);
+										add_cmd = new Command((int)tile_val, input_type_index, false, wind_id_turn, 4, chi_dif, current_game.game_mode_);
 									}
 									else if(call_type == 5)
 									{
-										add_cmd = new Command(-1, input_type_index, false, wind_id_turn, 5, chi_dif, current_game.game_mode_);
+										add_cmd = new Command(-1, input_type_index, false, wind_id_turn, 4, chi_dif, current_game.game_mode_);
 									}
 									break;
 								case 3:
@@ -592,7 +620,7 @@ public class Compress_input
 							int suit = -1;
 							for(int i = 0; i < Group.suit_reference.length; i++)
 								if(temp_input.charAt(2) == Group.suit_reference[i]) {suit = i; break;}
-							ret_value = 5.0 + (suit * 9) + 0.005;
+							ret_value = 4.0 + (suit * 9) + 0.005;
 						}
 						break;
 					/*
@@ -605,7 +633,7 @@ public class Compress_input
 								int suit = -1;
 								for(int i = 0; i < Group.suit_reference.length; i++)
 									if(temp_input.charAt(3) == Group.suit_reference[i]) {suit = i; break;}
-								ret_value = 5.0 + (suit * 9) + 0.505;
+								ret_value = 4.0 + (suit * 9) + 0.505;
 						}
 						break;
 					}
@@ -644,7 +672,8 @@ public class Compress_input
 			 * wind_id_turn remains the same unless someone robs kan with kokushi
 			 */
 			CONCEALED_QUAD,
-			DROP				//Increment/loop wind_id_turn
+			DROP,				//Increment/loop wind_id_turn
+			TSUMO
 		}
 		
 		/**
@@ -739,6 +768,7 @@ public class Compress_input
 			this.tile_id_ = tile_id;
 			switch(input_id)
 			{
+				case 4:
 				case 1:
 					this.tile_id_ = tile_id;
 				case 2:
@@ -748,7 +778,14 @@ public class Compress_input
 					}
 				case 0:
 					this.game_mode_ = game_mode;
-					this.prev_call_type_ = prev_call_type.values()[call_type_id];
+					if(call_type_id > 3)
+					{
+						this.prev_call_type_ = prev_call_type.values()[4];
+					}
+					else
+					{
+						this.prev_call_type_ = prev_call_type.values()[call_type_id];
+					}
 					this.input_ = input_type.values()[input_id];
 					break;
 			}
@@ -766,7 +803,7 @@ public class Compress_input
 			}
 			else
 			{
-				this.chi_dif_ = -99;
+				this.chi_dif_ = -9;
 			}
 			this.player_wind_id_ = player_id;
 			
@@ -790,6 +827,7 @@ public class Compress_input
 			this.tile_id_ = tile_id;
 			switch(input_id)
 			{
+				case 4:
 				case 1:
 					this.tile_id_ = tile_id;
 				case 2:
@@ -799,7 +837,14 @@ public class Compress_input
 					}
 				case 0:
 					this.game_mode_ = game_mode;
-					this.prev_call_type_ = prev_call_type.values()[call_type_id];
+					if(call_type_id > 3)
+					{
+						this.prev_call_type_ = prev_call_type.values()[4];
+					}
+					else
+					{
+						this.prev_call_type_ = prev_call_type.values()[call_type_id];
+					}
 					this.input_ = input_type.values()[input_id];
 					break;
 			}
@@ -817,7 +862,7 @@ public class Compress_input
 			}
 			else
 			{
-				this.chi_dif_ = -99;
+				this.chi_dif_ = -9;
 			}
 			this.player_wind_id_ = player_id;
 			
@@ -867,7 +912,7 @@ public class Compress_input
 		}
 		public boolean set_input_type(int type_id)
 		{
-			if(type_id < 0 || type_id > 5) {return false;}
+			if(type_id < 0 || type_id > 4) {return false;}
 			this.input_ = input_type.values()[type_id];
 			return true;
 		}
