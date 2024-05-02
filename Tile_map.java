@@ -17,7 +17,14 @@ import bot_package.Prediction.Score_probability;
  */
 public class Tile_map 
 {
+	final private static Path base_defense_score_path_ = Paths.get("src" + File.separator + "bot_package" + File.separator + "Call_progress_score.txt");
 	
+	/**
+	 * Integer id:
+	 * 10th digit == amount of calls
+	 * 1st  digit == layer
+	 */
+	private static HashMap<Integer, Double> call_progress_map_ = new HashMap<Integer, Double>();
 	/**
 	 * Based off the danger chart from Daina Chiba’s Riichi Book 1
 	 * 	Grade		Number_val			Tile_type
@@ -97,7 +104,6 @@ public class Tile_map
 	 */
 	protected ArrayList<Integer> hand_probabilities_;
 	
-	
 	public Tile_map(Prediction player_judgements, int opponent, MJ_round this_round)
 	{
 		this.current_round_ = this_round;
@@ -112,21 +118,146 @@ public class Tile_map
 		return x.init_score_opportunities();
 	}
 	
-	public static void x()
+	public ArrayList<Double> danger_map(ArrayList<Double> drop_pile)
 	{
-		
+		ArrayList<Integer> discard_type = Prediction.tile_to_discardType(drop_pile);
+		/*
+		 * 4.0 == only valid yaku tile
+		 * 3.0 == very likely
+		 * 2.0 == more likely
+		 * 1.0 == unknown
+		 * 0.0 == less likely
+		 * -1.0 == no chance
+		 */
+		ArrayList<Double> talking_chances = new ArrayList<Double>();
+		/*
+		 * 0 == early
+		 * 1 == mid
+		 * 2 == full
+		 */
+		int size_hand = drop_pile.size()/6;
+		if(size_hand > 2) {size_hand = 2;}
+		switch(this.current_round_.game_mode_)
+		{
+			case 0:	//Riichi Mahjong
+				int layer = 0;
+				for(int tile_i = 0; tile_i < drop_pile.size(); tile_i++)
+				{
+					layer = tile_i/6;
+					if(discard_type.get(tile_i) == 1)
+					{
+						switch(layer)
+						{
+							case 0:
+								break;
+							case 1:
+								break;
+							default:
+								break;
+						}
+					}
+				}
+				break;
+			case 1:	//Canto Mahjong
+				break;
+		}
+		return new ArrayList<Double>();
 	}
 	
-	public static void main(String[] args)
+	/**
+	 * 
+	 * @param drop_pile the whole drop_pile ArrayList of this Player
+	 * @param ready_index where the Player is believed to be ready at this index discard
+	 * @param hand_prob A 3 index array that will show the probability of the current drop pile being played a certain way
+	 * @param score_opportunities given called groups, what kind of score the Player is more likely going for
+	 * @return ranging from [-1,1] where 1 == 100% confidence sakigiri, -1 == 0% confidence
+	 */
+	public double check_sakigiri(ArrayList<Double> drop_pile, int ready_index, int[] hand_prob, int[] score_opportunities)
 	{
-		Path filePath = Paths.get("src" + File.separator + "bot_package" + File.separator + "Score_behavior.txt");
-        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+		if(drop_pile.size() == 0) {return -1;}
+		ArrayList<Integer> discard_type = Prediction.tile_to_discardType(drop_pile);
+		int tedashi_index = ready_index;
+		if(discard_type.get(ready_index) == 0)
+		{
+			for(int i = tedashi_index; i >= 0; i--)
+			{
+				if(discard_type.get(i) == 1)
+				{
+					tedashi_index = i;
+					break;
+				}
+			}
+		}
+		return 0.0;
+	}
+	
+	/**
+	 * 
+	 * @param drop_pile
+	 * @param declared_Groups
+	 * @return
+	 */
+	public static double progress_score(ArrayList<Double> drop_pile, ArrayList<Group> declared_Groups) 
+	{
+      return 0.0;
+	}
+	
+	public static void init_call_progress_map(int game_mode)
+	{
+		try (BufferedReader reader = Files.newBufferedReader(base_defense_score_path_)) 
+        {
             String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+            boolean list_score = false;
+            int calls;
+            int layer;
+            double score = -1.0;
+            while ((line = reader.readLine()) != null) 
+            {
+            	line = line.strip();
+                if(line.compareTo("&%") == 0){list_score = true; continue;}
+                else if(line.compareTo("|%") == 0){list_score = false; continue;}
+                if(list_score)
+                {
+                	try
+                	{
+                		calls = Character.getNumericValue(line.charAt(0));
+                		layer = 0;
+                		String score_str = "";
+                		for(int i = 1; i < line.length(); i++)
+                		{
+                			if(line.charAt(i) == 's')
+                			{
+                				line = line.substring(i + 1).strip();
+                				score_str = "";
+                				i = 0;
+                			}
+                			if(line.charAt(i) == ';')
+                			{
+                				score = Double.parseDouble(score_str);
+                				call_progress_map_.put(calls * 10 + layer, score);
+                				score_str = "";
+                				layer++;
+                			}
+                			else
+                			{
+                				score_str += line.charAt(i);
+                			}
+                		}
+                	}
+                	catch(Exception e)
+                	{
+                		calls = 0;
+                		call_progress_map_ = new HashMap<Integer, Double>();
+                	}
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+		System.out.println(call_progress_map_);
+	}
+	public static void main(String[] args)
+	{
+		init_call_progress_map();
 	}
 }

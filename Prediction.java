@@ -81,16 +81,19 @@ public class Prediction
 	 */
 	private ArrayList<ArrayList<Integer>> suit_amt_ = new ArrayList<ArrayList<Integer>>();
 	
+	
 	private Tile_map player_info_map_;
 	
 	/**
 	 * Parameterized Constructor
 	 * @param drop_pile
+	 * @param user
 	 * @param dora
 	 * @param track_tedashi
 	 */
 	public Prediction(ArrayList<Double> drop_pile, int dora, boolean track_tedashi)
 	{
+		
 		//sets drop_pile of 1 player to this prediction instance
 		this.drop_pile_ = new ArrayList<Double>(drop_pile);
 		
@@ -663,6 +666,37 @@ public class Prediction
 		if(alg3_score > 1.75) {alg3_score = 1.75;} 		//range = [-3,1.75]
 		
 		return alg1_score + alg2_score + alg3_score;
+	}
+	
+	/**
+	 * 
+	 * @info
+	 * The problem with 7 pairs is there are no clear pattern of discard pile with the tiles
+	 * of the drop pile. The only EXTREMELY CLEAR pattern is if you are given the history of all drop pile
+	 * 
+	 * 7 pairs typically throw tiles that are already discarded
+	 * 
+	 * situation == 
+	 * RATIO BETWEEN
+	 * distance between current discard from opponent to previous instance of same tile 	(let x value)
+	 * Layer																				(let y value)
+	 * 
+	 * 1st factor tedashi == 1.6x, tsumogiri = 1x
+	 * 
+	 * 2nd factor
+	 * situation				drop_pile_size			add_score
+	 * x = 1					y = any					++5
+	 * x = [1,drop_pile_size/4] y > 0					++3
+	 * x = [
+	 * 
+	 * 
+	 * @param all_drop_history this is the whole history of drop tiles, including every Player
+	 * @return return score range [-3.75, 8.75], to determine the score of the ArrayList drop pile that represents 
+	 * a typical 7 pairs hand. 
+	 */
+	public double seven_pairs_prob(ArrayList<Integer> all_drop_history)
+	{
+		
 	}
 	
 	/**
@@ -1540,6 +1574,7 @@ public class Prediction
 	}
 	public static void main(String[] args)
 	{	
+		
 		//Hand: 115r6789p123678sckqo (4,7p)
 		Prediction normal1 = new Prediction(read_dropSTR("wdndrdrdrdgdgdgdededed"), -1, false);
 		//Hand: 45567m33789sckq111zo (3,6m)
