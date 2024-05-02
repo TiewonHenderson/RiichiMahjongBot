@@ -553,62 +553,6 @@ public class Player
 		private String mjSTRhand_; 
 		
 		/*
-		 * 	update_Groups itself represents ArrayList<ArrayList<Group>> for each groupSN case, 
-		 *	String Key will represent the groupID
-		 *	String Assigned groupSN
-		 * 	
-		 * 
-		 * 	Scoring reference:
-		 * 	Completed Groups 	= 10 (Exponentially grows as more complete/called groups are formed) (peaks at 2)
-		 * 	Incomp Groups 		= 4	 (Linearly grows as more complete/called groups are formed) (peaks at 2)
-		 * 	Pair				= 5	 (remains the same) (peaks at 3)
-		 * 	Floating Tile		= 1	 (remains the same) (peaks at 4)
-		 * 
-		 * 	What update_Groups prioritizes:
-		 * 		ArrayList<Group> of only completed groups:
-		 * 			prioritize only 2 completed groups over 3 Pairs despite lower score
-		 * 	
-		 * 		ArrayList<Group> of as many incomplete groups
-		 * 			prioritize 2 incomplete groups over 2 pairs with complete groups <= 2
-		 * 			prioritize 2 pairs over 2 incomplete groups with complete groups == 3
-		 * 
-		 * 		Pairs > floating Tiles
-		 * 			Any situation
-		 * 
-		 * 		Empty ArrayList<Group>
-		 * 			Only floating tile suits are better off empty if complete groups >= 2
-		 * 			Untouched if 									 complete groups <= 1
-		 * 
-		 * 	*note* Japanese MJ terms:
-		 * 		"Tsumogiri" = throwing the tile you just drew
-		 * 		"Tedashi" 	= throwing the tile you have in your hand, accepting the tile drawn
-		 * 
-		 * 	Two Situations:
-		 * 
-		 * 		The Tile is kept into the hand == Tedashi?:
-		 * 			Three(pseudo Four) nested Situations:
-		 * 
-		 * 				The Tile completes a group:
-		 * 					
-		 * 				The Tile builds a group:
-		 * 
-		 * 				The Tile harms a group:
-		 * 
-		 * 				Pseudo Fourth == Throw the same tile in your hand:
-		 * 					
-		 * 		The Tile is thrown out == Tsumogiri:
-		 * 			update_Groups == update_Groups (no groups are altered)
-		 */
-		private HashMap<String, String> update_Groups_ = new HashMap<String, String>();
-		
-		
-		/*
-		 * This makes aware if new tiles were called/accepted into the hand, which could
-		 * possibly change the hand's out-dated groups
-		 */
-		private boolean updated_searches_ = false;
-		
-		/*
 		 * An ArrayList to indicate what tiles can be called via index
 		 * 1 => sequence can be called
 		 * 2 => triplet can be called
@@ -638,8 +582,6 @@ public class Player
 			this.declaredGroups_ = new ArrayList<Group>(clone.declaredGroups_);
 			this.currentHand_ = new ArrayList<Integer>(clone.currentHand_);
 			this.mjSTRhand_ = new String(clone.mjSTRhand_);
-			this.update_Groups_ = new HashMap<String, String>(clone.update_Groups_);
-			this.updated_searches_ = clone.updated_searches_;
 			this.call_map_ = new ArrayList<Integer>(clone.call_map_);
 		}
 		/**
@@ -765,15 +707,6 @@ public class Player
 			}
 		}
 		
-		/**
-		 * 
-		 * @return 
-		 */
-		public HashMap<String, String> get_currentGroups()
-		{
-			return this.update_Groups_;
-		}
-		
 		public boolean update_added_quad(int fourth_tile)
 		{
 			for(int i = 0; i < this.declaredGroups_.size(); i++)
@@ -821,104 +754,6 @@ public class Player
 		}
 		
 		/**
-		 * *Note* this function does not take into consideration unique hands like 7 pairs nor 13 orphans
-		 * 
-		 * GroupSearch progress_score would not consider declared groups, This will add this specific PlayerHand declared groups
-		 * Updates current this.update_Groups
-		 * 
-		 * *note* pairs are considered as incomplete groups
-		 * 4110 == 4 groups, 1 pair, 1 incomp groups, 0 floating tiles == complete
-		 * 
-		 * 4001 == 4 groups, 0 pairs, 0 incomp groups, 1 floating tile == waiting
-		 * 3220 == 3 groups, 2 pairs, 2 incomp groups, 0 floating tiles == waiting
-		 * 3120 == 3 groups, 1 pair, 2 incomp groups, 0 floating tiles == waiting
-		 * 
-		 * 3112 == 3 groups, 1 pair, 1 incomp group (the pair itself), 2 floating tiles == incomplete
-		 * etc == incomplete
-		 * 
-		 * 4000 == invalid
-		 * @return A Integer numerical score of how far the hand is close to winning
-		 */
-		public int progress_score()
-		{
-			if(!this.updated_searches_)
-			{
-				this.update_Groups_ = GroupSearch.search_all_groupSN(this, false);
-				this.updated_searches_ = true;
-			}
-			int best_score = 0;
-			for(String key: this.update_Groups_.keySet())
-			{
-				int current_score = GroupSearch.progress_score(this.update_Groups_.get(key)) + (this.declaredGroups_.size() * 1000);
-				if(current_score > best_score)
-				{
-					best_score = current_score;
-				}
-			}
-			return best_score;
-		}
-		
-		/**
-		 * *Note* this function does not take into consideration unique hands like 7 pairs nor 13 orphans
-		 * @return The ArrayList<Group> that has the highest score in terms of progression to a complete hand
-		 */
-		public ArrayList<Group> get_fastestGroups()
-		{
-			if(!this.updated_searches_)
-			{
-				this.update_Groups_ = GroupSearch.search_all_groupSN(this, false);
-				this.updated_searches_ = true;
-			}
-			int best_score = 0;
-			String best_key = "";
-			for(String key: this.update_Groups_.keySet())
-			{
-				int current_score = GroupSearch.progress_score(this.update_Groups_.get(key)) + (this.declaredGroups_.size() * 1000);
-				if(current_score > best_score)
-				{
-					best_score = current_score;
-					best_key = key;
-				}
-			}
-			return Group.groupSN_to_ArrayList(this.update_Groups_.get(best_key));
-		}
-		
-		/**
-		 * WIP
-		 * 
-		 * This function is used to fit the new inputed tile to the groups the PlayerHand currently has
-		 * Without needing to search through every possible groups again using GroupSearch algorithm
-		 * @param new_tile
-		 * @return
-		 */
-		public boolean update_groups(int new_tile)
-		{
-			return false;
-		}
-		
-		
-		/**
-		 * *Warning* Should only run when this.update_Groups is empty, otherwise waste of resources
-		 * @param new_tile The new tile that assumes is newly drawn to the hand, can be discarded
-		 * @return True if the current groups are updated to fit the new_tile inputed,
-		 * 		   False if the tile either doesn't fit (groups didn't alter in anyway) or error was raised
-		 */
-		public boolean refresh_GroupSN()
-		{
-			try
-			{
-				HashMap<String, String> groupSN_map = GroupSearch.search_all_groupSN(this, false);
-				for(String key: groupSN_map.keySet())
-					this.update_Groups_.put(key, groupSN_map.get(key));
-				return true;
-			}
-			catch(Exception e)
-			{
-				return false;
-			}
-		}
-		
-		/**
 		 * 
 		 * @param in_groups The ArrayList of Groups that wants to be sorted into a 2D ArrayList depending on it's suit
 		 * @return A 2D ArrayList that has groups depending on the suit index
@@ -941,10 +776,18 @@ public class Player
 	}
 	public static class HiddenHand extends PlayerHand
 	{
-		/**
-		 * This is to reference the amount of tiles the opponent has in their current hand
+		
+		/*
+		 * The declaredGroups of this PlayerHand, what PlayerHand represents is not just
+		 * the concealed part of what the Player is playing on, but the Entire hand
 		 */
-		public int tile_amt_;
+		public ArrayList<Group> declaredGroups_; 
+		
+		/*
+		 * An overriding field of PlayerHand.currentHand_
+		 * Since this represents a hidden hand, this ArrayList would only include -1 with size == amount of tiles
+		 */
+		public ArrayList<Integer> currentHand_;
 		
 		/**
 		 * This is in reference to the MJ_round variant that is being played:
@@ -959,10 +802,10 @@ public class Player
 		 */
 		public HiddenHand(int game_mode) 
 		{
-			this.tile_amt_ = 13;
+			this.currentHand_ = new ArrayList<Integer>(Collections.nCopies(13, -1));
 			this.game_mode_ = game_mode;
 		}
-		
+
 		/**
 		 * 
 		 * @param custom_tile_amt a custom amount of tiles in hand
@@ -971,34 +814,85 @@ public class Player
 		 */
 		public HiddenHand(int custom_tile_amt, ArrayList<Group> visible_groups, int game_mode)
 		{
-			this.tile_amt_ = custom_tile_amt;
+			this.currentHand_ = new ArrayList<Integer>(Collections.nCopies(custom_tile_amt, -1));
 			this.game_mode_ = game_mode;
 			for(int i = 0; i < visible_groups.size(); i++)
 			{
 				if(!this.add_declared_group(visible_groups.get(i)))
 				{
 					this.set_declared_group(new ArrayList<Group>());
-					this.tile_amt_ = 13;
+					this.currentHand_ = new ArrayList<Integer>(Collections.nCopies(13, -1));
+					for(int j = 0; j < 13; j++) currentHand_.add(0);
 					break;
 				}
 			}
 		}
 		
+		public ArrayList<Integer> get_current_hand()
+		{
+			return this.currentHand_;
+		}
+		
 		public int get_amt_tiles()
 		{
-			return this.tile_amt_;
+			return this.currentHand_.size();
 		}
 		
-		public boolean set_amt_tiles(int new_tile_amt)
+		/*
+		 * Returns the current ArrayList<Group> that are visible to other players
+		 * This however does include the concealed declared quads that would consider the hand
+		 * still be concealed
+		 */
+		public ArrayList<Group> get_declaredGroups()
 		{
-			if(new_tile_amt > 0 && new_tile_amt < 15)
+			return this.declaredGroups_;
+		}
+		
+		public boolean set_current_hand(ArrayList<Integer> overridden_method)
+		{
+			try 
 			{
-				this.tile_amt_ = new_tile_amt;
+				this.currentHand_ = new ArrayList<Integer>(Collections.nCopies(overridden_method.size(), -1));
 				return true;
 			}
-			return false;
+			catch(Exception e) {return false;}
 		}
 		
+		public boolean set_current_hand(int tile_amt)
+		{
+			try 
+			{
+				this.currentHand_ = new ArrayList<Integer>(Collections.nCopies(tile_amt, -1));
+				return true;
+			}
+			catch(Exception e) {return false;}
+		}
+		
+		
+		/**
+		 * If required, 
+		 * set the current Player's declared groups to a new ArrayList<Group> of declared Groups
+		 * @param in_newGroups The new ArrayList<Group> for this PlayerHand instance
+		 * @return True if the new_groups has been set, false if an error was raised
+		 */
+		public boolean set_declared_group(ArrayList<Group> in_newGroups)
+		{
+			try
+			{
+				this.declaredGroups_ = new ArrayList<Group>(in_newGroups);
+				return true;
+			}
+			catch(Exception e)
+			{
+				return false;
+			}
+		}
+		
+		/**
+		 * Used to add new declared groups to unique PlayerHand instance
+		 * @param new_group SINGULAR group to be added to this instance of PlayerHand
+		 * @return True if the new Group was added, false if an error was raised
+		 */
 		public boolean add_declared_group(Group new_group)
 		{
 			if(!new_group.declared_)
@@ -1009,6 +903,18 @@ public class Player
 			{
 				this.declaredGroups_.add(new_group);
 				return true;
+			}
+			return false;
+		}
+		
+		public boolean update_added_quad(int fourth_tile)
+		{
+			for(int i = 0; i < this.declaredGroups_.size(); i++)
+			{
+				if(this.declaredGroups_.get(i).get_groupTiles().get(0) == fourth_tile)
+				{
+					return this.declaredGroups_.get(i).upgrade_pon();
+				}
 			}
 			return false;
 		}

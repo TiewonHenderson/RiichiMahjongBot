@@ -222,6 +222,18 @@ public class Group extends Scoring
 		}
 		return return_str + ")";
 	}
+	
+	
+	public boolean upgrade_pon()
+	{
+		if(this.get_Group_info()[0] == 3 && this.get_Group_info()[2] == 2)
+		{
+			this.tile_list_.add(this.tile_list_.get(0));
+			return true;
+		}
+		return false;
+	}
+	
 	/**
 	 * 
 	 * @param in_group An ArrayList<Integer> of size 3/4 to check if valid group
@@ -401,16 +413,6 @@ public class Group extends Scoring
 			}
 		}
 		return returnList;
-	}
-	
-	public boolean upgrade_pon()
-	{
-		if(this.get_Group_info()[0] == 3 && this.get_Group_info()[2] == 2)
-		{
-			this.tile_list_.add(this.tile_list_.get(0));
-			return true;
-		}
-		return false;
 	}
 	
 	/*

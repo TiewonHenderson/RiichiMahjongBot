@@ -81,6 +81,8 @@ public class Prediction
 	 */
 	private ArrayList<ArrayList<Integer>> suit_amt_ = new ArrayList<ArrayList<Integer>>();
 	
+	private Tile_map player_info_map_;
+	
 	/**
 	 * Parameterized Constructor
 	 * @param drop_pile
@@ -664,50 +666,6 @@ public class Prediction
 	}
 	
 	/**
-	 *	@info ArrayList score index:
-	 * 	0: Dragon Groups -> 1													
-	 *	1: Small 3 Dragons -> 3													
-	 *	2: Big 3 Dragons -> 5 													
-	 *	3: Rotation Wind -> 1 (from gamestatus)									
-	 *	4: Seat Wind -> 1 (from player seatwind + 1) 							
-	 *	5: Kongs -> 1								
-	 *	6: All Seq -> 1														
-	 *	7: All Pon -> 3														
-	 *	8: Mix Suit -> 3 														
-	 *	9: All Terms/Honors -> 2 (5 - 3; from pung game)						
-	 *	10: Full Suit -> 6 		
-	 *	-------------------------------------
-	 *	11: All Terminals -> 5 (10 - 2 - 3; all term/honors, from pung game)	
-	 *	12: All Honors -> 5 (10 - 2 - 3; from pung game, all term/honors)		
-	 *	13: 4 little winds -> 6 												
-	 *	14: 4 big winds ->10 (13 - 3; from pung game)										
-	 *	15: 4 quads -> 10 (13 - 3; from pung game
-	 *
-	 * @param called_groups The list of called_groups from a Player opponent
-	 * @param tile_market any valid visible tile_market of a Player
-	 * @return a HashMap<Integer, Double> that has doubles as percentage chance of the Player having that score
-	 * 		   double ranges from [0,1.0] where 1.0 == 100% has that point, 0.0 == 0% has that point
-	 */
-	public ArrayList<Double> called_prediction(ArrayList<Group> called_groups, ArrayList<Integer> tile_market)
-	{
-		ArrayList<Double> return_percent_score = new ArrayList<Double>();
-		for(int i = 0; i <= 15; i++) return_percent_score.add(0.0);
-		if(called_groups.size() == 0) {return return_percent_score;}
-		int[] scoring_alg = Scoring.Scoring_Algorithm.declared_scoring(called_groups);
-		/*Dragon Groups*/
-		
-		//Dragon points (can only be 0.0 or 1.0)
-		if(scoring_alg[2] > 0) {return_percent_score.set(0, 1.0);}
-		
-		//Shousangen
-		switch(scoring_alg[2])
-		{
-			case 1:
-				break;
-		}
-	}
-	
-	/**
 	 * @info
 	 * How progression typically occurs
 	 * start == multiple tedashi to get rid of useless tiles
@@ -1232,6 +1190,352 @@ public class Prediction
 				return true;
 			}
 			return false;
+		}
+	}
+	
+	public static class Score_probability
+	{
+		public ArrayList<int[]> declare_info_list_ = new ArrayList<int[]>();
+		
+		public ArrayList<Integer> user_tile_market_;
+		
+		public int seat_wind_id_;
+		
+		public int prev_wind_id_;
+		
+		public Score_probability(ArrayList<Group> called_groups, ArrayList<Integer> tile_market, int seat_wind_id, int prev_wind_id)
+		{
+			this.seat_wind_id_ = seat_wind_id;
+			this.prev_wind_id_ = prev_wind_id;
+			for(Group called_group: called_groups)
+			{
+				this.declare_info_list_.add(Group.group_info(called_group));
+			}
+			this.user_tile_market_ = tile_market;
+		}
+		
+		/**
+		 * Runs all the opportunities function in this class and returns it in a integer list, index follows [0,6]
+		 * 0: dragon
+		 * 1: wind
+		 * 2: extended wind
+		 * 3: quad
+		 * 4: group_type
+		 * 5: group_suit
+		 * 6: term/honor
+		 * 
+		 * @return a list of integer values that represents the possibility of the 
+		 * called groups going to achieve the score corresponding to that index
+		 */
+		public int[] init_score_opportunities()
+		{
+			int[] return_val = {
+					this.dragon_opportunities(),
+					this.wind_opportunities(),
+					this.extend_wind_opportunities(),
+					this.quad_opportunities(),
+					this.mix_type_opportunities(),
+					this.mix_suit_opportunities(),
+					this.term_honor_opportunities()
+					};
+			return return_val;
+			
+		}
+		
+		/**
+		 * @info
+		 * 100th digit == 1/0 	representing if hand is confirmed daisangen
+		 * 10th  digit == 7/2/0 representing if hand can form 7 == daisangen, 2 == shousangen, 0 == none
+		 * 1st	 digit == [0,3] representing how many dragon triplets
+		 * @return integer index represents informations, return is max 3 digit, mininum 0
+		 */
+		public int dragon_opportunities()
+		{
+			int point_amt = 0;
+			boolean[] has_dragon = {false, false, false};	
+			
+			for(int[] declare_info: this.declare_info_list_)
+			{
+				if(declare_info[1]-30 > 0 && declare_info[0] > 1)	//WH starts at index 31
+				{
+					point_amt++;
+					has_dragon[declare_info[1] - 31] = true;
+				}
+			}
+			
+			/*
+			 * +10 	== 4/3 	non visible
+			 * +1 	== 2 	non visible
+			 * +0	== 0/1	non visible
+			 */
+			int dragon_amt = 0;
+			switch(point_amt)
+			{
+				case 3:
+					return 103;
+				case 2:
+					for(int i = 0; i < has_dragon.length; i++)
+					{
+						if(!has_dragon[i]) 
+						{
+							switch(this.user_tile_market_.get(i+31))
+							{
+								case 4:
+								case 3:
+									return 72;
+								case 2:
+									return 22;
+								default:
+									return 2;
+							}
+						}
+					}
+				case 1:
+					for(int i = 0; i < has_dragon.length; i++)
+					{
+						if(!has_dragon[i]) 
+						{
+							switch(this.user_tile_market_.get(i+31))
+							{
+								case 4:
+								case 3:
+									dragon_amt+=10;
+									break;
+								case 2:
+									dragon_amt++;
+									break;
+							}
+						}
+					}
+					switch(dragon_amt)
+					{
+						case 20:
+							return 71;
+						case 11:
+							return 21;
+						default:
+							return 1;
+					}
+				case 0:
+					for(int i = 31; i < this.user_tile_market_.size(); i++)
+					{
+						switch(this.user_tile_market_.get(i+31))
+						{
+							case 4:
+							case 3:
+								dragon_amt+=10;
+								break;
+							case 2:
+								dragon_amt++;
+								break;
+						}
+					}
+					switch(dragon_amt)
+					{
+						case 30:
+							return 70;
+						case 21:
+							return 20;
+					}
+			}
+			return 0;
+		}
+		
+		/**
+		 * @info
+		 * return integer value:
+		 * 1000th digit: 	1==has seat wind triplet 		0==no seat wind triplet
+		 * 100th digit: 	5==possible	seat				0==impossible seat
+		 * 10th digit: 		1==has prevalent wind triplet 	0==no prevalent wind triplet
+		 * 1st digit: 		5==possible	prevalent			0==impossible prevalent
+		 * 
+		 * @param seat_wind the seatwind_id that would give the seat wind point
+		 * @param prev_wind the prevalent_wind_id that would give the prevalent wind point
+		 * @return 	A four digit integer that represents the has/possibility/impossible 
+		 */
+		public int wind_opportunities()
+		{
+			int score = 0;
+			//If the visible tile amount can form a triplet
+			switch(this.user_tile_market_.get(this.seat_wind_id_ + 27))
+			{
+				case 4:
+				case 3:
+					score += 500;
+					break;
+			}
+			switch(this.user_tile_market_.get(this.prev_wind_id_ + 27))
+			{
+				case 4:
+				case 3:
+					score += 5;
+					break;
+			}
+			for(int[] declare_info: this.declare_info_list_)
+			{
+				if(declare_info[1]-27 == this.seat_wind_id_ && declare_info[0] > 1)
+				{
+					score += 1000;
+				}
+				if(declare_info[1]-27 == this.prev_wind_id_ && declare_info[0] > 1)
+				{
+					score += 10;
+				}
+			}
+			return score;
+		}
+		
+		/**
+		 * @info index refers to the digits from left to right as if the number was a list
+		 * i.e digit 1000th == east (wind_id 0)
+		 * values		meaning
+		 * 0			impossible to get
+		 * 1			>=3 is not visible
+		 * 2			Player has that wind group
+		 * @return a 4 digit integer that represents if the Player can, does, or cannot have that wind_id group
+		 */
+		public int extend_wind_opportunities()
+		{
+			int[] value = new int[4];
+			for(int[] declare_info: this.declare_info_list_)
+			{
+				if(declare_info[1] >= 27 || declare_info[1] <= 30)
+				{
+					value[declare_info[1] - 27] = 2;
+				}
+			}
+			for(int i = 0; i < value.length; i++)
+			{
+				if(value[i] == 0 && this.user_tile_market_.get(i + 27) >= 3)
+				{
+					value[i] = 1;
+				}
+			}
+			return value[0]*1000 + value[1]*100 + value[2]*10 + value[3];
+		}
+		
+		/**
+		 * @info
+		 * 10th digit 	= quad amount
+		 * 1st digit  	= 1 == possible to add kan 
+		 * @return a integer score that represents the amount of quads and possible added quads if the Player were to draw that tile
+		 */
+		public int quad_opportunities()
+		{
+			int score = 0;
+			for(int[] declare_info: this.declare_info_list_)
+			{
+				if(declare_info[0] == 3)
+				{
+					score += 10;
+				}
+				else if(declare_info[0] == 2)
+				{
+					if(this.user_tile_market_.get(declare_info[1]) == 1)
+					{
+						score += 1;
+					}
+				}
+			}
+			return score;
+		}
+		
+		/**
+		 * @info
+		 * 00 = not all the same 
+		 * 01 = all seq
+		 * 02 = all triplet/quad : no chance for all quads
+		 * 12 = all triplet/quad : 4th tile not visible for all triplets
+		 * 03 = all quad
+		 * @return double digit int value to determine which group type score is most probable
+		 */
+		public int mix_type_opportunities() 
+		{
+			Set<Integer> call_type = new HashSet<Integer>();
+			int can_all_quad = 10;
+			for(int[] group_info: this.declare_info_list_)
+			{
+				if(call_type.size() > 0 && call_type.add(group_info[0]))
+				{
+					return 0;
+				}
+				if(group_info[0] == 2)
+				{
+					if(this.user_tile_market_.get(group_info[1]) == 0)
+					{
+						can_all_quad = 0;
+					}
+				}
+			}
+			if(call_type.size() != 1) {return 0;}
+			ArrayList<Integer> get_set_element = new ArrayList<Integer>(call_type);
+			switch(get_set_element.get(0))
+			{
+				case 1:
+					return 1;
+				case 2:
+					return can_all_quad + 2;
+				case 3:
+					return 3;
+			}
+			return 0;
+		}
+		
+		/**
+		 * @info
+		 * 10th digit: 	if there is only 1 suit that was called on, this would represent the flush suit
+		 * 1st digit:	1 if there is honors, 0 is there is no honor
+		 * the return value is -10/-11 is flush hand is impossible (multiple suit were called)
+		 * @return double digit int value to determine which suit and if the calls include honors
+		 */
+		public int mix_suit_opportunities()
+		{
+			int has_honor = 0;
+			int suit = -1;
+			for(int[] declare_info: this.declare_info_list_)
+			{
+				if(declare_info[1]/9 == 3)
+				{
+					has_honor = 1;
+				}
+				else if(suit == -1)
+				{
+					suit = declare_info[1]/9;
+				}
+				else if(suit != declare_info[1]/9)
+				{
+					return -10 - has_honor;
+				}
+			}
+			return (suit * 10) + has_honor;
+		}
+		
+		/**
+		 * @info
+		 * 100th digit: amount of terminal groups
+		 * 10th	 digit: amount of honor groups
+		 * 1st   digit: amount of other groups
+		 * @return three digit int value to determine the amount of groups called that are either terminal, honor, neither
+		 */
+		public int term_honor_opportunities()
+		{
+			/*
+			 * return 0 for not terminal/honor
+			 * return 1 for terminal
+			 * return 2 for honor
+			 */
+			IntUnaryOperator doubleInt = x -> 
+			{
+				if(x > 26){return 2;}
+				if(x%9==0 || x%9==8) {return 1;}
+				return 0;
+			};
+			int[] groups = new int[3];
+			for(int[] declare_info: this.declare_info_list_)
+			{
+				groups[doubleInt.applyAsInt(declare_info[2])]++;
+			}
+			return groups[1]*100 + groups[2]*10 + groups[0];
 		}
 	}
 	public static void main(String[] args)

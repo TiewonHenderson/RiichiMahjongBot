@@ -68,12 +68,6 @@ public class MJ_round
 	 */
 	public int total_wall_tiles_;
 	
-	/*
-	 * With each index that would represent the Player's wind_ID, the int value would indicate the amount
-	 * of remaining called Group possible (4 == no declared Group)
-	 */
-	public int[] player_status_ = new int[4];
-	
 	/**
 	 * This will be the counter responsible for whose turn it currently is
 	 */
@@ -263,25 +257,6 @@ public class MJ_round
 	}
 	
 	/**
-	 * Accessor method to get a list of 4 Players and the amount of calls each Player has made
-	 * @return Returns a list of 4 elements representing each Player and the amount of calls they have
-	 */
-	public int[] get_status()
-	{
-		return this.player_status_;
-	}
-	
-	/**
-	 * Mutator method to set a certain index that would represent a Player to an updated status
-	 * @param player_index The player (referred by their wind_ID) that wants their call amount to be changed
-	 * @param new_status The new call amount to be assigned to this certain Player
-	 */
-	public void set_status(int player_index, int new_status)
-	{
-		this.player_status_[player_index] = new_status; 
-	}
-	
-	/**
 	 * Accessor method to get current turn for a certain wind_ID
 	 * @return The current wind_id that is allowed to go (in other words, the integer that represent which Player's turn)
 	 */
@@ -293,10 +268,30 @@ public class MJ_round
 	/**
 	 * Mutator method to set new wind_ID
 	 * @param new_windID The new wind_ID desired for this current turn
+	 * @return true if the input is a valid windID and is set, otherwise false
 	 */
-	public void set_windID_turn(int new_windID)
+	public boolean set_windID_turn(int new_windID)
 	{
+		if(new_windID < 0 || new_windID > 3) {return false;}
 		this.wind_ID_turn_ = new_windID;
+		return true;
+	}
+	
+	public int get_prevalent_windID()
+	{
+		return this.prevalent_wind_;
+	}
+	
+	public boolean set_prevalent_windID(int new_prev_windID)
+	{
+		if(new_prev_windID < 0 || new_prev_windID > 3) {return false;}
+		this.prevalent_wind_ = new_prev_windID;
+		return true;
+	}
+	
+	public int get_game_mode()
+	{
+		return this.game_mode_;
 	}
 	
 	public void set_game_mode(int game_mode)

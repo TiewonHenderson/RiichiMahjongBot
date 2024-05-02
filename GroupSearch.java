@@ -1306,6 +1306,158 @@ public class GroupSearch extends Group
 		return return_STR + "c";
 	}
 	
+	public static class PlayerHand_searcher
+	{
+		
+		/*
+		 * 	update_Groups itself represents ArrayList<ArrayList<Group>> for each groupSN case, 
+		 *	String Key will represent the groupID
+		 *	String Assigned groupSN
+		 * 	
+		 * 
+		 * 	Scoring reference:
+		 * 	Completed Groups 	= 10 (Exponentially grows as more complete/called groups are formed) (peaks at 2)
+		 * 	Incomp Groups 		= 4	 (Linearly grows as more complete/called groups are formed) (peaks at 2)
+		 * 	Pair				= 5	 (remains the same) (peaks at 3)
+		 * 	Floating Tile		= 1	 (remains the same) (peaks at 4)
+		 * 
+		 * 	What update_Groups prioritizes:
+		 * 		ArrayList<Group> of only completed groups:
+		 * 			prioritize only 2 completed groups over 3 Pairs despite lower score
+		 * 	
+		 * 		ArrayList<Group> of as many incomplete groups
+		 * 			prioritize 2 incomplete groups over 2 pairs with complete groups <= 2
+		 * 			prioritize 2 pairs over 2 incomplete groups with complete groups == 3
+		 * 
+		 * 		Pairs > floating Tiles
+		 * 			Any situation
+		 * 
+		 * 		Empty ArrayList<Group>
+		 * 			Only floating tile suits are better off empty if complete groups >= 2
+		 * 			Untouched if 									 complete groups <= 1
+		 * 
+		 * 	*note* Japanese MJ terms:
+		 * 		"Tsumogiri" = throwing the tile you just drew
+		 * 		"Tedashi" 	= throwing the tile you have in your hand, accepting the tile drawn
+		 * 
+		 * 	Two Situations:
+		 * 
+		 * 		The Tile is kept into the hand == Tedashi?:
+		 * 			Three(pseudo Four) nested Situations:
+		 * 
+		 * 				The Tile completes a group:
+		 * 					
+		 * 				The Tile builds a group:
+		 * 
+		 * 				The Tile harms a group:
+		 * 
+		 * 				Pseudo Fourth == Throw the same tile in your hand:
+		 * 					
+		 * 		The Tile is thrown out == Tsumogiri:
+		 * 			update_Groups == update_Groups (no groups are altered)
+		 */
+		private HashMap<String, String> update_Groups_ = new HashMap<String, String>();
+		
+		/*
+		 * This makes aware if new tiles were called/accepted into the hand, which could
+		 * possibly change the hand's out-dated groups
+		 */
+		private boolean updated_searches_ = false;
+		
+		/**
+		 * This is the valid hand that can return an ArrayList of tiles that represents a valid hand in Mahjong
+		 */
+		private PlayerHand valid_PlayerHand_;
+		
+		public PlayerHand_searcher(PlayerHand valid_hand)
+		{
+			this.valid_PlayerHand_ = valid_hand;
+		}
+		
+		/**
+		 * *Note* this function does not take into consideration unique hands like 7 pairs nor 13 orphans
+		 * 
+		 * GroupSearch progress_score would not consider declared groups, This will add this specific PlayerHand declared groups
+		 * Updates current this.update_Groups
+		 * 
+		 * *note* pairs are considered as incomplete groups
+		 * 4110 == 4 groups, 1 pair, 1 incomp groups, 0 floating tiles == complete
+		 * 
+		 * 4001 == 4 groups, 0 pairs, 0 incomp groups, 1 floating tile == waiting
+		 * 3220 == 3 groups, 2 pairs, 2 incomp groups, 0 floating tiles == waiting
+		 * 3120 == 3 groups, 1 pair, 2 incomp groups, 0 floating tiles == waiting
+		 * 
+		 * 3112 == 3 groups, 1 pair, 1 incomp group (the pair itself), 2 floating tiles == incomplete
+		 * etc == incomplete
+		 * 
+		 * 4000 == invalid
+		 * @return A Integer numerical score of how far the hand is close to winning
+		 */
+		public int progress_score()
+		{
+			if(!this.updated_searches_)
+			{
+				this.update_Groups_ = GroupSearch.search_all_groupSN(this.valid_PlayerHand_, false);
+				this.updated_searches_ = true;
+			}
+			int best_score = 0;
+			for(String key: this.update_Groups_.keySet())
+			{
+				int current_score = GroupSearch.progress_score(this.update_Groups_.get(key)) + (this.valid_PlayerHand_.declaredGroups_.size() * 1000);
+				if(current_score > best_score)
+				{
+					best_score = current_score;
+				}
+			}
+			return best_score;
+		}
+		
+		/**
+		 * *Note* this function does not take into consideration unique hands like 7 pairs nor 13 orphans
+		 * @return The ArrayList<Group> that has the highest score in terms of progression to a complete hand
+		 */
+		public ArrayList<Group> get_fastestGroups()
+		{
+			if(!this.updated_searches_)
+			{
+				this.update_Groups_ = GroupSearch.search_all_groupSN(this.valid_PlayerHand_, false);
+				this.updated_searches_ = true;
+			}
+			int best_score = 0;
+			String best_key = "";
+			for(String key: this.update_Groups_.keySet())
+			{
+				int current_score = GroupSearch.progress_score(this.update_Groups_.get(key)) + (this.valid_PlayerHand_.declaredGroups_.size() * 1000);
+				if(current_score > best_score)
+				{
+					best_score = current_score;
+					best_key = key;
+				}
+			}
+			return Group.groupSN_to_ArrayList(this.update_Groups_.get(best_key));
+		}
+		
+		/**
+		 * *Warning* Should only run when this.update_Groups is empty, otherwise waste of resources
+		 * @param new_tile The new tile that assumes is newly drawn to the hand, can be discarded
+		 * @return True if the current groups are updated to fit the new_tile inputed,
+		 * 		   False if the tile either doesn't fit (groups didn't alter in anyway) or error was raised
+		 */
+		public boolean refresh_GroupSN()
+		{
+			try
+			{
+				HashMap<String, String> groupSN_map = GroupSearch.search_all_groupSN(this.valid_PlayerHand_, false);
+				for(String key: groupSN_map.keySet())
+					this.update_Groups_.put(key, groupSN_map.get(key));
+				return true;
+			}
+			catch(Exception e)
+			{
+				return false;
+			}
+		}
+	}
 	public static void main(String[] args)
 	{
 		test();

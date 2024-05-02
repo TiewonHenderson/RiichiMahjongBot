@@ -1,6 +1,14 @@
 package bot_package;
 
 import java.util.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import bot_package.Prediction.Score_probability;
 
 /**
  * This class is an extension to the Prediction class, where algorithmic judgments are made of the opponent
@@ -9,6 +17,7 @@ import java.util.*;
  */
 public class Tile_map 
 {
+	
 	/**
 	 * Based off the danger chart from Daina Chiba’s Riichi Book 1
 	 * 	Grade		Number_val			Tile_type
@@ -75,7 +84,6 @@ public class Tile_map
 	 */
 	protected int wind_id_;
 	
-	
 	/**
 	 * When assigned to a opponent Player, this will store numbers [0,255] that shows [genbutsu, extreme danger]
 	 */
@@ -95,15 +103,30 @@ public class Tile_map
 		this.current_round_ = this_round;
 		this.wind_id_ = opponent;
 		this.current_predictions_ = player_judgements;
-		ArrayList<Group> possible_calls = this.current_round_.get_validPlayerCalls(opponent);
-		if(possible_calls.size() > 0)
-		{
-			
-		}
+	}
+	
+	public int[] opponent_score_chance(ArrayList<Integer> tile_market)
+	{
+		Score_probability x = new Score_probability(this.current_round_.get_all_Players().get(this.wind_id_).get_PlayerHand().get_declaredGroups(),
+													tile_market, this.wind_id_, this.current_round_.prevalent_wind_);
+		return x.init_score_opportunities();
+	}
+	
+	public static void x()
+	{
+		
 	}
 	
 	public static void main(String[] args)
 	{
-		
+		Path filePath = Paths.get("src" + File.separator + "bot_package" + File.separator + "Score_behavior.txt");
+        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 	}
 }
