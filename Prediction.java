@@ -1,10 +1,6 @@
 package bot_package;
 
 import java.util.*;
-import java.io.File;
-import java.io.IOException;
-import java.nio.*;
-import java.nio.file.*;
 import java.util.function.*;
 
 /**
@@ -37,19 +33,6 @@ public class Prediction
 {
 	
 	/**
-	 * @warning Need to fix in future when exporting as application, path will not remain
-	 */
-	final private static Path Player_behav_file = Paths.get(Paths.get("").toAbsolutePath().normalize() + 
-														   "src" + File.separator + 
-														   "bot_package" + File.separator +
-														   "Player_behaviors.txt");
-	
-	/**
-	 * Used to indicate if tedashi is being tracked / inputed by user
-	 */
-	public boolean track_tedashi_;
-	
-	/**
 	 * If algorithm is looking into riichi mahjong, the discard of dora can raise suspicion on the Player status
 	 */
 	public int dora_;
@@ -58,6 +41,11 @@ public class Prediction
 	 * The inputed drop_pile of the opponent
 	 */
 	public ArrayList<Double> drop_pile_;
+	
+	/**
+	 * A instance field to store all the probability from the activation function
+	 */
+	public double[] all_probability_ = {-4,-4,-4};
 	
 	/**
 	 * Used for searching index of drop pile where Player is confirmed ready (in riichi)
@@ -81,17 +69,25 @@ public class Prediction
 	 */
 	private ArrayList<ArrayList<Integer>> suit_amt_ = new ArrayList<ArrayList<Integer>>();
 	
+	/**
+	 * Not required, but can help in certain functions (kokushi + 7 pairs probability)
+	 * this field can only be set using the mutator function (which checks valid size + tile_id amounts)
+	 */
+	private ArrayList<Integer> user_tile_market_;
+	
+	/**
+	 * Not required, but can help in certain functions (normal + flush probability, also eliminates need to search kokushi/7 pairs)
+	 * this field can only be set using the mutator function (which checks valid size + tile_id amounts)
+	 */
+	private ArrayList<Group> player_call_groups_;
 	
 	private Tile_map player_info_map_;
 	
 	/**
-	 * Parameterized Constructor
+	 * Parameterized Constructor where tile_market_ and call_groups_ are not given
 	 * @param drop_pile
-	 * @param user
-	 * @param dora
-	 * @param track_tedashi
 	 */
-	public Prediction(ArrayList<Double> drop_pile, int dora, boolean track_tedashi)
+	public Prediction(ArrayList<Double> drop_pile)
 	{
 		
 		//sets drop_pile of 1 player to this prediction instance
@@ -148,12 +144,27 @@ public class Prediction
 			add_tiletype_count.add(simple_count);
 			orphan_ratio_list_.add(add_tiletype_count);
 		}
+	}
+	
+	public Prediction(ArrayList<Double> drop_pile, boolean track_tedashi)
+	{
 		
-		//Only applicable to riichi mahjong
-		this.dora_ = dora;
-		
-		//Option of the user where tedashi / tsumogiri is tracked, otherwise just tile_id
-		this.track_tedashi_ = track_tedashi;
+	}
+	
+	public boolean set_user_tile_market(ArrayList<Integer> tile_market)
+	{
+		if(tile_market.size() != 34)
+		{
+			return false;
+		}
+		for(int tile_id: tile_market){if(tile_id < 0 || tile_id > 4) {return false;}}
+		this.user_tile_market_ = tile_market;
+		return true;
+	}
+	
+	public ArrayList<Integer> get_user_tile_market()
+	{
+		return this.user_tile_market_;
 	}
 	
 	public boolean add_tile(double new_tile)
@@ -441,6 +452,7 @@ public class Prediction
 	}
 
 	/**
+	 * @info
 	 * Algorithm 1: weighted_values by drop_pile index (higher score == less likely to be kokushi)
 	 * 
 	 * weight system of equations (let x = turn)
@@ -473,12 +485,27 @@ public class Prediction
 	 * 
 	 * to avoid higher weights of flushes, divide by variance of suits (exclude honors)
 	 * 
+	 * @hidden if user_tile_market_ has a value, any orphan tile that are all visible (either by calls or dropped) 
+	 * will return a score of -3.75 as kokushi is now impossible according to the user_tile_market_
 	 * 
 	 * final score = (Algorithm 1)= [0,2] (Algorithm 2) = [-0.75, 5] (Algorithm 3) = [-3,1.75]
 	 * @return return score range [-3.75, 8.75], where higher means more probable for kokushi
 	 */
 	public double kokushi_prob()
 	{
+		if(this.user_tile_market_ != null)
+		{
+			for(int i = 0; i < this.user_tile_market_.size(); i++)
+			{
+				if(i % 9 == 0 || i % 9 == 8 || i > 25)
+				{
+					if(this.user_tile_market_.get(i) == 0)
+					{
+						return -3.75;
+					}
+				}
+			}
+		}
 		//Algorithm 1 (higher non-adjusted score == less likely to be kokushi)
 		final double[] scalars = {0.05,0.55,2.55,3};
 		ArrayList<Integer> orphan_index = new ArrayList<Integer>();
@@ -674,31 +701,101 @@ public class Prediction
 	 * The problem with 7 pairs is there are no clear pattern of discard pile with the tiles
 	 * of the drop pile. The only EXTREMELY CLEAR pattern is if you are given the history of all drop pile
 	 * 
-	 * 7 pairs typically throw tiles that are already discarded
+	 * 7 pairs behavior (for max efficiency)
 	 * 
-	 * situation == 
-	 * RATIO BETWEEN
-	 * distance between current discard from opponent to previous instance of same tile 	(let x value)
-	 * Layer																				(let y value)
+	 * the whole point of this algorithm is to see if the opponent is discarding tiles that are scarce
+	 * tile_amt == user_tile_market_ index
+	 * tedashi tiles
+	 * tile_amt						add_score
+	 * 3(op themselves)				-1.5
+	 * 2							+0.2
+	 * 1							+0.8
+	 * 0							+1.5
 	 * 
-	 * 1st factor tedashi == 1.6x, tsumogiri = 1x
+	 * tsumogiri					add_score
+	 * 3(op themselves)				-2.0
+	 * 2							-0.1
+	 * 1							+1.0
+	 * 0							+1.0
 	 * 
-	 * 2nd factor
-	 * situation				drop_pile_size			add_score
-	 * x = 1					y = any					++5
-	 * x = [1,drop_pile_size/4] y > 0					++3
-	 * x = [
-	 * 
-	 * 
-	 * @param all_drop_history this is the whole history of drop tiles, including every Player
 	 * @return return score range [-3.75, 8.75], to determine the score of the ArrayList drop pile that represents 
-	 * a typical 7 pairs hand. 
+	 * a typical 7 pairs hand. Limited version of 7 pairs
 	 */
-	public double seven_pairs_prob(ArrayList<Integer> all_drop_history)
+	public double seven_pairs_prob()
+	{
+		double final_score = 0.0;
+		ArrayList<Integer> discard_type = tile_to_discardType(this.drop_pile_);
+		if(this.user_tile_market_ == null)
+		{
+			if(this.drop_pile_.size()/6 == 0)
+			{
+				final_score += 3.75;
+			}
+			for(int i = discard_type.size() - 1; i >= 0; i++)
+			{
+				if(i <= 6)
+				{
+					break;
+				}
+				if(discard_type.get(i) == 1)
+				{
+					if(this.drop_pile_.get(i) % 9 == 0 || this.drop_pile_.get(i) % 9 == 8 && this.drop_pile_.get(i) <= 26)
+					{
+						final_score += i/6 * 0.5;
+					}
+					else if(this.drop_pile_.get(i) > 26)
+					{
+						final_score += i/6 * 0.75;
+					}
+					else
+					{
+						final_score -= (i/6) * 0.35;
+					}
+				}
+				if(final_score > 8.75) {final_score = 8.75;}
+				if(final_score < -3.75) {final_score = -3.75;}
+			}
+		}
+		else
+		{
+			double[][] additive_scores = {{1.0,1.0,-0.1,-2.0}, {1.5,0.8,0.2,-1.5}};
+			for(int i = 0; i < this.drop_pile_.size(); i++)
+			{
+				final_score += additive_scores[discard_type.get(i)][this.user_tile_market_.get(this.drop_pile_.get(i).intValue())];
+			}
+		}
+		return final_score;
+	}
+	
+	/**
+	 * @info future implementation
+	 * @param discard_index the index of ALL drop pile history where the Opponent discarded a tile
+	 * @return
+	 */
+	public double seven_pairs_prob(ArrayList<Integer> discard_index)
 	{
 		
 	}
 	
+	public double[] return_all_prob()
+	{
+		for(int i = 0; i < this.all_probability_.length; i++)
+		{
+			switch(i)
+			{
+				case 0:
+					this.all_probability_[0] = score_2_percentage(this.normal_prob());
+					break;
+				case 1:
+					this.all_probability_[1] = score_2_percentage(this.flush_prob());
+					break;
+				case 2:
+					this.all_probability_[2] = score_2_percentage(this.kokushi_prob());
+					break;
+			}
+		}
+		return this.all_probability_;
+	}
 	/**
 	 * @info
 	 * How progression typically occurs
@@ -837,6 +934,8 @@ public class Prediction
 	
 	public static double score_2_percentage(double score)
 	{
+		if(((score + 3.75)/(12.5)) * 100.0 < 0.0) {return 0.0;}
+		if(((score + 3.75)/(12.5)) * 100.0 > 100.0) {return 100.0;}
 		return ((score + 3.75)/(12.5)) * 100.0;
 	}
 	
@@ -1576,54 +1675,54 @@ public class Prediction
 	{	
 		
 		//Hand: 115r6789p123678sckqo (4,7p)
-		Prediction normal1 = new Prediction(read_dropSTR("wdndrdrdrdgdgdgdededed"), -1, false);
+		Prediction normal1 = new Prediction(read_dropSTR("wdndrdrdrdgdgdgdededed"), false);
 		//Hand: 45567m33789sckq111zo (3,6m)
-		Prediction normal2 = new Prediction(read_dropSTR("nd2pd7pd1md9md8sdwht5rpt2sdst3pt1st6ptgt"), -1, false);
+		Prediction normal2 = new Prediction(read_dropSTR("nd2pd7pd1md9md8sdwht5rpt2sdst3pt1st6ptgt"), false);
 		//Hand: 789m234678p78s11zckqo (6,9s)
-		Prediction normal3 = new Prediction(read_dropSTR("1md4md4st1pd-1s2m1swwh9pwe3m5rs4m"), -1, false);
+		Prediction normal3 = new Prediction(read_dropSTR("1md4md4st1pd-1s2m1swwh9pwe3m5rs4m"), false);
 		//Hand: 3789m234p566778sckqo (3m tanki)
-		Prediction normal4 = new Prediction(read_dropSTR("whd1md2sdgt1st5md9sd4sd1mt9st"), -1, false);
+		Prediction normal4 = new Prediction(read_dropSTR("whd1md2sdgt1st5md9sd4sd1mt9st"), false);
 		//Hand: 23499m455667p67s (5,8s)
-		Prediction normal5 = new Prediction(read_dropSTR("sdrdrt9sted6md2pd-1p6s2s1pwhw6s6m"), -1, false);
+		Prediction normal5 = new Prediction(read_dropSTR("sdrdrt9sted6md2pd-1p6s2s1pwhw6s6m"), false);
 		//Hand: 123m44789p23345sckqo (1,4s)
-		Prediction normal6 = new Prediction(read_dropSTR("nd2md2sd6st5rmdwhtrt9mtgdgd7pd-1pw5m5p7mgn"), -1, false);
+		Prediction normal6 = new Prediction(read_dropSTR("nd2md2sd6st5rmdwhtrt9mtgdgd7pd-1pw5m5p7mgn"), false);
 		//Hand: 78m567789p33789sckqo (6,9m)
-		Prediction normal7 = new Prediction(read_dropSTR("9mdrd4st9sdrt2pd-w4m4p5m1s5rm4p6s5p"), -1, false);
+		Prediction normal7 = new Prediction(read_dropSTR("9mdrd4st9sdrt2pd-w4m4p5m1s5rm4p6s5p"), false);
 		
-		Prediction flush1 = new Prediction(read_dropSTR("2md3md4md5md6md7md8md2pd3pd4pd5pd6pd7pd8pd"), -1, false);
+		Prediction flush1 = new Prediction(read_dropSTR("2md3md4md5md6md7md8md2pd3pd4pd5pd6pd7pd8pd"), false);
 		
 		//Hand: 9s123567778sckq555zo (no ten)
-//		Prediction flush1 = new Prediction(read_dropSTR("4md9md3md3mtrd6mdsd3pd6pd6pt8pd"), -1, false);
+//		Prediction flush1 = new Prediction(read_dropSTR("4md9md3md3mtrd6mdsd3pd6pd6pt8pd"), false);
 		//Hand: 12233447m57zckq789mo (noten)
-		Prediction flush2 = new Prediction(read_dropSTR("7pd8pd3sd3sd6sd1pdwded3pd6pd"), -1, false);
+		Prediction flush2 = new Prediction(read_dropSTR("7pd8pd3sd3sd6sd1pdwded3pd6pd"), false);
 		//Hand: 13377s33zckq999s444zo (noten)
-		Prediction flush3 = new Prediction(read_dropSTR("6md6pd5md5rpt6st3md8md2pd1mdgdrded5mdrtsdgt3pd"), -1, false);
+		Prediction flush3 = new Prediction(read_dropSTR("6md6pd5md5rpt6st3md8md2pd1mdgdrded5mdrtsdgt3pd"), false);
 		//Hand: 1222355888s222zckqo (25s shanpon)
-		Prediction flush4 = new Prediction(read_dropSTR("2pd4pd8pd1pd4pt2md8ptwhd1md2md3md4md6pd6pted-"), -1, false);
+		Prediction flush4 = new Prediction(read_dropSTR("2pd4pd8pd1pd4pt2md8ptwhd1md2md3md4md6pd6pted-"), false);
 		//Hand: 33m22zckq777z111z111mo (3m S shanpon)
-		Prediction flush5 = new Prediction(read_dropSTR("4pd4sd8sd4sd7pd7pd6md9mt5pt2st5rmt5mt2md6pd4mt7st8mt2mt2pt"), -1, false);
+		Prediction flush5 = new Prediction(read_dropSTR("4pd4sd8sd4sd7pd7pd6md9mt5pt2st5rmt5mt2md6pd4mt7st8mt2mt2pt"), false);
 		//Hand: 12p44zckq555p678p999po (3p edge wait)
-		Prediction flush6 = new Prediction(read_dropSTR("4sd1mt6stsd7stwd9st4stedgd4mt8pt6pdnt5st"), -1, false);
+		Prediction flush6 = new Prediction(read_dropSTR("4sd1mt6stsd7stwd9st4stedgd4mt8pt6pdnt5st"), false);
 		//Hand: 678p3444666788sckqo (Noten)
-		Prediction flush7 = new Prediction(read_dropSTR("2md5pd3pd3ptndgdrdndsdrdwt1mtwhted4pt9pt8mt"), -1, false);
+		Prediction flush7 = new Prediction(read_dropSTR("2md5pd3pd3ptndgdrdndsdrdwt1mtwhted4pt9pt8mt"), false);
 		//Hand: 8m6p345566899s44zckqo (no ten)
-		Prediction flush8 = new Prediction(read_dropSTR("9mdwhd5md3pdsdwd9pt3mt2ptrd7pt"), -1, false);
+		Prediction flush8 = new Prediction(read_dropSTR("9mdwhd5md3pdsdwd9pt3mt2ptrd7pt"), false);
 		//Hand: 5r6788m66zckq444m777zo (8m g shanpon)
-		Prediction flush9 = new Prediction(read_dropSTR("8sd1st9mdet6pd5pd6sd7sd7sd1st3md6mt3pt"), -1, false);
+		Prediction flush9 = new Prediction(read_dropSTR("8sd1st9mdet6pd5pd6sd7sd7sd1st3md6mt3pt"), false);
 		
 		//Hand: 2233m55p779s4477zckqo (9s tanki)
-		Prediction seven_pairs1 = new Prediction(read_dropSTR("2pdwd1pt7md4mt-1mt"), -1, false);
+		Prediction seven_pairs1 = new Prediction(read_dropSTR("2pdwd1pt7md4mt-1mt"), false);
 		
 		//Hand: Hand: 19m19p19s1234456zckqo (r kokushi wait)
-		Prediction kokushi1 =  new Prediction(read_dropSTR("7sd5sd4pd3pd3pd2pd5md5md5st2mt3mt1pd"), -1, false);
+		Prediction kokushi1 =  new Prediction(read_dropSTR("7sd5sd4pd3pd3pd2pd5md5md5st2mt3mt1pd"), false);
 		//Hand: 19m19p19s1223567zkqo (north kokushi wait)
-		Prediction kokushi2 =  new Prediction(read_dropSTR("7md5md7pd8pd9md4md6pd2sd7md3st9pd6pt1mded-wh5p6p1s5s"), -1, false);
+		Prediction kokushi2 =  new Prediction(read_dropSTR("7md5md7pd8pd9md4md6pd2sd7md3st9pd6pt1mded-wh5p6p1s5s"), false);
 		//Hand: 9m19p19s12345677zkqo (1m kokushi wait)
-		Prediction kokushi3 =  new Prediction(read_dropSTR("6sd5st4st7md6md5md8mt4pd5pd1sdwhd5rptwt"), -1, false);
+		Prediction kokushi3 =  new Prediction(read_dropSTR("6sd5st4st7md6md5md8mt4pd5pd1sdwhd5rptwt"), false);
 		//Fake
-		Prediction kokushi4 =  new Prediction(read_dropSTR("2md2pd2sd3md3pd3sd4md4pd4sd5md5pd5sd6md6pd6sd7md7pd7sd8md8pd8sd"), -1, false);
+		Prediction kokushi4 =  new Prediction(read_dropSTR("2md2pd2sd3md3pd3sd4md4pd4sd5md5pd5sd6md6pd6sd7md7pd7sd8md8pd8sd"), false);
 		
-		Prediction extreme = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd1sd1zd-"), -1, false);
+		Prediction extreme = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd1sd1zd-"), false);
 
 		String[] name = {"Normal", "Flush", "7 Pairs", "Kokushi"};
 		ArrayList<Prediction> test_list = new ArrayList<Prediction>();

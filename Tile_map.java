@@ -23,8 +23,19 @@ public class Tile_map
 	 * Integer id:
 	 * 10th digit == amount of calls
 	 * 1st  digit == layer
+	 * 
+	 * Score:
+	 * [0.0,1.0]
+	 * 0.0 == 1% confidence ready
+	 * 1.0 == 99-100& confidence ready
 	 */
 	private static HashMap<Integer, Double> call_progress_map_ = new HashMap<Integer, Double>();
+	
+	/**
+	 * Sorted ArrayList of the keys for call_progress_map_ that represents amount of calls and layer
+	 */
+	private static ArrayList<Integer> key_list = Group.sortArray(new ArrayList<Integer>(call_progress_map_.keySet()));
+	
 	/**
 	 * Based off the danger chart from Daina Chiba’s Riichi Book 1
 	 * 	Grade		Number_val			Tile_type
@@ -102,13 +113,26 @@ public class Tile_map
 	 * index 1 = flush
 	 * index 2 = kokushi
 	 */
-	protected ArrayList<Integer> hand_probabilities_;
+	protected double[] hand_probabilities_;
+	
+	/**
+	 * Runs all the opportunities function in this class and returns it in a integer list, index follows [0,6]
+	 * 0: dragon
+	 * 1: wind
+	 * 2: extended wind
+	 * 3: quad
+	 * 4: group_type
+	 * 5: group_suit
+	 * 6: term/honor
+	 */
+	protected int[] called_opportunities;
 	
 	public Tile_map(Prediction player_judgements, int opponent, MJ_round this_round)
 	{
 		this.current_round_ = this_round;
 		this.wind_id_ = opponent;
 		this.current_predictions_ = player_judgements;
+		init_call_progress_map(this.current_round_.game_mode_);
 	}
 	
 	public int[] opponent_score_chance(ArrayList<Integer> tile_market)
@@ -172,10 +196,15 @@ public class Tile_map
 	 * @param score_opportunities given called groups, what kind of score the Player is more likely going for
 	 * @return ranging from [-1,1] where 1 == 100% confidence sakigiri, -1 == 0% confidence
 	 */
-	public double check_sakigiri(ArrayList<Double> drop_pile, int ready_index, int[] hand_prob, int[] score_opportunities)
+	public double check_sakigiri(ArrayList<Double> drop_pile, int ready_index, double[] hand_prob)
 	{
 		if(drop_pile.size() == 0) {return -1;}
+		//Makes a binary list of tedashi tsumogiri list
 		ArrayList<Integer> discard_type = Prediction.tile_to_discardType(drop_pile);
+		//index of which hand is most likely according to the algorithm
+		int likely_hand = 0;
+		for(int i = 0; i < hand_prob.length; i++){if(hand_prob[likely_hand] < hand_prob[i]){likely_hand = i;}}
+		//Last tedashi tile before ready if applicable
 		int tedashi_index = ready_index;
 		if(discard_type.get(ready_index) == 0)
 		{
@@ -188,6 +217,8 @@ public class Tile_map
 				}
 			}
 		}
+		
+		
 		return 0.0;
 	}
 	
@@ -197,26 +228,36 @@ public class Tile_map
 	 * @param declared_Groups
 	 * @return
 	 */
-	public static double progress_score(ArrayList<Double> drop_pile, ArrayList<Group> declared_Groups) 
+	public double progress_score(ArrayList<Double> drop_pile, ArrayList<Group> declared_Groups) 
 	{
-      return 0.0;
+		int layer = drop_pile.size()/6;
+		if(layer > 3) {layer = 3;}
+		int calls = declared_Groups.size();
+		return call_progress_map_.get(calls * 10 + layer);
 	}
+	
+	
 	
 	public static void init_call_progress_map(int game_mode)
 	{
 		try (BufferedReader reader = Files.newBufferedReader(base_defense_score_path_)) 
         {
             String line;
-            boolean list_score = false;
+            int list_score_n_right_gm = 0;
             int calls;
             int layer;
             double score = -1.0;
             while ((line = reader.readLine()) != null) 
             {
             	line = line.strip();
-                if(line.compareTo("&%") == 0){list_score = true; continue;}
-                else if(line.compareTo("|%") == 0){list_score = false; continue;}
-                if(list_score)
+            	if(line.length() == 0) {continue;}
+            	if(line.substring(0,2).compareTo("gm") == 0)
+            	{
+            		if(Character.getNumericValue(line.charAt(2)) == game_mode){list_score_n_right_gm++;}
+            	}
+                if(line.compareTo("&%") == 0){list_score_n_right_gm++; continue;}
+                else if(line.compareTo("|%") == 0){list_score_n_right_gm = 0; continue;}
+                if(list_score_n_right_gm == 2)
                 {
                 	try
                 	{
@@ -243,6 +284,11 @@ public class Tile_map
                 				score_str += line.charAt(i);
                 			}
                 		}
+                		if(layer != 4)
+                		{
+                			for(int i = layer; i < 4; i++)
+                				call_progress_map_.put(calls * 10 + i, 1.0);
+                		}
                 	}
                 	catch(Exception e)
                 	{
@@ -251,13 +297,15 @@ public class Tile_map
                 	}
                 }
             }
-        } catch (IOException e) {
+        } 
+		catch (IOException e) 
+		{
             e.printStackTrace();
         }
-		System.out.println(call_progress_map_);
 	}
+	
 	public static void main(String[] args)
 	{
-		init_call_progress_map();
+		
 	}
 }
