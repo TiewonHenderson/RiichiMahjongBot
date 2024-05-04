@@ -370,7 +370,7 @@ public class Compress_input
 				 *		1			tedashi			(-1)		8		9md q?3p1md4mdq+e
 				 *		2			conceal kan		(5)			11		q?3p 1md4mdq+e
 				 *		2			tedashi			(-1)		0		1md q+e
-				 *		3 			add kan			(4)			27	q+e
+				 *		3 			add kan			(4)			27		q+e
 				 *		
 				 */
 //				try
@@ -560,6 +560,10 @@ public class Compress_input
 			{
 				riichi = true;
 				temp_input = temp_input.substring(0,temp_input.length() - 1);
+			}
+			if(temp_input.length() >= 2 && temp_input.substring(0, 2).compareTo("wh") == 0) 
+			{
+				temp_input = temp_input.substring(1);
 			}
 			try
 			{

@@ -33,11 +33,6 @@ public class Prediction
 {
 	
 	/**
-	 * If algorithm is looking into riichi mahjong, the discard of dora can raise suspicion on the Player status
-	 */
-	public int dora_;
-	
-	/**
 	 * The inputed drop_pile of the opponent
 	 */
 	public ArrayList<Double> drop_pile_;
@@ -144,11 +139,6 @@ public class Prediction
 			add_tiletype_count.add(simple_count);
 			orphan_ratio_list_.add(add_tiletype_count);
 		}
-	}
-	
-	public Prediction(ArrayList<Double> drop_pile, boolean track_tedashi)
-	{
-		
 	}
 	
 	public boolean set_user_tile_market(ArrayList<Integer> tile_market)
@@ -727,34 +717,7 @@ public class Prediction
 		ArrayList<Integer> discard_type = tile_to_discardType(this.drop_pile_);
 		if(this.user_tile_market_ == null)
 		{
-			if(this.drop_pile_.size()/6 == 0)
-			{
-				final_score += 3.75;
-			}
-			for(int i = discard_type.size() - 1; i >= 0; i++)
-			{
-				if(i <= 6)
-				{
-					break;
-				}
-				if(discard_type.get(i) == 1)
-				{
-					if(this.drop_pile_.get(i) % 9 == 0 || this.drop_pile_.get(i) % 9 == 8 && this.drop_pile_.get(i) <= 26)
-					{
-						final_score += i/6 * 0.5;
-					}
-					else if(this.drop_pile_.get(i) > 26)
-					{
-						final_score += i/6 * 0.75;
-					}
-					else
-					{
-						final_score -= (i/6) * 0.35;
-					}
-				}
-				if(final_score > 8.75) {final_score = 8.75;}
-				if(final_score < -3.75) {final_score = -3.75;}
-			}
+			return 0.0;
 		}
 		else
 		{
@@ -768,13 +731,111 @@ public class Prediction
 	}
 	
 	/**
-	 * @info future implementation
-	 * @param discard_index the index of ALL drop pile history where the Opponent discarded a tile
-	 * @return
+	 * @info 
+	 * A previous discard counter algorithm:
+	 * major weight == amount of same tile discarded before opponent discard
+	 * middle weight == tedashi
+	 * middle weight == layer
+	 * light weight == gamemode == 0, orphans -> 5s -> simples, gamemode == 1, same weights
+	 * 
+	 * major weight equation: 
+	 * z = total previous amt discard
+	 * x = layer
+	 * 
+	 * z = 0			x/28.5 - 0.06
+	 * z = 1			max(7-z,0)/((x+1)*5)
+	 * z = 2			abs(min(z,8)-8)/(2*((e^x)+1.75)) + .5/(z+1)
+	 * z = 3 			13-z/((x^2) + 5.5)
+	 * 
+	 * min un-weight score ~= -0.5094736842105263
+	 * max un-weight score ~= 41.58560833080732
+	 * 
+	 * Last scalar is dependent on size of discard_index (total drop_pile), scalar formula = abs(min(x,4)-5)*0.2725
+	 * 
+	 * @param discard_index 	Numerical_tools.get_discard_index(MJ_round's assigned_drop_wind_id_, wind_id)
+	 * @param all_drop_tiles	MJ_round's all_drop_tiles_
+	 * @return 
 	 */
-	public double seven_pairs_prob(ArrayList<Integer> discard_index)
+	public static double seven_pairs_prob(ArrayList<Integer> discard_index, ArrayList<Double> all_drop_tiles)
 	{
+		/*
+		 * Each index = amount of times before discard
+		 */
+		ArrayList<ArrayList<int[]>> amt_b4_discard_counter = new ArrayList<ArrayList<int[]>>();
+		for(int i = 0; i < 4; i++) amt_b4_discard_counter.add(new ArrayList<int[]>());
 		
+		ArrayList<Integer> sorted_index = Group.sortArray(discard_index);
+		for(int j = 0; j < sorted_index.size(); j++)
+		{
+			if(sorted_index.get(j) >= all_drop_tiles.size())
+			{
+				break;
+			}
+			int counter = 0;
+			int turn_distance = 0;
+			int latest_index = 0;
+			int tile_id = all_drop_tiles.get(sorted_index.get(j)).intValue();
+			for(int i = 0; i < sorted_index.get(j); i++)
+			{	
+				if(all_drop_tiles.get(i).intValue() == tile_id) 
+				{
+					counter++; turn_distance = 0;
+				}
+				//Responsible for the amount of turns the player could've discarded a tile
+				else if(latest_index < sorted_index.size() && i == sorted_index.get(latest_index)) 
+				{
+					latest_index++; turn_distance++;
+				}
+			}
+			if(turn_distance > 10) {turn_distance = 10;} if(turn_distance < 0 || counter == 0) {turn_distance = 0;}
+			int[] new_discard_info = {sorted_index.get(j)/(6 * 4), turn_distance, -1};
+			if(tile_id > 26)
+			{
+				new_discard_info[2] = 2;
+			}
+			else if(tile_id % 9 == 0 || tile_id % 9 == 8)
+			{
+				new_discard_info[2] = 1;
+			}
+			else
+			{
+				new_discard_info[2] = 0;
+			}
+			//0 = layer, 1 = turn_distance, 2 = tile type
+			System.out.println(counter + " ; " + turn_distance + " ; " + tile_id + " ; " + new_discard_info[0]);
+			amt_b4_discard_counter.get(counter).add(new_discard_info);
+		}
+		
+		double weighted_total = 0.0;
+		for(int i = 0; i < amt_b4_discard_counter.size(); i++)
+		{
+			for(int[] discard_info : amt_b4_discard_counter.get(i))
+			{
+				switch(i)
+				{
+					case 0:
+						weighted_total += Math.min(discard_info[0]/28.5 - 0.06, 0);
+						break;
+					case 1:
+						weighted_total += Math.max(7 - discard_info[1], 0)/
+										  ((discard_info[0] + 1) * 5.0);
+						break;
+					case 2:
+						weighted_total += Math.abs(Math.min(discard_info[1], 8) - 8.0)/
+										  (2.0 * (Math.exp(discard_info[0]) + 1.75)) + 
+										  (0.5)/(discard_info[1] + 1);
+						break;
+					case 3:
+						weighted_total += (13.0 - discard_info[1])/(Math.pow(discard_info[0], 2) + 5.5);
+						break;
+				}
+				System.out.println(weighted_total);
+			}
+		}
+		weighted_total = weighted_total * Math.max((Math.abs(Math.min(discard_index.size()/6, 4)-5) * 0.2725),1);
+		System.out.println("final " + weighted_total);
+		if(weighted_total > 8.75) {return 8.75;}
+		return weighted_total;
 	}
 	
 	public double[] return_all_prob()
@@ -1324,6 +1385,70 @@ public class Prediction
 			}
 			return false;
 		}
+		public static ArrayList<Integer> get_discard_index(ArrayList<Integer> assigned_drop_wind_id_, int wind_id)
+		{
+			ArrayList<Integer> indexes = new ArrayList<Integer>();
+			for(int i = 0; i < assigned_drop_wind_id_.size(); i++)
+			{
+				if(assigned_drop_wind_id_.get(i) == wind_id)
+				{
+					indexes.add(i);
+				}
+			}
+			return indexes;
+		}
+		public static ArrayList<ArrayList<Double>> get_index_drop_history(String whole_drop_history)
+		{
+			if(whole_drop_history.length() == 0) {return new ArrayList<ArrayList<Double>>();}
+			
+			ArrayList<Double> wind_index_list = new ArrayList<Double>();
+			ArrayList<Double> tile_list = new ArrayList<Double>();
+			double tile_val = 0;
+			String get_tile = "";
+			int wind_id = 0;
+			IntUnaryOperator increment_wind_id = x -> 
+			{
+				if(x + 1 > 3) {return 0;}
+				return ++x;
+			};
+			for(int i = 0; i < whole_drop_history.length(); i++)
+			{
+				switch(whole_drop_history.charAt(i))
+				{
+					case 'q':
+						switch(whole_drop_history.charAt(i + 1))
+						{
+							case 'c':
+								wind_id = increment_wind_id.applyAsInt(wind_id);
+								i += 2;
+								break;
+							case 'p':
+							case 'k':
+								wind_id = Character.getNumericValue(whole_drop_history.charAt(i + 2));
+								i += 2;
+								break;
+						}
+						break;
+					case 'd':
+						tile_val = 0.5;
+					case 't':
+						wind_index_list.add((double) wind_id);
+						tile_val += Compress_input.Console_io.get_tile_value(get_tile);
+						tile_list.add(tile_val);
+						get_tile = "";
+						tile_val = 0;
+						wind_id = increment_wind_id.applyAsInt(wind_id);
+						break;
+					default:
+						get_tile += whole_drop_history.charAt(i);
+						break;
+				}
+			}
+			ArrayList<ArrayList<Double>> return_list = new ArrayList<ArrayList<Double>>();
+			return_list.add(wind_index_list);
+			return_list.add(tile_list);
+			return return_list;
+		}
 	}
 	
 	public static class Score_probability
@@ -1675,54 +1800,85 @@ public class Prediction
 	{	
 		
 		//Hand: 115r6789p123678sckqo (4,7p)
-		Prediction normal1 = new Prediction(read_dropSTR("wdndrdrdrdgdgdgdededed"), false);
+		Prediction normal1 = new Prediction(read_dropSTR("wdndrdrdrdgdgdgdededed"));
 		//Hand: 45567m33789sckq111zo (3,6m)
-		Prediction normal2 = new Prediction(read_dropSTR("nd2pd7pd1md9md8sdwht5rpt2sdst3pt1st6ptgt"), false);
+		Prediction normal2 = new Prediction(read_dropSTR("nd2pd7pd1md9md8sdwht5rpt2sdst3pt1st6ptgt"));
 		//Hand: 789m234678p78s11zckqo (6,9s)
-		Prediction normal3 = new Prediction(read_dropSTR("1md4md4st1pd-1s2m1swwh9pwe3m5rs4m"), false);
+		Prediction normal3 = new Prediction(read_dropSTR("1md4md4st1pd-1s2m1swwh9pwe3m5rs4m"));
 		//Hand: 3789m234p566778sckqo (3m tanki)
-		Prediction normal4 = new Prediction(read_dropSTR("whd1md2sdgt1st5md9sd4sd1mt9st"), false);
+		Prediction normal4 = new Prediction(read_dropSTR("whd1md2sdgt1st5md9sd4sd1mt9st"));
 		//Hand: 23499m455667p67s (5,8s)
-		Prediction normal5 = new Prediction(read_dropSTR("sdrdrt9sted6md2pd-1p6s2s1pwhw6s6m"), false);
+		Prediction normal5 = new Prediction(read_dropSTR("sdrdrt9sted6md2pd-1p6s2s1pwhw6s6m"));
 		//Hand: 123m44789p23345sckqo (1,4s)
-		Prediction normal6 = new Prediction(read_dropSTR("nd2md2sd6st5rmdwhtrt9mtgdgd7pd-1pw5m5p7mgn"), false);
+		Prediction normal6 = new Prediction(read_dropSTR("nd2md2sd6st5rmdwhtrt9mtgdgd7pd-1pw5m5p7mgn"));
 		//Hand: 78m567789p33789sckqo (6,9m)
-		Prediction normal7 = new Prediction(read_dropSTR("9mdrd4st9sdrt2pd-w4m4p5m1s5rm4p6s5p"), false);
+		Prediction normal7 = new Prediction(read_dropSTR("9mdrd4st9sdrt2pd-w4m4p5m1s5rm4p6s5p"));
 		
-		Prediction flush1 = new Prediction(read_dropSTR("2md3md4md5md6md7md8md2pd3pd4pd5pd6pd7pd8pd"), false);
+		Prediction flush1 = new Prediction(read_dropSTR("2md3md4md5md6md7md8md2pd3pd4pd5pd6pd7pd8pd"));
 		
 		//Hand: 9s123567778sckq555zo (no ten)
-//		Prediction flush1 = new Prediction(read_dropSTR("4md9md3md3mtrd6mdsd3pd6pd6pt8pd"), false);
+//		Prediction flush1 = new Prediction(read_dropSTR("4md9md3md3mtrd6mdsd3pd6pd6pt8pd"));
 		//Hand: 12233447m57zckq789mo (noten)
-		Prediction flush2 = new Prediction(read_dropSTR("7pd8pd3sd3sd6sd1pdwded3pd6pd"), false);
+		Prediction flush2 = new Prediction(read_dropSTR("7pd8pd3sd3sd6sd1pdwded3pd6pd"));
 		//Hand: 13377s33zckq999s444zo (noten)
-		Prediction flush3 = new Prediction(read_dropSTR("6md6pd5md5rpt6st3md8md2pd1mdgdrded5mdrtsdgt3pd"), false);
+		Prediction flush3 = new Prediction(read_dropSTR("6md6pd5md5rpt6st3md8md2pd1mdgdrded5mdrtsdgt3pd"));
 		//Hand: 1222355888s222zckqo (25s shanpon)
-		Prediction flush4 = new Prediction(read_dropSTR("2pd4pd8pd1pd4pt2md8ptwhd1md2md3md4md6pd6pted-"), false);
+		Prediction flush4 = new Prediction(read_dropSTR("2pd4pd8pd1pd4pt2md8ptwhd1md2md3md4md6pd6pted-"));
 		//Hand: 33m22zckq777z111z111mo (3m S shanpon)
-		Prediction flush5 = new Prediction(read_dropSTR("4pd4sd8sd4sd7pd7pd6md9mt5pt2st5rmt5mt2md6pd4mt7st8mt2mt2pt"), false);
+		Prediction flush5 = new Prediction(read_dropSTR("4pd4sd8sd4sd7pd7pd6md9mt5pt2st5rmt5mt2md6pd4mt7st8mt2mt2pt"));
 		//Hand: 12p44zckq555p678p999po (3p edge wait)
-		Prediction flush6 = new Prediction(read_dropSTR("4sd1mt6stsd7stwd9st4stedgd4mt8pt6pdnt5st"), false);
+		Prediction flush6 = new Prediction(read_dropSTR("4sd1mt6stsd7stwd9st4stedgd4mt8pt6pdnt5st"));
 		//Hand: 678p3444666788sckqo (Noten)
-		Prediction flush7 = new Prediction(read_dropSTR("2md5pd3pd3ptndgdrdndsdrdwt1mtwhted4pt9pt8mt"), false);
+		Prediction flush7 = new Prediction(read_dropSTR("2md5pd3pd3ptndgdrdndsdrdwt1mtwhted4pt9pt8mt"));
 		//Hand: 8m6p345566899s44zckqo (no ten)
-		Prediction flush8 = new Prediction(read_dropSTR("9mdwhd5md3pdsdwd9pt3mt2ptrd7pt"), false);
+		Prediction flush8 = new Prediction(read_dropSTR("9mdwhd5md3pdsdwd9pt3mt2ptrd7pt"));
 		//Hand: 5r6788m66zckq444m777zo (8m g shanpon)
-		Prediction flush9 = new Prediction(read_dropSTR("8sd1st9mdet6pd5pd6sd7sd7sd1st3md6mt3pt"), false);
+		Prediction flush9 = new Prediction(read_dropSTR("8sd1st9mdet6pd5pd6sd7sd7sd1st3md6mt3pt"));
 		
-		//Hand: 2233m55p779s4477zckqo (9s tanki)
-		Prediction seven_pairs1 = new Prediction(read_dropSTR("2pdwd1pt7md4mt-1mt"), false);
+		//Hand: 2233m55p779s4477zckqo (9s tanki) wind_id = 2
+		Prediction seven_pairs1 = new Prediction(read_dropSTR("2pdwd1pt7md4mt-1mt"));
+		//Hand: 66m5566p45577s11zckqo wind_id = 0
+		Prediction seven_pairs2 = new Prediction(read_dropSTR("1sdrd9sd3st7pt2mt9st3pdnd6sd-8m2mwh6s"));
+		//Hand: 2233m55p779s4477zckqo wind_id = 0
+		Prediction seven_pairs3 = new Prediction(read_dropSTR("9sd2pd7pt2mdet2sd5sd-9m1p9p6p7pw7s9m9p1ss"));
+		//Hand: 355889m11449p99sckqo wind_id = 0
+		Prediction seven_pairs4 = new Prediction(read_dropSTR("sdedstwd5pt3sd6sd6pd3stgt2pdgt8st4mdwt3st8st2mt"));
+		//Hand: 44m11227788p335sckqo wind_id = 3
+		Prediction seven_pairs5 = new Prediction(read_dropSTR("6sded7sd1mdgt3md9sd-2ssw9m3m4ps5p1m"));
 		
+		//7_pairs_2 round
+		ArrayList<ArrayList<Double>> example_drop_history1 = Numerical_tools.get_index_drop_history("1sdwtwhd1ptrdqp3ndwd9sdwhd8pdgd3stndwt2st7pt3sd8pted2mtst3stwt9st1pt3pt1sd3pdst5rst8mtnt4ptgdgt6sd-");
+		//7_pairs_3 round
+		ArrayList<ArrayList<Double>> example_drop_history2 = Numerical_tools.get_index_drop_history("9sd6mtsdgd2pded2pd1mt7ptrd8mdqcmwhd2mdwt5mtntet5rmtwtet2sd8md9mt7md5sd-");
+		//7_pairs_4 round
+		ArrayList<ArrayList<Double>> example_drop_history3 = Numerical_tools.get_index_drop_history("sdqp1ed8pt6sted5ptnd6mtst5stwhd3stwdwhtwht5mt5pt8mt2mt3sdqcl3pdnted6sd6pdgd7st6pd2ptqcm2sd2sd3strtrt4stgt7pt5sdnt2pd4st6pd8pdgt7mtet5rpt8st4mt1mt7md4md7mtnt2mtwtwt4stgt3st5ptqcr9pd2st8st2wht1st5st2mt9mt3ptwt1st5rst");
+		//7_pairs_5 round
+		ArrayList<ArrayList<Double>> example_drop_history4 = Numerical_tools.get_index_drop_history("nd6pd5mt6pd9mt4sd9pdednt4pd7st7sdnt3pt1sd1mdsd1st9sdgt3sdrtgdqp1wd5mt3mdetwd6st9sd-");
+		
+		ArrayList<ArrayList<Double>> worst_drop_history1 = Numerical_tools.get_index_drop_history("1md1md1mded2md2md2mdsd3md3md3mdwd4md4md4mdnd5md5md5mdwhd6md6md6mdgd7md7md7mdrd8md8md8md1sd9md9md9md2sd1pd1pd1pd3sd2pd2pd2pd4sd3pd3pd3pd5sd4pd4pd4pd6sd5pd5pd5pd7sd6pd6pd6pd8sd7pd7pd7pd9sd8pd8pd8pd9pd");
+		ArrayList<ArrayList<Double>> worst_drop_history2 = Numerical_tools.get_index_drop_history("1md1md1mded2md2md2mdsd3md3md3mdwd4md4md4mdnd5md5md5mdwhd");
+		ArrayList<ArrayList<Double>> best_drop_history = Numerical_tools.get_index_drop_history("1md1md1md1md2md2md2md2md3md3md3md3md4md4md4md4md5md5md5md5md6md6md6md6md7md7md7md7md8md8md8md8md9md9md9md9md1pd1pd1pd1pd2pd2pd2pd2pd3pd3pd3pd3pd4pd4pd4pd4pd5pd5pd5pd5pd6pd6pd6pd6pd7pd7pd7pd7pd8pd8pd8pd8pd9pd9pd9pd9pd1sd1sd1sd1sd2sd2sd2sd2sd3sd3sd3sd3sd4sd4sd4sd4sd5sd5sd5sd5sd6sd6sd6sd6sd7sd7sd7sd7sd8sd8sd8sd8sd9sd9sd9sd9sd");
+		ArrayList<ArrayList<Double>> best_drop_history2 = Numerical_tools.get_index_drop_history("1md1md1md1md2md2md2md2md3md3md3md3md4md4md4md4md5md5md5md5md");
+		
+		System.out.println(example_drop_history1.get(1));
+		System.out.println("I" + seven_pairs2.seven_pairs_prob() + "  II: " + seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(example_drop_history1.get(0)), 0), example_drop_history1.get(1)));
+		System.out.println("I" + seven_pairs3.seven_pairs_prob() + "  II: " + seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(example_drop_history2.get(0)), 0), example_drop_history2.get(1)));
+		System.out.println("I" + seven_pairs4.seven_pairs_prob() + "  II: " + seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(example_drop_history3.get(0)), 0), example_drop_history3.get(1)));
+		System.out.println("I" + seven_pairs5.seven_pairs_prob() + "  II: " + seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(example_drop_history4.get(0)), 3), example_drop_history4.get(1)));
+		System.out.println(seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(worst_drop_history1.get(0)), 3), worst_drop_history1.get(1)));
+		System.out.println(seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(worst_drop_history2.get(0)), 3), worst_drop_history2.get(1)));
+		System.out.println(seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(best_drop_history.get(0)), 3), best_drop_history.get(1)));
+		System.out.println(seven_pairs_prob(Numerical_tools.get_discard_index(Numerical_tools.downcast_AL_double(best_drop_history2.get(0)), 3), best_drop_history2.get(1)));
 		//Hand: Hand: 19m19p19s1234456zckqo (r kokushi wait)
-		Prediction kokushi1 =  new Prediction(read_dropSTR("7sd5sd4pd3pd3pd2pd5md5md5st2mt3mt1pd"), false);
+		Prediction kokushi1 =  new Prediction(read_dropSTR("7sd5sd4pd3pd3pd2pd5md5md5st2mt3mt1pd"));
 		//Hand: 19m19p19s1223567zkqo (north kokushi wait)
-		Prediction kokushi2 =  new Prediction(read_dropSTR("7md5md7pd8pd9md4md6pd2sd7md3st9pd6pt1mded-wh5p6p1s5s"), false);
+		Prediction kokushi2 =  new Prediction(read_dropSTR("7md5md7pd8pd9md4md6pd2sd7md3st9pd6pt1mded-wh5p6p1s5s"));
 		//Hand: 9m19p19s12345677zkqo (1m kokushi wait)
-		Prediction kokushi3 =  new Prediction(read_dropSTR("6sd5st4st7md6md5md8mt4pd5pd1sdwhd5rptwt"), false);
+		Prediction kokushi3 =  new Prediction(read_dropSTR("6sd5st4st7md6md5md8mt4pd5pd1sdwhd5rptwt"));
 		//Fake
-		Prediction kokushi4 =  new Prediction(read_dropSTR("2md2pd2sd3md3pd3sd4md4pd4sd5md5pd5sd6md6pd6sd7md7pd7sd8md8pd8sd"), false);
+		Prediction kokushi4 =  new Prediction(read_dropSTR("2md2pd2sd3md3pd3sd4md4pd4sd5md5pd5sd6md6pd6sd7md7pd7sd8md8pd8sd"));
 		
-		Prediction extreme = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd1sd1zd-"), false);
+		Prediction extreme = new Prediction(read_dropSTR("1md2md3md4md5md6md7md8md9md1pd1sd1zd-"));
 
 		String[] name = {"Normal", "Flush", "7 Pairs", "Kokushi"};
 		ArrayList<Prediction> test_list = new ArrayList<Prediction>();
@@ -1731,34 +1887,36 @@ public class Prediction
 		test_list.add(normal7);test_list.add(flush1);test_list.add(flush2);
 		test_list.add(flush3);test_list.add(flush4);test_list.add(flush5);
 		test_list.add(flush6);test_list.add(flush7);test_list.add(flush8);
-		test_list.add(flush9);test_list.add(seven_pairs1);test_list.add(kokushi1);
+		test_list.add(flush9);test_list.add(seven_pairs1);test_list.add(seven_pairs2);test_list.add(seven_pairs3);test_list.add(kokushi1);
 		test_list.add(kokushi2);test_list.add(kokushi3);test_list.add(kokushi4);test_list.add(extreme);
 		
 		int name_index = 0;
 		int hand_index = 1;
-		for(int i = 0; i < test_list.size() - 1; i++)
-		{
-			switch(i) 
-			{
-				case 7: 
-					name_index = 1; 
-					hand_index = 1;
-					break; 
-				case 16: 
-					name_index = 2; 
-					hand_index = 1;
-					break; 
-				case 17: 
-					name_index = 3; 
-					hand_index = 1;
-					break;
-			}
-			System.out.println(name[name_index] + hand_index + ": ");
-			System.out.println(test_list.get(i).drop_pile_);
-			System.out.println("flush score: " + test_list.get(i).flush_prob());
-			System.out.println("Kokushi score: " + test_list.get(i).kokushi_prob());
-			hand_index++;
-		}
-		System.out.println(Numerical_tools.is_red_5(4.005));
+//		for(int i = 0; i < test_list.size() - 1; i++)
+//		{
+//			switch(i) 
+//			{
+//				case 7: 
+//					name_index = 1; 
+//					hand_index = 1;
+//					break; 
+//				case 16: 
+//					name_index = 2; 
+//					hand_index = 1;
+//					break; 
+//				case 19: 
+//					name_index = 3; 
+//					hand_index = 1;
+//					break;
+//			}
+//			System.out.println(name[name_index] + hand_index + ": ");
+//			System.out.println(test_list.get(i).drop_pile_);
+//			System.out.println("normal score: " + test_list.get(i).normal_prob());
+//			System.out.println("flush score: " + test_list.get(i).flush_prob());
+//			System.out.println("Kokushi score: " + test_list.get(i).kokushi_prob());
+//			System.out.println("simple 7_pair score: " + test_list.get(i).seven_pairs_prob());
+//			System.out.println("complex 7_pair score: " + test_list.get(i).seven_pairs_prob(Numerical_tools.downcast_AL_double(example_drop_history1.get(0)),example_drop_history1.get(1)));
+//			hand_index++;
+//		}
 	}
 }

@@ -26,6 +26,7 @@ public class MJ_round
 	 * This ArrayList stores all the tiles that were visibly dropped, this includes if it was called and used
 	 */
 	public ArrayList<Double> all_drop_tiles_ = new ArrayList<Double>();
+	public ArrayList<Integer> assigned_drop_wind_id_ = new ArrayList<Integer>();
 	
 	/**
 	 * Possible_tiles: 			used for the searching algorithm to see what tiles are left
@@ -436,6 +437,7 @@ public class MJ_round
 							tile_val += 0.05;
 						}
 						this.all_drop_tiles_.add(tile_val);
+						this.assigned_drop_wind_id_.add(current_cmd.player_wind_id_);
 						this.decrement_tiles_left();
 						this.get_all_Players().get(this.user_wind_).decrement_map_index(current_cmd.tile_id_);
 				}
