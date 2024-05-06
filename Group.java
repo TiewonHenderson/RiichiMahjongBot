@@ -1025,6 +1025,80 @@ public class Group extends Scoring
 		return return_array;
 	}
 	
+	public static ArrayList<Integer> get_talkingTiles(ArrayList<Integer> in_group)
+	{
+		if(in_group.size() == 0) {return new ArrayList<Integer>();}
+		/*
+		 * Group status reference
+		 * -3 = invalid
+		 * -2 = floating
+		 * -1 = incomp sequence
+		 * 0 = pair
+		 * 1 = sequence
+		 * 2 = triplets
+		 * 3 = quads
+		 */
+		int group_status = group_status(in_group);
+		ArrayList<Integer> return_array = new ArrayList<Integer>();
+		int suit = in_group.get(0)/9;
+		if(group_status == -3 || group_status >= 1)
+		{
+			return return_array;
+		}
+		
+		//Honors cannot create sequence, if honor tile present, only itself can form incomplete/ complete group
+		if(suit == 3)
+		{
+			return_array.add(in_group.get(0));
+			return return_array;
+		}
+		
+		switch(group_status)
+		{
+			case -2: //Floating tile
+				for(int i = -2; i <= 2; i++)
+				{
+					/*
+					 * Checks if the talking tile is in the same suit
+					 * Also Checks the tile is valid, and not goes to honors as it'll be checked beforehand
+					 */
+					if((in_group.get(0) + i)/9 != suit ||
+					   (in_group.get(0) + i) < 0 || (in_group.get(0) + i) > 26)
+					{
+						continue;
+					}
+					return_array.add(in_group.get(0) + i);
+				}
+				break;
+			case -1: //Incomplete Sequence
+				//Group_status already checks that the tiles are talking that can become a sequence
+				ArrayList<Integer> sort_seq = sortArray(in_group);
+				switch(Math.abs(sort_seq.get(1) - sort_seq.get(0))) //Finds if its two sides wait of middle wait
+				{
+					case 1:
+						if((sort_seq.get(0) - 1)/9 == suit && (sort_seq.get(0) - 1) >= 0) //if (0,1), -1 is invalid
+						{
+							return_array.add((sort_seq.get(0) - 1));
+						}
+						if((sort_seq.get(1) + 1)/9 == suit && (sort_seq.get(1) + 1) <= 26) //If (25,26), 27 is not same suit
+						{
+							return_array.add((sort_seq.get(1) + 1));
+						}
+						break;
+					case 2:
+						return_array.add((sort_seq.get(0) + 1)); //In between same suit must be same suit and valid
+						break;
+					default:
+						break;
+				}
+				break;
+			case 0: //Pair
+				return_array.add(in_group.get(0)); //Adds the tile back to indicate it can make triplet
+				break;
+		}
+		return return_array;
+	}
+	
 	/**
 	 * 
 	 * @return true if compiled, false if wrong

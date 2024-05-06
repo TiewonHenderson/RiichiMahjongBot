@@ -68,7 +68,7 @@ public class Prediction
 	 * Not required, but can help in certain functions (kokushi + 7 pairs probability)
 	 * this field can only be set using the mutator function (which checks valid size + tile_id amounts)
 	 */
-	private ArrayList<Integer> user_tile_market_;
+	private ArrayList<Integer> uni_tile_market_;
 	
 	/**
 	 * Not required, but can help in certain functions (normal + flush probability, also eliminates need to search kokushi/7 pairs)
@@ -148,13 +148,13 @@ public class Prediction
 			return false;
 		}
 		for(int tile_id: tile_market){if(tile_id < 0 || tile_id > 4) {return false;}}
-		this.user_tile_market_ = tile_market;
+		this.uni_tile_market_ = tile_market;
 		return true;
 	}
 	
-	public ArrayList<Integer> get_user_tile_market()
+	public ArrayList<Integer> get_uni_tile_market()
 	{
-		return this.user_tile_market_;
+		return this.uni_tile_market_;
 	}
 	
 	public boolean add_tile(double new_tile)
@@ -483,13 +483,13 @@ public class Prediction
 	 */
 	public double kokushi_prob()
 	{
-		if(this.user_tile_market_ != null)
+		if(this.uni_tile_market_ != null)
 		{
-			for(int i = 0; i < this.user_tile_market_.size(); i++)
+			for(int i = 0; i < this.uni_tile_market_.size(); i++)
 			{
 				if(i % 9 == 0 || i % 9 == 8 || i > 25)
 				{
-					if(this.user_tile_market_.get(i) == 0)
+					if(this.uni_tile_market_.get(i) == 0)
 					{
 						return -3.75;
 					}
@@ -715,7 +715,7 @@ public class Prediction
 	{
 		double final_score = 0.0;
 		ArrayList<Integer> discard_type = tile_to_discardType(this.drop_pile_);
-		if(this.user_tile_market_ == null)
+		if(this.uni_tile_market_ == null)
 		{
 			return 0.0;
 		}
@@ -724,7 +724,7 @@ public class Prediction
 			double[][] additive_scores = {{1.0,1.0,-0.1,-2.0}, {1.5,0.8,0.2,-1.5}};
 			for(int i = 0; i < this.drop_pile_.size(); i++)
 			{
-				final_score += additive_scores[discard_type.get(i)][this.user_tile_market_.get(this.drop_pile_.get(i).intValue())];
+				final_score += additive_scores[discard_type.get(i)][this.uni_tile_market_.get(this.drop_pile_.get(i).intValue())];
 			}
 		}
 		return final_score;

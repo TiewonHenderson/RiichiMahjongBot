@@ -83,7 +83,7 @@ public class Tile_map
 	 * 	F-			[250-253]			Non-Suji 2nd tile
 	 * 	F-			[254-255]			Non-Suji 1st tile
 	 */
-	final private ArrayList<Integer> flush_base_tile_safety = new ArrayList<Integer>();
+	final private ArrayList<Integer> canto_base_tile_safety = new ArrayList<Integer>();
 	
 	//Kokushi map is just not discarding any Orphan tiles
 	
@@ -93,9 +93,9 @@ public class Tile_map
 	public MJ_round current_round_;
 	
 	/**
-	 * Saved the current Prediction to the Player corresponding to the inputted wind_id
+	 * Saves the Player's info into this field, this Player instance should never be the User
 	 */
-	protected Prediction current_predictions_;
+	protected Player player_;
 	
 	/**
 	 * The wind id of the opponent Player this Tile_map would corresponding against
@@ -127,17 +127,17 @@ public class Tile_map
 	 */
 	protected int[] called_opportunities;
 	
-	public Tile_map(Prediction player_judgements, int opponent, MJ_round this_round)
+	public Tile_map(Player player_judgements, int opponent, MJ_round this_round)
 	{
 		this.current_round_ = this_round;
 		this.wind_id_ = opponent;
-		this.current_predictions_ = player_judgements;
+		this.player_ = player_judgements;
 		init_call_progress_map(this.current_round_.game_mode_);
 	}
 	
 	public int[] opponent_score_chance(ArrayList<Integer> tile_market)
 	{
-		Score_probability x = new Score_probability(this.current_round_.get_all_Players().get(this.wind_id_).get_PlayerHand().get_declaredGroups(),
+		Score_probability x = new Score_probability(this.current_round_.get_Player(this.wind_id_).get_PlayerHand().get_declaredGroups(),
 													tile_market, this.wind_id_, this.current_round_.prevalent_wind_);
 		return x.init_score_opportunities();
 	}
@@ -194,7 +194,7 @@ public class Tile_map
 	 * @param ready_index where the Player is believed to be ready at this index discard
 	 * @param hand_prob A 3 index array that will show the probability of the current drop pile being played a certain way
 	 * @param score_opportunities given called groups, what kind of score the Player is more likely going for
-	 * @return ranging from [-1,1] where 1 == 100% confidence sakigiri, -1 == 0% confidence
+	 * @return ranging from [0,1] where 1 == 100% confidence sakigiri, 0 == 0% confidence
 	 */
 	public double check_sakigiri(ArrayList<Double> drop_pile, int ready_index, double[] hand_prob)
 	{
@@ -206,6 +206,7 @@ public class Tile_map
 		for(int i = 0; i < hand_prob.length; i++){if(hand_prob[likely_hand] < hand_prob[i]){likely_hand = i;}}
 		//Last tedashi tile before ready if applicable
 		int tedashi_index = ready_index;
+		int tile_type = -1;
 		if(discard_type.get(ready_index) == 0)
 		{
 			for(int i = tedashi_index; i >= 0; i--)
@@ -218,8 +219,54 @@ public class Tile_map
 			}
 		}
 		
+		int genbatsu_count = 0;
+		for(int i = 0; i < this.current_round_.get_all_Players().size(); i++)
+		{
+			if(i == this.wind_id_) {continue;}
+			for(double drop: this.current_round_.get_Player(i).dropPile_)
+			{
+				if((int)drop == drop_pile.get(tedashi_index).intValue())
+				{
+					genbatsu_count++; break;
+				}
+			}
+		}
 		
-		return 0.0;
+		//importance x1 x1.5 x2 x1.5 x1
+		int[] talking_tiles = surrounding_tiles(drop_pile.get(tedashi_index).intValue());
+		double[] scalar = {1,1.5,2,1.5,1};
+		double talking_score = 0.0;
+		for(int i = 0; i < 5; i++)
+		{
+			talking_score += Math.max(talking_tiles[i] - 1, 0) * scalar[i];
+		}
+		return talking_score / (genbatsu_count + 1); //max == 19, min = 
+	}
+	
+	/**
+	 * 
+	 * @param tile_id
+	 * @return a score from [0,4] where 0 == dead tile, 4 == extreme live tile
+	 */
+	public int[] surrounding_tiles(int tile_id)
+	{
+		int[] return_list = {0, 0, this.current_round_.get_uni_tile_amt(tile_id), 0, 0};
+		if(tile_id > 26){return return_list;}
+		else
+		{
+			for(int i = -2; i <= 2; i++)
+			{
+				try
+				{
+					return_list[i + 2] = this.current_round_.get_uni_tile_amt(tile_id);
+				}
+				catch(Exception e) 
+				{
+					return_list[i + 2] = 0;
+				}
+			}
+			return return_list;
+		}
 	}
 	
 	/**
@@ -235,8 +282,6 @@ public class Tile_map
 		int calls = declared_Groups.size();
 		return call_progress_map_.get(calls * 10 + layer);
 	}
-	
-	
 	
 	public static void init_call_progress_map(int game_mode)
 	{
@@ -303,6 +348,7 @@ public class Tile_map
             e.printStackTrace();
         }
 	}
+	
 	
 	public static void main(String[] args)
 	{

@@ -39,7 +39,8 @@ public class Player
 	public boolean opponent_Player_ = true;
 	
 	/**
-	 * The visible amount of tile per tile_id for this instance of Player
+	 * The amount of tiles non-visible, so if there is a tile visible to this Player, that tile_id will decrement, 
+	 * even in their personal hand, decrement
 	 */
 	private ArrayList<Integer> tile_market_;
 	
@@ -194,7 +195,7 @@ public class Player
 	 * @return The ArrayList of tiles that would represent the drop pile of the Player, will not
 	 *		   delete tiles that were called on
 	 */
-	public ArrayList<Double> getPlayerDrops()
+	public ArrayList<Double> get_drop_pile()
 	{
 		return this.dropPile_;
 	}

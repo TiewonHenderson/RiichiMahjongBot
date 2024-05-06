@@ -1,7 +1,6 @@
 package bot_package;
 
 import java.util.*;
-import bot_package.Compress_input;
 import bot_package.Compress_input.Command;
 import bot_package.Compress_input.Console_io;
 import bot_package.Group.Hidden_Kan;
@@ -29,10 +28,10 @@ public class MJ_round
 	public ArrayList<Integer> assigned_drop_wind_id_ = new ArrayList<Integer>();
 	
 	/**
-	 * Possible_tiles: 			used for the searching algorithm to see what tiles are left
-	 * total_nonbonus_tiles: 	used to reference for how far the current game is progressing
+	 * A tile map that doesn't take into consideration Player individual hands, but will take into consideration
+	 * non-concealed declared Groups
 	 */
-	public ArrayList<Integer> possible_tiles_ = new ArrayList<Integer>();
+	public int[] uni_tile_map_ = new int[34];
 	
 	/**
 	 * Only applies to this.game_mode_ == 0 for Riichi mahjong games
@@ -103,6 +102,7 @@ public class MJ_round
 	 */
 	public MJ_round()
 	{
+		Arrays.fill(uni_tile_map_,4);
 		this.wind_ID_turn_ = 0;
 		this.game_status_ = 0;
 		this.prevalent_wind_ = 0;
@@ -119,6 +119,7 @@ public class MJ_round
 	 */
 	public MJ_round(int game_mode)
 	{
+		Arrays.fill(uni_tile_map_,4);
 		String[] info = MJ_round_get_info.get_all_info(this.console_io_stream);
 		switch(game_mode)
 		{
@@ -201,23 +202,6 @@ public class MJ_round
 	 */
 	
 	/**
-	 * Accessor method to get all non-visible tiles
-	 * @return Every tile in a suit by suit ArrayList<Integer> format that are not visible
-	 */
-	public ArrayList<Integer> get_possible_tiles()
-	{
-		return this.possible_tiles_;
-	}
-	
-	/**
-	 * Mutator method for the whole non-visible tiles sequential ArrayList
-	 * @param new_possible_tiles A whole new non-visible tiles sequential ArrayList where index represents the tile_id
-	 */
-	public void set_possible_tiles(ArrayList<Integer> new_possible_tiles)
-	{
-		this.possible_tiles_ = new ArrayList<Integer>(new_possible_tiles);
-	}
-	/**
 	 * Accessor method to get amount of tiles left in the wall itself
 	 * @return The total number of tiles left from THE WALL, not total visible tiles
 	 */
@@ -248,13 +232,19 @@ public class MJ_round
 		}
 		return false;
 	}
+
+	public ArrayList<Player> get_all_Players()
+	{
+		return this.all_players;
+	}
+	
 	/**
 	 * Accessor method to get all Players within a ArrayList
 	 * @return An ArrayList of Players where each index would be the Player's respective wind_ID
 	 */
-	public ArrayList<Player> get_all_Players()
+	public Player get_Player(int wind_id)
 	{
-		return this.all_players;
+		return this.all_players.get(wind_id);
 	}
 	
 	/**
@@ -293,6 +283,12 @@ public class MJ_round
 	public int get_game_mode()
 	{
 		return this.game_mode_;
+	}
+	
+	public int get_uni_tile_amt(int tile_id)
+	{
+		if(tile_id < 0 || tile_id > 33) return 0;
+		return this.uni_tile_map_[tile_id];
 	}
 	
 	public void set_game_mode(int game_mode)
@@ -338,14 +334,15 @@ public class MJ_round
 					case CONCEALED_QUAD:
 						if(current_cmd.tile_id_ != -1)//tile visible in riichi mahjong
 						{
-							this.get_all_Players().get(this.user_wind_).update_tile_map(current_cmd.tile_id_, 0);
+							this.get_Player(this.user_wind_).update_tile_map(current_cmd.tile_id_, 0);
+							this.uni_tile_map_[current_cmd.tile_id_] = 0;
 							ArrayList<Integer> group_list = new ArrayList<Integer>();
 							for(int i = 0; i < 4; i++) group_list.add(current_cmd.tile_id_);
 							this.all_players.get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, true));
 						}
 						else//tild_id == -1 if game_mode_ == 1
 						{
-							this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Hidden_Kan(current_cmd.player_wind_id_, -1));
+							this.get_Player(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Hidden_Kan(current_cmd.player_wind_id_, -1));
 						}
 						this.set_tiles_left(this.get_total_tiles_left() - 4);
 						break;
@@ -375,13 +372,17 @@ public class MJ_round
 									group_list.add(prev_tile_id + current_cmd.chi_dif_);
 								}
 								for(Integer visible_tile: group_list) 
-									this.get_all_Players().get(this.user_wind_).decrement_map_index(visible_tile);
+								{
+									this.uni_tile_map_[visible_tile]--;
+									this.get_Player(this.user_wind_).decrement_map_index(visible_tile);
+								}
 								group_list.add(prev_tile_id);
-								this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
+								this.get_Player(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
 								this.wind_ID_turn_++;
 								break;
 							case CALL_KAN:
-								this.get_all_Players().get(this.user_wind_).decrement_map_index(prev_tile_id);
+								this.get_Player(this.user_wind_).decrement_map_index(prev_tile_id);
+								this.uni_tile_map_[prev_tile_id]--;
 								group_list.add(prev_tile_id);
 								if(this.game_mode_ == 0)
 								{
@@ -391,15 +392,16 @@ public class MJ_round
 								
 								for(int i = 0; i < 2; i++)
 								{
-									this.get_all_Players().get(this.user_wind_).decrement_map_index(prev_tile_id);
+									this.uni_tile_map_[prev_tile_id]--;
+									this.get_Player(this.user_wind_).decrement_map_index(prev_tile_id);
 									group_list.add(prev_tile_id);
 								}
 								group_list.add(prev_tile_id);
-								this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
+								this.get_Player(current_cmd.player_wind_id_).get_PlayerHand().add_declared_group(new Group(group_list, true, false));
 								this.wind_ID_turn_ = current_cmd.player_wind_id_;
 								break;
 							case RON:
-								this.winner_wind_id = 
+								this.winner_wind_id = current_cmd.player_wind_id_;
 								this.game_status_ = 2;
 								all_commands = new LinkedList<Command>();
 								HashMap<Integer, String> revealing_hands = MJ_round_get_info.get_end_hands(this.console_io_stream);
@@ -411,17 +413,20 @@ public class MJ_round
 									}
 									else
 									{
-										this.get_all_Players().get(key).set_PlayerHand(new PlayerHand(revealing_hands.get(key)));
+										this.get_Player(key).set_PlayerHand(new PlayerHand(revealing_hands.get(key)));
 									}
 								}
 								return 2;
+							case NONE:
+								return 3;
 						}
 						break;
 					case ADDED_QUAD:
 						this.all_drop_tiles_.add(tile_val);
 						this.decrement_tiles_left();
-						this.get_all_Players().get(current_cmd.player_wind_id_).get_PlayerHand().update_added_quad(current_cmd.tile_id_);
-						this.get_all_Players().get(this.user_wind_).decrement_map_index(current_cmd.tile_id_);
+						this.get_Player(current_cmd.player_wind_id_).get_PlayerHand().update_added_quad(current_cmd.tile_id_);
+						this.get_Player(this.user_wind_).update_tile_map(current_cmd.tile_id_, 0);
+						this.uni_tile_map_[current_cmd.tile_id_] = 0;
 						break;
 					case DROP:
 						if(current_cmd.tedashi_)
@@ -439,11 +444,32 @@ public class MJ_round
 						this.all_drop_tiles_.add(tile_val);
 						this.assigned_drop_wind_id_.add(current_cmd.player_wind_id_);
 						this.decrement_tiles_left();
-						this.get_all_Players().get(this.user_wind_).decrement_map_index(current_cmd.tile_id_);
+						this.get_Player(this.user_wind_).decrement_map_index(current_cmd.tile_id_);
+						this.uni_tile_map_[current_cmd.tile_id_]--;
+					case TSUMO:
+						this.winner_wind_id = current_cmd.player_wind_id_;
+						this.game_status_ = 2;
+						all_commands = new LinkedList<Command>();
+						HashMap<Integer, String> revealing_hands = MJ_round_get_info.get_end_hands(this.console_io_stream);
+						for(int key: revealing_hands.keySet())
+						{
+							if(key == this.user_wind_)
+							{
+								continue;
+							}
+							else
+							{
+								this.get_Player(key).set_PlayerHand(new PlayerHand(revealing_hands.get(key)));
+							}
+						}
+						return 2;
 				}
 				if(drop_turn_b4_add_dora == 0)
 				{
-					this.add_dora_indicator(MJ_round_get_info.get_instant_dora_indicator(this.console_io_stream));
+					int dora_tile = MJ_round_get_info.get_instant_dora_indicator(this.console_io_stream);
+					this.add_dora_indicator(dora_tile);
+					this.get_Player(this.user_wind_).decrement_map_index(dora_tile);
+					this.uni_tile_map_[dora_tile]--;
 					drop_turn_b4_add_dora = -1;
 				}
 				else if(drop_turn_b4_add_dora > 0) {drop_turn_b4_add_dora--;}
@@ -490,6 +516,7 @@ public class MJ_round
 		}
 		return all_calls;
 	}
+	
 	
 	public static class MJ_round_get_info
 	{
