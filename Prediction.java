@@ -1385,6 +1385,12 @@ public class Prediction
 			}
 			return false;
 		}
+		/**
+		 * 
+		 * @param assigned_drop_wind_id_ The wind_id representation of the drop pile, meaning numbers 0-3 in this AL
+		 * @param wind_id The wind_id of the Player you want to see from the whole drop pile history
+		 * @return An ArrayList of specific index that represents the drop of the given wind_id of a certain Player
+		 */
 		public static ArrayList<Integer> get_discard_index(ArrayList<Integer> assigned_drop_wind_id_, int wind_id)
 		{
 			ArrayList<Integer> indexes = new ArrayList<Integer>();

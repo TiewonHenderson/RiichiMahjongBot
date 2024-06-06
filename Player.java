@@ -925,7 +925,7 @@ public class Player
 		ArrayList<Group> declared_groups = new ArrayList<Group>();
 		for(int i = 0; i < 2; i++) 
 		{
-			Group temp_group = Group.random_group(true, false);
+			Group temp_group = Test_class.random_group(true, false);
 			System.out.println("Added Group: " + temp_group);
 			declared_groups.add(temp_group);
 			if(declared_groups.get(declared_groups.size() - 1).get_groupTiles().size() == 4)

@@ -1,5 +1,5 @@
 Degree of Readiness:
-In riichi mahjong:
+gm0(riichi):
 		situation		readiness
 		riichi			1.0;
 &%
@@ -9,7 +9,7 @@ In riichi mahjong:
 		1 calls			0.1;0.4;0.9;1.0;
 		0 calls			0.0;0.3;0.8;1.0;
 |%
-In canto mahjong: 
+gm1(house canto): 
 		situation		readiness
 &%
 		4 calls			1.0;

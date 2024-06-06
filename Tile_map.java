@@ -34,7 +34,7 @@ public class Tile_map
 	/**
 	 * Sorted ArrayList of the keys for call_progress_map_ that represents amount of calls and layer
 	 */
-	private static ArrayList<Integer> key_list = Group.sortArray(new ArrayList<Integer>(call_progress_map_.keySet()));
+	private static ArrayList<Integer> key_list_;
 	
 	/**
 	 * Based off the danger chart from Daina Chiba’s Riichi Book 1
@@ -126,6 +126,7 @@ public class Tile_map
 	 * 6: term/honor
 	 */
 	protected int[] called_opportunities;
+	
 	
 	public Tile_map(Player player_judgements, int opponent, MJ_round this_round)
 	{
@@ -304,42 +305,34 @@ public class Tile_map
                 else if(line.compareTo("|%") == 0){list_score_n_right_gm = 0; continue;}
                 if(list_score_n_right_gm == 2)
                 {
-                	try
-                	{
-                		calls = Character.getNumericValue(line.charAt(0));
-                		layer = 0;
-                		String score_str = "";
-                		for(int i = 1; i < line.length(); i++)
-                		{
-                			if(line.charAt(i) == 's')
-                			{
-                				line = line.substring(i + 1).strip();
-                				score_str = "";
-                				i = 0;
-                			}
-                			if(line.charAt(i) == ';')
-                			{
-                				score = Double.parseDouble(score_str);
-                				call_progress_map_.put(calls * 10 + layer, score);
-                				score_str = "";
-                				layer++;
-                			}
-                			else
-                			{
-                				score_str += line.charAt(i);
-                			}
-                		}
-                		if(layer != 4)
-                		{
-                			for(int i = layer; i < 4; i++)
-                				call_progress_map_.put(calls * 10 + i, 1.0);
-                		}
-                	}
-                	catch(Exception e)
-                	{
-                		calls = 0;
-                		call_progress_map_ = new HashMap<Integer, Double>();
-                	}
+            		calls = Character.getNumericValue(line.charAt(0));
+            		layer = 0;
+            		String score_str = "";
+            		for(int i = 1; i < line.length(); i++)
+            		{
+            			if(line.charAt(i) == 's')
+            			{
+            				line = line.substring(i + 1).strip();
+            				score_str = "";
+            				i = 0;
+            			}
+            			if(line.charAt(i) == ';')
+            			{
+            				score = Double.parseDouble(score_str);
+            				call_progress_map_.put(calls * 10 + layer, score);
+            				score_str = "";
+            				layer++;
+            			}
+            			else
+            			{
+            				score_str += line.charAt(i);
+            			}
+            		}
+            		if(layer != 4)
+            		{
+            			for(int i = layer; i < 4; i++)
+            				call_progress_map_.put(calls * 10 + i, 1.0);
+            		}
                 }
             }
         } 
@@ -347,11 +340,15 @@ public class Tile_map
 		{
             e.printStackTrace();
         }
+		key_list_ = Group.sortArray(new ArrayList<Integer>(call_progress_map_.keySet()));
+		for(int key: key_list_)
+		{
+			System.out.println(key + " : " + call_progress_map_.get(key));
+		}
 	}
-	
 	
 	public static void main(String[] args)
 	{
-		
+		init_call_progress_map(0);
 	}
 }
