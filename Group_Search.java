@@ -601,7 +601,7 @@ public class Group_Search extends Group
 		//If given honors list, return Group_Search with only_triplets as true
 		if(suit == 3) {return list_TripletSearch(in_arraylist);}
 		
-		ArrayList<Tile> temp_suit = MJ_Hand_tools.sortArray(in_arraylist, false);
+		ArrayList<Tile> temp_suit = MJ_Hand_tools.sortTiles(in_arraylist, false);
 		int total_tiles = temp_suit.size();
 		int play_val_min = temp_suit.get(0).getTileID();
 
@@ -951,7 +951,7 @@ public class Group_Search extends Group
 			}
 		}
 		//Finalize groupSN
-		return_STR += "[+" + Tile.tileID_to_PlayVal(MJ_Hand_tools.sortArray(in_arraylist, false).get(0)) + "]";
+		return_STR += "[+" + Tile.tileID_to_PlayVal(MJ_Hand_tools.sortTiles(in_arraylist, false).get(0)) + "]";
 		return_STR += Character.toString(Tile.suit_reference[suit]);
 		return return_STR + "c";
 	}
@@ -979,7 +979,7 @@ public class Group_Search extends Group
 		//If given honors list, return Group_Search with only_triplets as true
 		if(suit == 3) {return list_TripletSearch(in_arraylist);}
 		
-		ArrayList<Integer> temp_suit = MJ_Hand_tools.Tiles_to_PlayVal(MJ_Hand_tools.sortArray(in_arraylist, false));
+		ArrayList<Integer> temp_suit = MJ_Hand_tools.Tiles_to_PlayVal(MJ_Hand_tools.sortTiles(in_arraylist, false));
 		int total_tiles = temp_suit.size();
 		int play_val_min = temp_suit.get(0);
 

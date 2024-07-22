@@ -1,6 +1,7 @@
 package bot_package_v2;
 
 import java.util.ArrayList;
+
 import bot_package_v2.MJ_tools.*;
 
 public class Group 
@@ -344,7 +345,7 @@ public class Group
 	    			return Group_type.TRIPLET;
 	    		}
 	    		//check if all the tiles are increments of each other for sequences
-	    		ArrayList<Tile> sortedGroup = MJ_Hand_tools.sortArray(in_group, false);
+	    		ArrayList<Tile> sortedGroup = MJ_Hand_tools.sortTiles(in_group, false);
 	    	    for(int i = 0; i < sortedGroup.size() - 1; i++)
 	    	    {
 	    	        if(sortedGroup.get(i).getTileID() + 1 != sortedGroup.get(i + 1).getTileID())

@@ -12,11 +12,11 @@ public class MJ_tools
 	/**
 	 * This represents a local class and holds key information for each tile
 	 */
-	public static class Tile
+	public static class Tile implements Comparable<Tile>
 	{
 		protected final int tile_id_;			//A int ID that would respresent a tile
 		protected final boolean red_five_;		//If this Tile instance is an Aka Dora
-		public final Wind assigned_wind_;		//This represents who discarded this Tile
+		public final Wind assigned_wind_;		//This represents who has/discarded this Tile
 		
 		/**
 		 * Represents how this Tile was discarded, 
@@ -64,6 +64,26 @@ public class MJ_tools
 				this.tile_id_ = -1;
 			}
 			this.assigned_wind_ = player;
+			this.discard_type_ = 0;
+			this.red_five_ = false;
+		}
+		
+		/**
+		 * Parameterized constructor has to have tile_val and player's wind or this tile is invalid
+		 * @param tile_id The tile value for this specific tile object
+		 * @param windID The player assigned by their wind rotation that discarded this Tile (represented by integer)
+		 */
+		public Tile(int tile_id, int windID)
+		{
+			if(isValidTile(tile_id))
+			{
+				this.tile_id_ = tile_id;
+			}
+			else
+			{
+				this.tile_id_ = -1;
+			}
+			this.assigned_wind_ = Wind.values()[windID];
 			this.discard_type_ = 0;
 			this.red_five_ = false;
 		}
@@ -197,6 +217,14 @@ public class MJ_tools
 		}
 		
 		/**
+		 * @override override to be able to compare 
+		 * @param otherTile Another Tile to be compared to this instance of Tile
+		 */
+	    public int compareTo(Tile otherTile) {
+	        return Integer.compare(this.getTileID(), otherTile.getTileID());
+	    }
+		
+		/**
 		 * 
 		 * @param in_tile_id A singular int value to be converted from tile_id to play_val
 		 * @return The play_val of the inputed integer, note this function only works from 0-33 inclusive
@@ -259,12 +287,16 @@ public class MJ_tools
 		public static ArrayList<Tile> createTileAL(ArrayList<Integer> in_tile_list)
 		{
 			ArrayList<Tile> return_list = new ArrayList<Tile>();
-			for(int tile_id: MJ_Hand_tools.int_sortArray(in_tile_list))
+			ArrayList<Integer> tempInList = new ArrayList<Integer>(in_tile_list);
+			Collections.sort(tempInList);
+			for(int tile_id: tempInList)
 			{
 				return_list.add(new Tile(tile_id));
 			}
 			return return_list;
 		}
+		
+		
 	}
 	
 	public static class MJ_Hand_tools
@@ -292,110 +324,23 @@ public class MJ_tools
 		}
 		
 		/**
-		 * 
-		 * @param in_arraylist Any Arraylist<Integer> that needs to be sorted
-		 * @return A sorted ArrayList<Integer> from the same ArrayList<Integer> input
-		 */
-		protected static ArrayList<Integer> int_sortArray(ArrayList<Integer> in_arraylist)
-		{
-			ArrayList<Integer> returnList = new ArrayList<Integer>();
-			ArrayList<Integer> tempList = new ArrayList<Integer>(in_arraylist);
-			if(in_arraylist.size() == 0)
-			{
-				return returnList;
-			}
-			int min = in_arraylist.get(0);
-			int index = 0;
-			
-			for(int i = 0; i < in_arraylist.size(); i++)
-			{
-				min = tempList.get(index);
-				for(int j = 0; j < tempList.size(); j++)
-				{
-					if(tempList.get(j) < min)
-					{
-						min = tempList.get(j);
-						index = j;
-					}
-				}
-				returnList.add(min);
-				tempList.remove(index);
-				index = 0;
-			}
-			return returnList;
-		}
-		
-		/**
-		 * 
-		 * @param in_arraylist A input of an ArrayList<Tile> that needs to be sorted
-		 * @return A sorted ArrayList<Tile> of the original inputted ArrayList<Tile>
-		 */
-		private static ArrayList<Tile> sortArray(ArrayList<Tile> in_arraylist)
-		{
-			ArrayList<Tile> returnList = new ArrayList<Tile>();
-			ArrayList<Tile> tempList = new ArrayList<Tile>(in_arraylist);
-			if(in_arraylist.size() == 0)
-			{
-				return returnList;
-			}
-			Tile min = in_arraylist.get(0);
-			int index = 0;
-			
-			for(int i = 0; i < in_arraylist.size(); i++)
-			{
-				min = tempList.get(index);
-				for(int j = 0; j < tempList.size(); j++)
-				{
-					if(tempList.get(j).getTileID() < min.getTileID())
-					{
-						min = tempList.get(j);
-						index = j;
-					}
-				}
-				returnList.add(min);
-				tempList.remove(index);
-				index = 0;
-			}
-			return returnList;
-		}
-		
-		/**
-		 * Overloading method so default value for reverse_sort = false, sort by minimum to maximum
 		 * @param in_arraylist A input of an ArrayList<Tile> that needs to be sorted
 		 * @param reverse_sort True if the ArrayList<Tile> should be sorted descending , false if wanted ascending
 		 * @return A sorted ArrayList<Tile> of the original inputted ArrayList<Tile>
 		 */
-		public static ArrayList<Tile> sortArray(ArrayList<Tile> in_arraylist, boolean reverse_sort)
+		public static ArrayList<Tile> sortTiles(ArrayList<Tile> in_arraylist, boolean reverse_sort)
 		{
-			ArrayList<Tile> returnList = new ArrayList<Tile>();
 			ArrayList<Tile> tempList = new ArrayList<Tile>(in_arraylist);
-			Tile max = in_arraylist.get(0);
-			int index = 0;
-			
-			if(!reverse_sort)
+			Collections.sort(tempList);
+			if(reverse_sort)
 			{
-				return sortArray(in_arraylist);
-			}
-			else
-			{
-				//Sorting by maximum to minimum when set boolean argument to true
-				for(int i = 0; i < in_arraylist.size(); i++)
+				for(int i = in_arraylist.size() - 1; i >= 0; i--)
 				{
-					max = tempList.get(index);
-					for(int j = 0; j < tempList.size(); j++)
-					{
-						if(tempList.get(j).getTileID() > max.getTileID())
-						{
-							max = tempList.get(j);
-							index = j;
-						}
-					}
-					returnList.add(max);
-					tempList.remove(index);
-					index = 0;
+					tempList.add(tempList.get(i));
+					tempList.remove(0);
 				}
 			}
-			return returnList;
+			return tempList;
 		}
 		
 		/**
@@ -440,7 +385,7 @@ public class MJ_tools
 			 * Makes sure its play_val because tile_id can exceed 9
 			 */
 			
-			ArrayList<Integer> temp_suit = Tiles_to_PlayVal(sortArray(in_suitarray));
+			ArrayList<Integer> temp_suit = Tiles_to_PlayVal(sortTiles(in_suitarray, false));
 			int min = temp_suit.get(0);
 			int max = temp_suit.get(temp_suit.size() - 1);
 			/*
@@ -490,6 +435,21 @@ public class MJ_tools
 				}
 			}
 			return tile_array;
+		}
+		
+		/**
+		 * 
+		 * @param listOfTiles Any form of collection that contains Tiles
+		 * @return An ArrayList of integer values representing the Tile id
+		 */
+		public static ArrayList<Integer> castTilesToInt(Collection<Tile> listOfTiles)
+		{
+			ArrayList<Integer> return_data = new ArrayList<Integer>();
+			for(Tile tile: listOfTiles)
+			{
+				return_data.add(tile.getTileID());
+			}
+			return return_data;
 		}
 		
 		/**
@@ -677,7 +637,8 @@ public class MJ_tools
 						{
 							continue;
 						}
-						Group new_group = new Group(int_sortArray(add_group), declared, concealed);
+						Collections.sort(add_group);
+						Group new_group = new Group(add_group, declared, concealed);
 						if(tile_mode == 1) { new_group.setConcealed(true); } //If looking in remainder, incomplete groups are always concealed}
 						if(tile_mode == 1 || tile_mode == 0){ all_groups.get(tile_mode).add(new_group); } //Adds group to corresponding index
 						add_group = new ArrayList<Integer>();
@@ -784,7 +745,7 @@ public class MJ_tools
 					//Adds all the tiles into one ArrayList
 					for(Group group: temp_groups) for(Tile tile: group.getGroupTiles()) suit_hand.add(tile);
 					
-					min = Tile.tileID_to_PlayVal(sortArray(suit_hand).get(0));
+					min = Tile.tileID_to_PlayVal(sortTiles(suit_hand, false).get(0));
 					
 					boolean start_remain = false; //Keeps track of where to add "r={", also helps close remainder segment
 					String suit_string = ""; //The return for one suit, will be added to whole return_string
