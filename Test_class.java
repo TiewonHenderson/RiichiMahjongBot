@@ -11,10 +11,11 @@ import bot_package_v2.Group.*;
 public class Test_class 
 {
 	//random instance of Tile to test Tile algorithms
-	public Tile randomTile;
+	public Tile randomTile_;
 	
 	//random instance of Group to test Group's algorithm
-	public Group randomGroup;
+	public Group randomGroup_;
 	
-	public 
+	//random instance of a Mahjong hand (Tiles only)
+	public ArrayList<Tile> randomMJHand_;
 }
