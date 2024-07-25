@@ -1,9 +1,7 @@
 package bot_package_v2;
 
 import java.util.*;
-
-import bot_package.GroupSearch;
-import bot_package.Player;
+import java.util.function.*;
 import bot_package_v2.Player.Wind;
 
 public class MJ_tools 
@@ -236,7 +234,6 @@ public class MJ_tools
 			 * (in_tile_id / 9) = suit by flooring
 			 * in_tile_id - ((in_tile_id / 9) * 9) = converts it into a man tile (all man = play_val - 1)
 			 */
-			if(in_tile_id > 26) return in_tile_id - 17;
 			else return in_tile_id - ((in_tile_id / 9) * 9) + 1;
 		}
 		
@@ -667,7 +664,6 @@ public class MJ_tools
 		{
 			String return_str = "";
 			ArrayList<Group> temp_groups = new ArrayList<Group>(in_arraylist); //This temp ArrayList allows us to remove elements to sort
-			
 			HashMap<Integer, ArrayList<Group>> suit_groups = new HashMap<Integer, ArrayList<Group>>();
 			
 			for(int i = 0; i <= 3; i++) suit_groups.put(i, new ArrayList<Group>());
@@ -691,8 +687,7 @@ public class MJ_tools
 					suit_groups.get(current_group.getGroupTiles().get(0).getTileID()/9).add(current_group);
 				}
 			}
-			
-			
+
 			/*
 			 * 0 = concealed
 			 * 1 = concealed quads
@@ -713,33 +708,35 @@ public class MJ_tools
 						{
 							case 0:
 								//Don't add declared concealed quads
-								if(given_group.concealed_ && !given_group.declared_)
+								if(given_group.isConcealed() && !given_group.isDeclared())
 								{
 									temp_groups.add(given_group);
 								}
 								break;
 							case 1:
-								if(given_group.getGroupTiles().size() == 4 && given_group.concealed_ && given_group.declared_)
+								if(given_group.getGroupTiles().size() == 4 && given_group.isConcealed() && given_group.isDeclared())
 								{
 									temp_groups.add(given_group);
 								}
 								break;
 							case 2:
-								if(given_group.getGroupTiles().size() == 4 && !given_group.concealed_ && given_group.declared_)
+								if(given_group.getGroupTiles().size() == 4 && !given_group.isConcealed() && given_group.isDeclared())
 								{
 									temp_groups.add(given_group);
 								}
 								break;
 							case 3:
-								if(given_group.getGroupTiles().size() == 3 && !given_group.concealed_ && given_group.declared_)
+								if(given_group.getGroupTiles().size() == 3 && !given_group.isConcealed() && given_group.isDeclared())
 								{
 									temp_groups.add(given_group);
 								}
 								break;
 						}
 					}
-					
-					if(temp_groups.size() == 0) {continue;} //If temp_groups.size() == 0, there is no concealed/non-concealed groups
+					if(temp_groups.size() == 0) //If temp_groups.size() == 0, there is no concealed/non-concealed groups
+					{
+						continue;
+					}
 					ArrayList<Tile> suit_hand = new ArrayList<Tile>();
 					int min;
 					//Adds all the tiles into one ArrayList
@@ -752,7 +749,8 @@ public class MJ_tools
 	
 					for(Group given_group: temp_groups)
 					{
-						if((i == 0 && given_group.concealed_ && !given_group.declared_))
+						System.out.println(given_group);
+						if((i == 0 && given_group.isConcealed() && !given_group.isDeclared()))
 						{
 							/*
 							 *	The groupSN method will return the play_val-min and set it appropriate to groupSN format 
@@ -806,6 +804,90 @@ public class MJ_tools
 				}
 			}
 			return return_str;
+		}
+		
+		/**
+		 * 
+		 * @param in_groupSN A String that represents a groupSN to be checked if it has all the required indicators
+		 * @return Each integer represents the index of the corresponding indicators, however -1 represents the indicator not being present
+		 */
+		public static int[] checkGroupSN(String in_groupSN)
+		{
+			int[] has_indicators = {-1, -1, -1, -1};
+			for(int i = 0; i < in_groupSN.length(); i++)
+			{
+				switch(in_groupSN.charAt(i))
+				{
+					case 'c':
+						has_indicators[0] = i;
+						break;
+					case 'k':
+						has_indicators[1] = i;
+						break;
+					case 'q':
+						has_indicators[2] = i;
+						break;
+					case 'o':
+						has_indicators[3] = i;
+						break;
+				}
+			}
+			return has_indicators;
+		}
+		
+		/**
+		 * 
+		 * @param in_groupSN A reference to the original groupSN to be altered if it is missing indicators
+		 * @return The altered concatenation of missing indicators to in_groupSN, since altering String reference does not alter original variable
+		 */
+		public static String addIndicators(String in_groupSN)
+		{
+			int[] has_indicators = checkGroupSN(in_groupSN);
+			boolean[] reference = {true, true, true, true};
+			final char[] indicators = {'c', 'k', 'q', 'o'};
+			int start = 0;
+			
+			for(int i = 0; i < has_indicators.length; i++) 
+			{
+				if(has_indicators[i] == -1) 
+					reference[i] = false;
+			}
+			
+			for(int i = 0; i < has_indicators.length; i++)
+			{
+				if(has_indicators[i] == -1)
+				{
+					try
+					{
+						has_indicators[i] = has_indicators[i - 1] + 1;
+						start = has_indicators[i - 1] + 1;
+					}
+					catch(ArrayIndexOutOfBoundsException e)
+					{
+						has_indicators[i] = start;
+						start++;
+					}
+				}
+			}
+			
+			int offset = 0;
+			for(int i = 0; i < has_indicators.length; i++)
+			{
+				if(!reference[i])
+				{
+					if(has_indicators[i] >= in_groupSN.length())
+					{
+						in_groupSN += indicators[i];
+					}
+					else 
+					{
+						in_groupSN = in_groupSN.substring(0, has_indicators[i] + offset) + indicators[i] + in_groupSN.substring(has_indicators[i] + offset);
+						offset++;
+					}
+				}
+			}
+			
+			return in_groupSN;
 		}
 		
 		/**

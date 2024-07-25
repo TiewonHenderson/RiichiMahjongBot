@@ -135,7 +135,7 @@ public class Prediction
 	
 	/**
 	 * 
-	 * @param visibleTiles Represents Tiles that are visible and not part of the wall
+	 * @param visibleTiles Represents Tiles that are visible and not part of the wall (decrement each given Tile)
 	 * @return True if the tile amount has been updated, false if no changes
 	 */
 	public boolean updateTileAmount(ArrayList<Tile> visibleTiles)
@@ -611,6 +611,14 @@ public class Prediction
 			}
 		}
 		
+		/**
+		 * 
+		 * @return
+		 */
+		public double[] yakuFromMeldedGroups()
+		{
+			double[] return_data = new double[];
+		}
 	}
 	
 	/**

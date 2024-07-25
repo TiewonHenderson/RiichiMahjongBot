@@ -42,9 +42,8 @@ public class Group_Search extends Group
 		ArrayList<Group_type> group_status_list = new ArrayList<Group_type>();
 		for(Group group: all_groups)
 		{
-			group_status_list.add(Group.groupStatus(group.getGroupTiles()));
+			group_status_list.add(group.groupStatus());
 		}
-		
 		
 		int progress_score = 0;
 		
@@ -78,7 +77,7 @@ public class Group_Search extends Group
 					progress_score += 110;
 					break;
 				default:
-					if(group_status.ordinal() >= 1 && group_status.ordinal() <= 3)
+					if(group_status.ordinal() >= 4 && group_status.ordinal() <= 7)
 					{
 						progress_score += 1000;
 					}
@@ -216,7 +215,7 @@ public class Group_Search extends Group
 			}
 		}
 		
-		//Where the hands gets pairs removed/ no pairs removed
+		//Where the hands gets pairs removed / no pairs removed
 		HashMap<Integer, ArrayList<Tile>> allPossible_hands = new HashMap<Integer, ArrayList<Tile>>();
 		allPossible_hands.put(-1, new ArrayList<Tile>(playHand.getVisibleHand())); //No pairs removed
 		
@@ -358,12 +357,15 @@ public class Group_Search extends Group
 		String temp_ID = addInt(pair);
 		String temp_groupSN = "";
 		
+		System.out.println(given_hand);
+		
 		ArrayList<ArrayList<Tile>> suit_list = MJ_Hand_tools.suitDivide(given_hand);
 		ArrayList<String> add_groupSN = new ArrayList<String>();
 		for(ArrayList<Tile> suit: suit_list)
 		{
-			temp_groupSN += list_Group_Search(suit, false); //adds GroupSN for each suit
+			temp_groupSN += listGroupSearch(suit, false); //adds GroupSN for each suit
 		}
+		System.out.println(temp_groupSN);
 		temp_groupSN = addItemTo_groupSN(temp_groupSN, remove_tile); //Adds the pair back if removed into groupSN to check status
 		temp_ID += getHandStatus(temp_groupSN); //Will add the index that represents progress status
 		temp_ID += "LL"; //Indicates Linear left to right
@@ -378,7 +380,7 @@ public class Group_Search extends Group
 		temp_ID = addInt(pair);
 		for(ArrayList<Tile> suit: suit_list)
 		{
-			temp_groupSN += list_Group_Search(suit, true); //adds GroupSN for each suit
+			temp_groupSN += listGroupSearch(suit, true); //adds GroupSN for each suit
 		}
 		
 		temp_groupSN = addItemTo_groupSN(temp_groupSN, remove_tile);
@@ -468,7 +470,7 @@ public class Group_Search extends Group
 	{
 		if(in_arraylist.size() <= 3)
 		{
-			return list_Group_Search(in_arraylist, false);
+			return listGroupSearch(in_arraylist, false);
 		}
 		
 		ArrayList<Integer> matrix = MJ_Hand_tools.convert_to_matrix(in_arraylist);
@@ -499,26 +501,20 @@ public class Group_Search extends Group
 			};
 		}
 		
-		
-		ArrayList<Group> left_groups  = MJ_Hand_tools.groupSN_to_ArrayList(list_Group_Search(MJ_Hand_tools.convert_to_ArrayList(left_matrix, suit, minimums.get(0)), false));
-		ArrayList<Group> right_groups = MJ_Hand_tools.groupSN_to_ArrayList(list_Group_Search(MJ_Hand_tools.convert_to_ArrayList(right_matrix, suit , minimums.get(1)) , true));
-		
 		//Add complete/incomplete groups to corresponding ArrayList<Group>
 		ArrayList<ArrayList<Group>> categorized_Group = new ArrayList<ArrayList<Group>>();
 		for(int i = 0; i < 2; i++) categorized_Group.add(new ArrayList<Group>());
 		//Iterator to be able to iterator two ArrayList at once
-		Iterator<Group> l_groups = left_groups.iterator();
-		Iterator<Group> r_groups = right_groups.iterator();
+		Iterator<Group> l_groups = MJ_Hand_tools.groupSN_to_ArrayList(listGroupSearch(MJ_Hand_tools.convert_to_ArrayList(left_matrix, suit, minimums.get(0)), false)).iterator();
+		Iterator<Group> r_groups = MJ_Hand_tools.groupSN_to_ArrayList(listGroupSearch(MJ_Hand_tools.convert_to_ArrayList(right_matrix, suit , minimums.get(1)) , true)).iterator();
 		
-		boolean[] has_next = {true, true};
-		
-		while(has_next[0] || has_next[1])
+		while(l_groups.hasNext() || r_groups.hasNext())
 		{
 			//hasNext() determines if there is a next element
-			if(has_next[0] && l_groups.hasNext())
+			if(l_groups.hasNext())
 			{
 				Group temp_group = new Group(l_groups.next());
-				if(groupStatus(temp_group.getGroupTiles()).ordinal() > 0)
+				if(temp_group.groupStatus().ordinal() > 3)
 				{
 					categorized_Group.get(0).add(temp_group);
 				}
@@ -527,14 +523,10 @@ public class Group_Search extends Group
 					categorized_Group.get(1).add(temp_group);
 				}
 			}
-			if(!l_groups.hasNext())
-			{
-				has_next[0] = false;
-			}
-			if(has_next[1] && r_groups.hasNext())
+			if(r_groups.hasNext())
 			{
 				Group temp_group = new Group(r_groups.next());
-				if(groupStatus(temp_group.getGroupTiles()).ordinal() > 0)
+				if(temp_group.groupStatus().ordinal() > 3)
 				{
 					categorized_Group.get(0).add(temp_group);
 				}
@@ -543,12 +535,7 @@ public class Group_Search extends Group
 					categorized_Group.get(1).add(temp_group);
 				}
 			}
-			if(!r_groups.hasNext())
-			{
-				has_next[1] = false;
-			}
 		}
-		
 		ArrayList<Tile> remainder_tiles = new ArrayList<Tile>();
 		for(Group incomp_groups : categorized_Group.get(1)) 
 		{
@@ -574,8 +561,13 @@ public class Group_Search extends Group
 		}
 		
 		ArrayList<Group> temp_all_groups = new ArrayList<Group>();
-		for(ArrayList<Group> groups_list: categorized_Group) for(Group group: groups_list) temp_all_groups.add(group);
-		
+		for(ArrayList<Group> groups_list: categorized_Group) 
+		{
+			for(Group group: groups_list) 
+			{
+				temp_all_groups.add(group);
+			}
+		}
 		return MJ_Hand_tools.ArrayList_to_groupSN(temp_all_groups);
 	}
 	
@@ -587,7 +579,7 @@ public class Group_Search extends Group
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_SequenceSearch(ArrayList<Tile> in_arraylist, boolean reverse_search)
+	public static String listSequenceSearch(ArrayList<Tile> in_arraylist, boolean reverse_search)
 	{
 		String return_String = "";
 		if(in_arraylist.size() <= 0) 
@@ -599,7 +591,7 @@ public class Group_Search extends Group
 		int suit = in_arraylist.get(0).getTileID()/9;
 		
 		//If given honors list, return Group_Search with only_triplets as true
-		if(suit == 3) {return list_TripletSearch(in_arraylist);}
+		if(suit == 3) {return listTripletSearch(in_arraylist);}
 		
 		ArrayList<Tile> temp_suit = MJ_Hand_tools.sortTiles(in_arraylist, false);
 		int total_tiles = temp_suit.size();
@@ -856,13 +848,12 @@ public class Group_Search extends Group
 	}
 	
 	/**
-	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
 	 * @param  in_arraylist ASSUMES this is all in one suit Tiles, index out of bounds if not
 	 * @return A String representation of completed triplets, remainder pairs/floating tiles, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_TripletSearch(ArrayList<Tile> in_arraylist)
+	public static String listTripletSearch(ArrayList<Tile> in_arraylist)
 	{
 		
 		String return_STR = "";
@@ -953,19 +944,18 @@ public class Group_Search extends Group
 		//Finalize groupSN
 		return_STR += "[+" + Tile.tileID_to_PlayVal(MJ_Hand_tools.sortTiles(in_arraylist, false).get(0)) + "]";
 		return_STR += Character.toString(Tile.suit_reference[suit]);
-		return return_STR + "c";
+		return return_STR;
 	}
 	
 	/**
 	 * 
-	 * *Warning* Assumes input for arraylist is considered concealed, thus the groupSN will end with "c"
 	 * @param  in_arraylist ASSUMES this is all in one suit Tiles
 	 * @param  reverse_search Whether or not the search the inputted array from index 0 to last element or last element to index 0
 	 * @return A String representation of completed groups, remainder groups, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Complete Groups)r={(Remainder Shapes)}[+min]'suitchar'
 	 */
-	public static String list_Group_Search(ArrayList<Tile> in_arraylist, boolean reverse_search)
+	public static String listGroupSearch(ArrayList<Tile> in_arraylist, boolean reverse_search)
 	{
 		String return_STR = "";
 		if(in_arraylist.size() <= 0) 
@@ -977,7 +967,7 @@ public class Group_Search extends Group
 		int suit = in_arraylist.get(0).getTileID()/9;
 		
 		//If given honors list, return Group_Search with only_triplets as true
-		if(suit == 3) {return list_TripletSearch(in_arraylist);}
+		if(suit == 3) {return listTripletSearch(in_arraylist);}
 		
 		ArrayList<Integer> temp_suit = MJ_Hand_tools.Tiles_to_PlayVal(MJ_Hand_tools.sortTiles(in_arraylist, false));
 		int total_tiles = temp_suit.size();
@@ -1274,9 +1264,109 @@ public class Group_Search extends Group
 		
 		return_STR += "[+" + play_val_min + "]";
 		return_STR += Character.toString(Tile.suit_reference[suit]);
-		return return_STR + "c";
+		return return_STR;
 	}
 	
+	/**
+	 * </td>TODO test
+	 * 
+	 * @param  in_arraylist ASSUMES this is all in one suit Tiles, index out of bounds if not
+	 * @return A String representation of unique pairs, remainder floating tiles, increment minimum, and the suit
+	 * 		   The String representation is called GroupSN = Group String Notation
+	 * 		   Format: (Unique pairs)r={(Remainder Shapes)}[+min]'suitchar'
+	 */
+	public static String listPairsSearch(ArrayList<Tile> in_arraylist)
+	{
+		String return_STR = "";
+		if(in_arraylist.size() <= 0) 
+		{
+			return "";
+		}
+		
+		int suit = in_arraylist.get(0).getTileID()/9;
+		
+		//Convert suit to matrix
+		ArrayList<Integer> matrix = MJ_Hand_tools.convert_to_matrix(in_arraylist);
+		
+		//Adds all the complete/incomplete groups into this ArrayList<String>
+		ArrayList<String> group_shape_list = new ArrayList<String>();
+		
+		//Every tile can be a triplet
+		for(int index = 0; index < matrix.size(); index++)
+		{
+			/*
+			 * As long as tile_amt > 0, it can technically become a triplet, 
+			 * of course higher amounts are more prioritized
+			 * 
+			 * This assumes the matrix is sorted
+			 */
+			String temp_str = "(";
+			
+			if(matrix.get(index) == 0){continue;} //excludes no tile present cells
+			for(int n = 0; n < matrix.get(index); n++) temp_str += Integer.toString(index);
+			temp_str += ")";
+			group_shape_list.add(temp_str);
+		}
+		
+		/*
+		 * Assuming only pairs are searched, 
+		 * quads needs to be declared as concealed kongs and would count as triplets
+		 */
+		boolean added_r_char = false;
+		for(int tile_amt = 4; tile_amt >= 1; tile_amt--)
+		{
+			if(tile_amt == 2)
+			{
+				/*
+				 * checks each index if length of String corresponds to 
+				 * (amount of chars - 2) == 2 to be a completed pair
+				 */
+				for(int group_index = 0; group_index < group_shape_list.size(); group_index++)
+				{
+					if(group_shape_list.get(group_index).length() - 2 > 2)
+					{
+						/*
+						 * Assuming the previous search was sorted
+						 */
+						return_STR += group_shape_list.get(group_index);
+						group_shape_list.remove(group_index);
+						group_index--;
+					}
+				}
+			}
+			else
+			{
+				//Starts the remainder incomplete groups section
+				if(!added_r_char)
+				{
+					return_STR += "r={";
+					added_r_char = true;
+				}
+				for(int group_index = 0; group_index < group_shape_list.size(); group_index++)
+				{
+					if(group_shape_list.get(group_index).length() - 2 == tile_amt)
+					{
+						/*
+						 * tile_amt keeps track of which amount goes first
+						 * 2 tiles groups would go first over 1 tile incomplete groups
+						 */
+						return_STR += group_shape_list.get(group_index);
+						group_shape_list.remove(group_index);
+						group_index--;
+					}
+				}
+			}
+			//completes the groups section of the groupSN
+			if(tile_amt == 1)
+			{
+				return_STR += "}";
+			}
+		}
+		//Finalize groupSN
+		return_STR += "[+" + Tile.tileID_to_PlayVal(MJ_Hand_tools.sortTiles(in_arraylist, false).get(0)) + "]";
+		return_STR += Character.toString(Tile.suit_reference[suit]);
+		return return_STR;
+	}
 	public static class PlayerHand_Searcher
 	{
 		
@@ -1428,5 +1518,20 @@ public class Group_Search extends Group
 				return false;
 			}
 		}
+	}
+	
+	//Main Method
+	public static void main(String[] args)
+	{
+		int[] randTileIDs = {0,1,2,11,12,13,13,13,13,29,29,29,33,33};
+		ArrayList<Tile> randomHand = new ArrayList<Tile>();
+		for(int tileID: randTileIDs) randomHand.add(new Tile(tileID));
+		Visible_hand x = new Visible_hand(randomHand);
+		HashMap<String, String> result = searchAllGroupSN(x);
+		for(String key: result.keySet()) System.out.println(key + " : " + result.get(key));
+		
+		String test = "(012)r={}[+1]mc(222)(012)r={}[+3]pc(000)r={(44)}[+12]zc";
+		System.out.println(MJ_Hand_tools.addIndicators(test));
+		
 	}
 }

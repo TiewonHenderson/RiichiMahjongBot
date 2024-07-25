@@ -210,9 +210,9 @@ public class Group
 	public String toString()
 	{
 		String return_str = "(";
-		for(Tile tile_id: this.tile_list_) 
+		for(Tile tile: this.tile_list_) 
 		{
-			return_str += Integer.toString(tile_id.getTileID()) + ",";
+			return_str += Integer.toString(tile.getTileID()) + Tile.suit_reference[tile.getTileID()/9] +  ",";
 		}
 		try
 		{
@@ -302,6 +302,15 @@ public class Group
 	public int getGroupStatus()
 	{
 		return groupStatus(this.getGroupTiles()).ordinal() - 3;
+	}
+	
+	/**
+	 * 
+	 * @return The Group_type of this instance of Group
+	 */
+	public Group_type groupStatus()
+	{
+		return groupStatus(this.getGroupTiles());
 	}
 	
 	/**
