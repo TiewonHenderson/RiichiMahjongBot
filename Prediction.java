@@ -618,6 +618,7 @@ public class Prediction
 		public double[] yakuFromMeldedGroups()
 		{
 			double[] return_data = new double[];
+			
 		}
 	}
 	

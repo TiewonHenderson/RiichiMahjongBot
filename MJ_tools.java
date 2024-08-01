@@ -18,7 +18,7 @@ public class MJ_tools
 		
 		/**
 		 * Represents how this Tile was discarded, 
-		 * -1 	== in_hand
+		 * -1 	== draw/in_hand
 		 * 0/1 	== tsumogiri/tedashi respectively
 		 * 10 	== riichi Tile
 		 */
@@ -749,7 +749,6 @@ public class MJ_tools
 	
 					for(Group given_group: temp_groups)
 					{
-						System.out.println(given_group);
 						if((i == 0 && given_group.isConcealed() && !given_group.isDeclared()))
 						{
 							/*
@@ -836,58 +835,43 @@ public class MJ_tools
 		}
 		
 		/**
-		 * 
+		 * @info There is no further analysis as it is impossible to differentiate concealed declared quads and open quads
+		 * 		 Only by going off of where 'c' is, then adding quad indicators and adding 'o' at last index
 		 * @param in_groupSN A reference to the original groupSN to be altered if it is missing indicators
 		 * @return The altered concatenation of missing indicators to in_groupSN, since altering String reference does not alter original variable
 		 */
 		public static String addIndicators(String in_groupSN)
 		{
-			int[] has_indicators = checkGroupSN(in_groupSN);
-			boolean[] reference = {true, true, true, true};
-			final char[] indicators = {'c', 'k', 'q', 'o'};
-			int start = 0;
-			
-			for(int i = 0; i < has_indicators.length; i++) 
+			int[] hasIndicators = checkGroupSN(in_groupSN);
+			final char[] indicatorsChars = {'k', 'q'};
+			String temp_str = in_groupSN;
+			if(hasIndicators[0] == -1)
 			{
-				if(has_indicators[i] == -1) 
-					reference[i] = false;
+				temp_str += "ckqo";
+				return temp_str;
 			}
-			
-			for(int i = 0; i < has_indicators.length; i++)
+			int start = hasIndicators[0];
+			int offset = 1;
+			for(int i = 1; i < hasIndicators.length - 1; i++)
 			{
-				if(has_indicators[i] == -1)
+				if(hasIndicators[i] == -1)
 				{
-					try
+					if(temp_str.length() > start + offset)
 					{
-						has_indicators[i] = has_indicators[i - 1] + 1;
-						start = has_indicators[i - 1] + 1;
-					}
-					catch(ArrayIndexOutOfBoundsException e)
-					{
-						has_indicators[i] = start;
-						start++;
-					}
-				}
-			}
-			
-			int offset = 0;
-			for(int i = 0; i < has_indicators.length; i++)
-			{
-				if(!reference[i])
-				{
-					if(has_indicators[i] >= in_groupSN.length())
-					{
-						in_groupSN += indicators[i];
-					}
-					else 
-					{
-						in_groupSN = in_groupSN.substring(0, has_indicators[i] + offset) + indicators[i] + in_groupSN.substring(has_indicators[i] + offset);
+						temp_str = temp_str.substring(0, start + offset) + indicatorsChars[i - 1] + temp_str.substring(start + offset, temp_str.length());
 						offset++;
 					}
 				}
+				else
+				{
+					start = hasIndicators[i];
+				}
 			}
-			
-			return in_groupSN;
+			if(hasIndicators[hasIndicators.length - 1] == -1)
+			{
+				temp_str += "o";
+			}
+			return temp_str;
 		}
 		
 		/**
@@ -949,5 +933,13 @@ public class MJ_tools
 				}
 			}
 		}
+	}
+	public static void main(String[] args)
+	{
+		String random_groupSN = "(012)r={}[+1]mr={(0)}[+1]p(012)r={}[+3]sc(000)r={}[+7]z";
+		ArrayList<Group> test1 = MJ_Hand_tools.groupSN_to_ArrayList(random_groupSN);
+		System.out.println(test1);
+		System.out.println(MJ_Hand_tools.ArrayList_to_groupSN(test1));
+		System.out.println("what" + MJ_Hand_tools.addIndicators(random_groupSN));
 	}
 }
