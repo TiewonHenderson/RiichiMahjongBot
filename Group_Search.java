@@ -364,7 +364,6 @@ public class Group_Search extends Group
 			temp_groupSN += listGroupSearch(suit, false); //adds GroupSN for each suit
 		}
 		temp_groupSN += "ckqo";
-		System.out.println("LL"+ temp_groupSN);
 		temp_groupSN = addItemTo_groupSN(temp_groupSN, remove_tile); //Adds the pair back if removed into groupSN to check status
 		temp_ID += getHandStatus(temp_groupSN); //Will add the index that represents progress status
 		temp_ID += "LL"; //Indicates Linear left to right
@@ -382,7 +381,6 @@ public class Group_Search extends Group
 			temp_groupSN += listGroupSearch(suit, true); //adds GroupSN for each suit
 		}
 		temp_groupSN += "ckqo";
-		System.out.println("LR"+ temp_groupSN);
 		temp_groupSN = addItemTo_groupSN(temp_groupSN, remove_tile);
 		temp_ID += getHandStatus(temp_groupSN);
 		temp_ID += "LR"; //Indicates Linear right to left
@@ -406,8 +404,6 @@ public class Group_Search extends Group
 			temp_groupSN += outerSearch(suit);
 		}
 		temp_groupSN = MJ_Hand_tools.addIndicators(temp_groupSN);
-		
-		System.out.println("OS" +temp_groupSN);
 		temp_groupSN = addItemTo_groupSN(temp_groupSN, remove_tile);
 		temp_ID += getHandStatus(temp_groupSN);
 		temp_ID += "OS";
@@ -476,11 +472,12 @@ public class Group_Search extends Group
 			return listGroupSearch(in_arraylist, false);
 		}
 		
+		ArrayList<Tile> sorted_Tiles = MJ_Hand_tools.sortTiles(in_arraylist, false);
 		ArrayList<Integer> matrix = MJ_Hand_tools.convert_to_matrix(in_arraylist);
 		
 		int half_index = matrix.size()/2;
 		
-		int suit = in_arraylist.get(0).getTileID()/9;
+		int suit = sorted_Tiles.get(0).getTileID()/9;
 		
 		//Keeps track of the split matrices
 		ArrayList<Integer> left_matrix = MJ_Hand_tools.subArrayList(matrix, 0, half_index);
@@ -490,7 +487,7 @@ public class Group_Search extends Group
 		ArrayList<Integer> minimums = new ArrayList<Integer>();
 		
 		//Left matrix minimum is always the first tile
-		minimums.add(Tile.tileID_to_PlayVal(in_arraylist.get(0)));
+		minimums.add(Tile.tileID_to_PlayVal(sorted_Tiles.get(0)));
 		
 		/*
 		 * BECAUSE convert_2_ArrayList method in Group.java will assume the minimum is the first occurrence
@@ -500,13 +497,14 @@ public class Group_Search extends Group
 		{
 			if(right_matrix.get(i) > 0) 
 			{
-				minimums.add(Tile.tileID_to_PlayVal(in_arraylist.get(0).getTileID() + half_index + i));
+				minimums.add(Tile.tileID_to_PlayVal(sorted_Tiles.get(0).getTileID() + half_index + i));
 			};
 		}
 		
 		//Add complete/incomplete groups to corresponding ArrayList<Group>
 		ArrayList<ArrayList<Group>> categorized_Group = new ArrayList<ArrayList<Group>>();
 		for(int i = 0; i < 2; i++) categorized_Group.add(new ArrayList<Group>());
+		
 		//Iterator to be able to iterator two ArrayList at once
 		Iterator<Group> l_groups = MJ_Hand_tools.groupSN_to_ArrayList(listGroupSearch(MJ_Hand_tools.convert_to_ArrayList(left_matrix, suit, minimums.get(0)), false) + "c").iterator();
 		Iterator<Group> r_groups = MJ_Hand_tools.groupSN_to_ArrayList(listGroupSearch(MJ_Hand_tools.convert_to_ArrayList(right_matrix, suit , minimums.get(1)) , true) + "c").iterator();
@@ -547,7 +545,7 @@ public class Group_Search extends Group
 				for(Tile tile: incomp_groups.getGroupTiles()) remainder_tiles.add(tile);
 			}
 		}
-		if(in_arraylist.size() > remainder_tiles.size())
+		if(sorted_Tiles.size() > remainder_tiles.size())
 		{
 			/*
 			 * Recursion to see if remainder groups can upgrade
@@ -560,7 +558,7 @@ public class Group_Search extends Group
 			 * If there were completed groups in remainder groups index, it will be detected by ArrayList_to_groupSN() function
 			 * For recursion, just add Groups with less then 3 tiles
 			 */
-			categorized_Group.add(1, MJ_Hand_tools.groupSN_to_ArrayList(outerSearch(remainder_tiles)));
+			categorized_Group.set(1, MJ_Hand_tools.groupSN_to_ArrayList(outerSearch(remainder_tiles)));
 		}
 		
 		//Will not take into consideration newly drawn Tiles
@@ -1535,10 +1533,14 @@ public class Group_Search extends Group
 		
 		System.out.println("\n");
 		
-		int[] randTileIDs = {0,1,2,9,9,9,20,21,22,33,33,33,34,34};
+		int[] randTileIDs = {0,0,1,3,3,4,4,6,6,6,7,7,8};
 		ArrayList<Tile> randomHand2 = new ArrayList<Tile>();
 		for(int tileID: randTileIDs) randomHand2.add(new Tile(tileID));
 		Visible_hand x2 = new Visible_hand(randomHand2);
 		HashMap<String, String> result2 = searchAllGroupSN(x2);		
+		for(String key: result2.keySet())
+		{
+			System.out.println("Key: " + key + " groupSN: " + result2.get(key));
+		}
 	}
 }
