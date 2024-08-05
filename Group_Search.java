@@ -1,13 +1,9 @@
 package bot_package_v2;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
+import java.text.MessageFormat;
 
 import bot_package_v2.MJ_tools.*;
-import bot_package_v2.MJ_tools.MJ_Hand_tools;
 import bot_package_v2.Player.Visible_hand;
 
 public class Group_Search extends Group
@@ -339,6 +335,26 @@ public class Group_Search extends Group
 	}
 	
 	/**
+	 * 
+	 * @param playHand A new PlayerHand object to search for any unique pairs
+	 * @return A single String that represents Unique pairs as groups with remainders either being single Tiles or overflow Tiles
+	 * 		   (Overflow Tiles being pairs created from triplets or undeclared quads)
+	 */
+	public static String searchAllPairs(Visible_hand playHand)
+	{
+		ArrayList<ArrayList<Tile>> suitList = MJ_Hand_tools.suitDivide(playHand.getVisibleHand());
+		
+		String returnGroupSN = "";
+		
+		for(ArrayList<Tile> suitedAL: suitList)
+		{
+			returnGroupSN += listPairsSearch(suitedAL);
+		}
+		
+		return returnGroupSN + "ckqo";
+	}
+	
+	/**
 	 * @Function How this program works is by perform two linear searches and one "binary" search
 	 * 			 The two linear search involves searchings in two orders, index 0 -> size() - 1, size() - 1 -> index 0
 	 * 			 The "binary" search will cut the ArrayList<Tile> into 2 searches in two given arrays
@@ -413,7 +429,6 @@ public class Group_Search extends Group
 		
 		return return_array;
 	}
-	
 	/**
 	 * NEED HEAVY OPTIMIZATION WITH STRING MANIPUTATION
 	 */
@@ -424,7 +439,7 @@ public class Group_Search extends Group
 		for(int i = 0; i < new_tiles.size(); i++) if(new_tiles.get(i).getTileID() < 0 || new_tiles.get(i).getTileID() > 33) {return group_sn;}
 		
 		ArrayList<Group> temp_groups = MJ_Hand_tools.groupSN_to_ArrayList(group_sn);
-		temp_groups.add(new Group(new_tiles, declared, concealed, null));
+		temp_groups.add(new Group(new_tiles, declared, concealed));
 		return MJ_Hand_tools.ArrayList_to_groupSN(temp_groups);
 	}
 	
@@ -1270,8 +1285,7 @@ public class Group_Search extends Group
 	}
 	
 	/**
-	 * </td>TODO test
-	 * 
+	 * @note No undeclared quads/triplets will be counted as another pair, it will just be put within Remainder shapes
 	 * @param  in_arraylist ASSUMES this is all in one suit Tiles, index out of bounds if not
 	 * @return A String representation of unique pairs, remainder floating tiles, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
@@ -1279,95 +1293,57 @@ public class Group_Search extends Group
 	 */
 	public static String listPairsSearch(ArrayList<Tile> in_arraylist)
 	{
-		String return_STR = "";
 		if(in_arraylist.size() <= 0) 
 		{
 			return "";
 		}
 		
+		//Add to final groupSN for pairs
+		int min = MJ_Hand_tools.sortTiles(in_arraylist, false).get(0).getPlayValue();
 		int suit = in_arraylist.get(0).getTileID()/9;
 		
 		//Convert suit to matrix
 		ArrayList<Integer> matrix = MJ_Hand_tools.convert_to_matrix(in_arraylist);
 		
-		//Adds all the complete/incomplete groups into this ArrayList<String>
-		ArrayList<String> group_shape_list = new ArrayList<String>();
+		//Sort uniquePairs to add for later
+		Queue<String> uniquePairs = new LinkedList<String>();
+		Queue<String> remainders = new LinkedList<String>();
 		
-		//Every tile can be a triplet
-		for(int index = 0; index < matrix.size(); index++)
+		//Iterate for any occurence of >= 2
+		for(int i = 0; i < matrix.size(); i++)
 		{
-			/*
-			 * As long as tile_amt > 0, it can technically become a triplet, 
-			 * of course higher amounts are more prioritized
-			 * 
-			 * This assumes the matrix is sorted
-			 */
-			String temp_str = "(";
-			
-			if(matrix.get(index) == 0){continue;} //excludes no tile present cells
-			for(int n = 0; n < matrix.get(index); n++) temp_str += Integer.toString(index);
-			temp_str += ")";
-			group_shape_list.add(temp_str);
+			switch(matrix.get(i))
+			{
+				case 4:
+					remainders.add("(" + (min - 1 + i) + ")");
+				case 3:
+					remainders.add("(" + (min - 1 + i) + ")");
+				case 2:
+					uniquePairs.add(MessageFormat.format("({0}{0})", (min - 1 + i)));
+					break;
+				case 1:
+					remainders.add("(" + (min - 1 + i) + ")");
+					break;
+			}
 		}
 		
-		/*
-		 * Assuming only pairs are searched, 
-		 * quads needs to be declared as concealed kongs and would count as triplets
-		 */
-		boolean added_r_char = false;
-		for(int tile_amt = 4; tile_amt >= 1; tile_amt--)
+		String returnSTR = "";
+		
+		//Adds all the pair "Groups" to the final groupSN
+		while(uniquePairs.peek() != null)
 		{
-			if(tile_amt == 2)
-			{
-				/*
-				 * checks each index if length of String corresponds to 
-				 * (amount of chars - 2) == 2 to be a completed pair
-				 */
-				for(int group_index = 0; group_index < group_shape_list.size(); group_index++)
-				{
-					if(group_shape_list.get(group_index).length() - 2 > 2)
-					{
-						/*
-						 * Assuming the previous search was sorted
-						 */
-						return_STR += group_shape_list.get(group_index);
-						group_shape_list.remove(group_index);
-						group_index--;
-					}
-				}
-			}
-			else
-			{
-				//Starts the remainder incomplete groups section
-				if(!added_r_char)
-				{
-					return_STR += "r={";
-					added_r_char = true;
-				}
-				for(int group_index = 0; group_index < group_shape_list.size(); group_index++)
-				{
-					if(group_shape_list.get(group_index).length() - 2 == tile_amt)
-					{
-						/*
-						 * tile_amt keeps track of which amount goes first
-						 * 2 tiles groups would go first over 1 tile incomplete groups
-						 */
-						return_STR += group_shape_list.get(group_index);
-						group_shape_list.remove(group_index);
-						group_index--;
-					}
-				}
-			}
-			//completes the groups section of the groupSN
-			if(tile_amt == 1)
-			{
-				return_STR += "}";
-			}
+			returnSTR += uniquePairs.poll();
 		}
-		//Finalize groupSN
-		return_STR += "[+" + Tile.tileID_to_PlayVal(MJ_Hand_tools.sortTiles(in_arraylist, false).get(0)) + "]";
-		return_STR += Character.toString(Tile.suit_reference[suit]);
-		return return_STR;
+		
+		returnSTR += "{";
+		
+		//Adds the final remainder Tiles
+		while(remainders.peek() != null)
+		{
+			returnSTR += remainders.poll();
+		}
+		
+		return returnSTR += "}[" + min + "]" + Tile.suit_reference[suit];
 	}
 	public static class PlayerHand_Searcher
 	{
@@ -1533,7 +1509,7 @@ public class Group_Search extends Group
 		
 		System.out.println("\n");
 		
-		int[] randTileIDs = {0,0,1,3,3,4,4,6,6,6,7,7,8};
+		int[] randTileIDs = {0,0,4,4};
 		ArrayList<Tile> randomHand2 = new ArrayList<Tile>();
 		for(int tileID: randTileIDs) randomHand2.add(new Tile(tileID));
 		Visible_hand x2 = new Visible_hand(randomHand2);
@@ -1542,5 +1518,8 @@ public class Group_Search extends Group
 		{
 			System.out.println("Key: " + key + " groupSN: " + result2.get(key));
 		}
+		
+		String pair_search = listPairsSearch(randomHand2);
+		System.out.println(pair_search);
 	}
 }

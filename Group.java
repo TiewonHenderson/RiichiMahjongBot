@@ -40,7 +40,7 @@ public class Group
 	 * @param concealed whether the group is concealed(considered not visible to others, cannot rob unless special circumstances)
 	 * @param extra Null parameter in order to perform overloading 
 	 */
-	public Group(ArrayList<Tile> in_group, boolean declared, boolean concealed, Object extra)
+	public Group(ArrayList<Tile> in_group, boolean declared, boolean concealed)
 	{
 		this.tile_list_ = new ArrayList<Tile>(in_group);
 		this.declared_ = declared;
@@ -52,8 +52,9 @@ public class Group
 	 * @param in_group An ArrayList<Integer> that represents a tile group (can be incomplete without declared)
 	 * @param declared Whether the group is even declared, so not even in the Mahjong hand
 	 * @param concealed whether the group is concealed(considered not visible to others, cannot rob unless special circumstances)
+	 * @param extra Null parameter in order to perform overloading 
 	 */
-	public Group(ArrayList<Integer> in_group, boolean declared, boolean concealed)
+	public Group(ArrayList<Integer> in_group, boolean declared, boolean concealed, Object extra)
 	{
 		this.tile_list_ = Tile.createTileAL(in_group);
 		this.declared_ = declared;

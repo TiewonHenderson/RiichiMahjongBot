@@ -47,6 +47,7 @@ public class Scoring
 {
 	/**
 	 * This represents the groupSN that is the winning hand, should not include winning Tile within
+	 * Meaning the groupSN should be readied
 	 */
 	public String winningGroupSN_;
 	
@@ -123,6 +124,7 @@ public class Scoring
 	 * @info Function checks for 
 	 * - Tile is not discard and is drawn by who
 	 * - If mahjong hand is concealed
+	 * @return True if the hand satisfies the conditions of being completely concealed and tsumo, false otherwise
 	 */
 	public boolean mezenTsumo()
 	{
@@ -136,5 +138,15 @@ public class Scoring
 		}
 		
 		return true;
+	}
+	
+	/**
+	 * @info
+	 * The groupSN should be uniquely returned from the listPairsSearch() function
+	 * @return True if the hand satisfies the conditions of being 7 pairs, false if not
+	 */
+	public boolean chitoi()
+	{
+		
 	}
 }

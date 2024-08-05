@@ -343,6 +343,7 @@ public class Player
 	public static class Visible_hand extends Mahjong_hand
 	{
 		/**
+		 * @note This will not include ANY declared groups
 		 * This represents the current ArrayList<Tile> Mahjong hand of the User
 		 */
 		private ArrayList<Tile> visible_hand_;

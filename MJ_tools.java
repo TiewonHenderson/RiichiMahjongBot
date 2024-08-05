@@ -2,7 +2,8 @@ package bot_package_v2;
 
 import java.util.*;
 import java.util.function.*;
-import bot_package_v2.Player.Wind;
+
+import bot_package_v2.Player.*;
 
 public class MJ_tools 
 {
@@ -20,7 +21,7 @@ public class MJ_tools
 		 * Represents how this Tile was discarded, 
 		 * -1 	== draw/in_hand
 		 * 0/1 	== tsumogiri/tedashi respectively
-		 * 10 	== riichi Tile
+		 * +10 	== riichi Tile
 		 */
 		public int discard_type_ = -1;
 		
@@ -91,6 +92,9 @@ public class MJ_tools
 		 * @param tile_id The tile value for this specific tile object
 		 * @param red_5 For riichi mahjong, if this tile is a Aka dora, this would be true
 		 * @param discard_type If this tile was discarded, this would represent the discard type
+		 * 		   -1 	== draw/in_hand
+		 * 		   0/1 	== tsumogiri/tedashi respectively
+		 * 		   +10 	== riichi Tile
 		 */
 		public Tile(int tile_id, Wind player, boolean red_5, int discard_type)
 		{
@@ -105,6 +109,18 @@ public class MJ_tools
 			this.assigned_wind_ = player;
 			this.discard_type_ = discard_type;
 			this.red_five_ = red_5;
+		}
+		
+		/**
+		 * Clone constructor
+		 * @param clone Another instance of Tile to be cloned onto this instance
+		 */
+		public Tile(Tile clone)
+		{
+			this.tile_id_ = clone.getTileID();
+			this.red_five_ = clone.isRed5();
+			this.assigned_wind_ = clone.getAssignedWind();
+			this.discard_type_ = clone.getDiscardType();
 		}
 		
 		/**
@@ -138,7 +154,7 @@ public class MJ_tools
 		 * Accessor method to get who discarded this Tile
 		 * @return The Wind enum that represents the Player's wind rotation
 		 */
-		public Wind getWhoDiscarded()
+		public Wind getAssignedWind()
 		{
 			return this.assigned_wind_;
 		}
@@ -635,7 +651,7 @@ public class MJ_tools
 							continue;
 						}
 						Collections.sort(add_group);
-						Group new_group = new Group(add_group, declared, concealed);
+						Group new_group = new Group(add_group, declared, concealed, null);
 						if(tile_mode == 1) { new_group.setConcealed(true); } //If looking in remainder, incomplete groups are always concealed}
 						if(tile_mode == 1 || tile_mode == 0){ all_groups.get(tile_mode).add(new_group); } //Adds group to corresponding index
 						add_group = new ArrayList<Integer>();

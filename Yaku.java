@@ -2,7 +2,7 @@ package bot_package_v2;
 
 import java.util.*;
 
-import bot_package_v2.MJ_Tools.*;
+import bot_package_v2.MJ_tools.Tile;
 
 /**
  * This class will be responsible for both Group and Groupless Mahjong hands 

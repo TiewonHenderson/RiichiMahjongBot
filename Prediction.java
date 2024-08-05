@@ -92,7 +92,7 @@ public class Prediction
 		for(int i = 0; i < newDiscardHistory.size() - 1; i++)
 		{
 			//Checks for consecutive Player discards
-			if(newDiscardHistory.get(i).getWhoDiscarded() == newDiscardHistory.get(i + 1).getWhoDiscarded())
+			if(newDiscardHistory.get(i).getAssignedWind() == newDiscardHistory.get(i + 1).getAssignedWind())
 			{
 				return false;
 			}
@@ -191,7 +191,7 @@ public class Prediction
 		//Checks for consecutive Player discards
 		for(int i = 0; i < this.discardHistory_.size() - 1; i++)
 		{
-			if(this.discardHistory_.get(i).getWhoDiscarded() == this.discardHistory_.get(i + 1).getWhoDiscarded())
+			if(this.discardHistory_.get(i).getAssignedWind() == this.discardHistory_.get(i + 1).getAssignedWind())
 			{
 				return_value = false;
 			}
@@ -280,7 +280,7 @@ public class Prediction
 		ArrayList<Tile> return_data = new ArrayList<Tile>();
 		for(Tile tile: this.discardHistory_)
 		{
-			if(tile.getWhoDiscarded() == playerWind)
+			if(tile.getAssignedWind() == playerWind)
 			{
 				return_data.add(tile);
 			}
