@@ -497,7 +497,7 @@ public class Group_Search extends Group
 		//Keeps track of the split matrices
 		ArrayList<Integer> left_matrix = MJ_Hand_tools.subArrayList(matrix, 0, half_index);
 		ArrayList<Integer> right_matrix = MJ_Hand_tools.subArrayList(matrix, half_index, matrix.size());
-		
+
 		//Keeps track of minimums for both matrices
 		ArrayList<Integer> minimums = new ArrayList<Integer>();
 		
@@ -573,7 +573,7 @@ public class Group_Search extends Group
 			 * If there were completed groups in remainder groups index, it will be detected by ArrayList_to_groupSN() function
 			 * For recursion, just add Groups with less then 3 tiles
 			 */
-			categorized_Group.set(1, MJ_Hand_tools.groupSN_to_ArrayList(outerSearch(remainder_tiles)));
+			categorized_Group.set(1, MJ_Hand_tools.groupSN_to_ArrayList(outerSearch(remainder_tiles) + "c"));
 		}
 		
 		//Will not take into consideration newly drawn Tiles
@@ -585,6 +585,7 @@ public class Group_Search extends Group
 				temp_all_groups.add(group);
 			}
 		}
+
 		return MJ_Hand_tools.ArrayList_to_groupSN(temp_all_groups);
 	}
 	
@@ -1506,6 +1507,10 @@ public class Group_Search extends Group
 		for(int tileID: singleSuitTileIDs) randomHand.add(new Tile(tileID));
 		Visible_hand x = new Visible_hand(randomHand);
 		HashMap<String, String> result = searchAllGroupSN(x);
+		for(String key: result.keySet())
+		{
+			System.out.println("Key: " + key + " groupSN: " + result.get(key));
+		}
 		
 		System.out.println("\n");
 		
