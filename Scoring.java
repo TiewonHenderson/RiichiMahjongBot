@@ -37,8 +37,10 @@ import bot_package_v2.MJ_tools.*;
 	23: Nine Gates
 	24: Pure Nine Gates 
 	
-	25: All Terms/Honors
-	26: All Terminal
+    25: Half Outside Hand
+    26: Fully Outside Hand
+    27: All Terms/Honors
+    28: All Terminal
 	
 	27: Tenhou
 	28: Chihou

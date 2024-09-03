@@ -612,13 +612,95 @@ public class Prediction
 		}
 		
 		/**
+		 * Using the indexes from the Scoring table, each index represents the probability of the declared Groups
+		 * reaching to that score or that score being impossible
 		 * 
-		 * @return
+		 * @info
+		 * Index represents these scores below
+		 * 
+		 * 0: Shousangen / Daisangen
+		 * 1: 4 little Winds / 4 Big Winds
+		 * 2: Toitoi
+		 * 3: 4 Quads
+		 * 4: Half Flush
+		 * 5: Full Flush
+		 * 6: Half Outside Hand
+		 * 7: Full Outside Hand
+		 * 8: All Terms/Honors
+		 * 9: All Honors
+		 * 10: All Terminal
+		 * 
+		 * @return A double Array which represents probability of scores within each index
 		 */
 		public double[] yakuFromMeldedGroups()
 		{
-			double[] return_data = new double[];
+			double[] return_data = new double[11];
+			if(this.current_hand_.getDeclaredGroups().size() == 0)
+			{
+				return return_data;
+			}
 			
+			ArrayList<Group> declaredGroups = this.current_hand_.getDeclaredGroups();
+			
+			//This will store the middle Tile of each Group, with what type of melded Group it is, and it's suit
+			String[] groupInfo = new String[declaredGroups.size()];
+			
+			for(int i = 0; i < declaredGroups.size(); i++)
+			{
+				/*
+				 * Converts info Array to string, then adds middle Tile ID
+				 * if invalid declared info, sets String to e
+				 */
+				for(int value: declaredGroups.get(i).getGroupInfo())
+				{
+					if(value < 0)
+					{
+						groupInfo[i] = "e";
+						break;
+					}
+					groupInfo[i] += value;
+				}
+				groupInfo[i] += declaredGroups.get(i).getGroupTiles().get(declaredGroups.get(i).getGroupTiles().size()/2);
+			}
+			
+			//Keeps track of suited Yakus
+			int suit = -1;
+			
+			for(int i = 0; i < groupInfo.length; i++)
+			{
+				if(groupInfo[i].charAt(0) == 'e')
+				{
+					continue;
+				}
+				//Checks suit
+				switch(groupInfo[i].charAt(groupInfo[i].length() - 1))
+				{
+					default:
+						if(suit == -1)
+						{
+							for(int k = 0; k < Tile.suit_reference.length; k++) 
+							{
+								//Sets suit to current Group's suit
+								if(Tile.suit_reference[k] == groupInfo[i].charAt(groupInfo[i].length() - 1))
+								{
+									suit = k;
+									break;
+								}
+							}
+						}
+						//Checks if suited Yakus are already invalid (does nothing if is not possible)
+						else if(return_data[4] != -1)
+						{
+							if(Tile.suit_reference[suit] != groupInfo[i].charAt(groupInfo[i].length() - 1))
+							{
+								return_data[4] = -1;
+							}
+						}
+						break;
+					case 'z':
+						break;
+				}
+			}
 		}
 	}
 	
@@ -707,6 +789,6 @@ public class Prediction
 	
 	public static void main(String[] args)
 	{
-		
+
 	}
 }

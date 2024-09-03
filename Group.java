@@ -255,9 +255,9 @@ public class Group
 	/**
 	 * If any digit = 0, that means the group is invalid/Uncomplete
 	 * @return Gets information of this instance of group as integer list
-	 * 			index 0 = group type, i.e 1 = sequence, 2 = triplets, 3 = quads
-	 * 			index 1 = group suit, i.e -1 = invalid/mixed, 0 = mans, 1 = pins, 2 = sous, 3 = honors
-	 * 			index 2 = group concealed, i.e 0 = concealed/undeclared, 1 = concealed/declared, 2 = open/declared, (open/undeclared is impossible)
+	 * 			index 0 = group type, -3 = invalid, -2 = floating, -1 = incomp sequence, 0 = pair, 1 = sequence, 2 = triplets, 3 = quads
+	 * 			index 1 = group suit, -1 = invalid/mixed, 0 = mans, 1 = pins, 2 = sous, 3 = honors
+	 * 			index 2 = group concealed, 0 = concealed/undeclared, 1 = concealed/declared, 2 = open/declared, (open/undeclared is impossible)
 	 */
 	public int[] getGroupInfo()
 	{
@@ -287,9 +287,8 @@ public class Group
 		}
 		return_data[1] = suit;
 		return return_data;
-		
 	}
-	
+
 	/**
 	 * @return The group type of this Group, 
 	 * -3 = invalid
