@@ -642,64 +642,180 @@ public class Prediction
 			
 			ArrayList<Group> declaredGroups = this.current_hand_.getDeclaredGroups();
 			
-			//This will store the middle Tile of each Group, with what type of melded Group it is, and it's suit
-			String[] groupInfo = new String[declaredGroups.size()];
+			int totalGroups = 0;
+			int[] groupTypes = {0,0,0};
+			int[] suitTypes = {9,9,9,9};
+			/*
+			 * three length string where each represent tile type
+			 * 0 = simple, 1 = terminal, 2 = wind, 3 = dragon
+			 */
+			String[] hasTermHonor = {null, null, null, null}; 
 			
+			/*
+			 * Adds all group type, suit, and group information to corresponding list
+			 */
 			for(int i = 0; i < declaredGroups.size(); i++)
 			{
-				/*
-				 * Converts info Array to string, then adds middle Tile ID
-				 * if invalid declared info, sets String to e
-				 */
-				for(int value: declaredGroups.get(i).getGroupInfo())
+				int[] groupInfo = declaredGroups.get(i).getGroupInfo();
+				if(groupInfo[0] >= 1 && groupInfo[0] <= 3)
+					groupTypes[groupInfo[0] - 1]++;
+				else continue;
+				if(groupInfo[1] >= 0 && groupInfo[1] <= 3)
+					suitTypes[i] = groupInfo[1];
+				else continue;
+				String tileTypeSTR = "";
+				for(Tile groupTile: declaredGroups.get(i).getGroupTiles())
 				{
-					if(value < 0)
+					int[] tileInfo = groupTile.getTileInfo();
+					switch(tileInfo[0])
 					{
-						groupInfo[i] = "e";
-						break;
+						case 3:
+							if(tileInfo[1] <= 3)
+								tileTypeSTR += 2;
+							else
+								tileTypeSTR += 3;
+							break;
+						default:
+							switch(tileInfo[1])
+							{
+								case 1:
+								case 9:
+									tileTypeSTR += 1;
+									break;
+								default:
+									tileTypeSTR += 0;
+							}
 					}
-					groupInfo[i] += value;
 				}
-				groupInfo[i] += declaredGroups.get(i).getGroupTiles().get(declaredGroups.get(i).getGroupTiles().size()/2);
+				totalGroups++;
+				hasTermHonor[i] = tileTypeSTR;
 			}
 			
-			//Keeps track of suited Yakus
-			int suit = -1;
-			
-			for(int i = 0; i < groupInfo.length; i++)
+			/*
+			 * Mainly focuses on groupType
+			 * Scores affected:
+			 * 0,1,2,3,8,9,10
+			 */
+			switch(groupTypes[0])//checks sequences
 			{
-				if(groupInfo[i].charAt(0) == 'e')
+				case 1:
+					//removes all triplets/quads, all term/honors,
+					return_data[2] = -1;
+					return_data[3] = -1;
+					for(int i = 8; i <= 10; i++)return_data[i] = -1;
+				case 2:
+					//Two groups are sequences, cannot have 4 unique winds
+					return_data[1] = -1;
+				case 3:
+					//Three groups are sequences, cannot have 3 unique dragons
+					return_data[0] = -1;
+				case 4:
+					break;
+			}
+			
+			/*
+			 * Mainly focuses on groupSuit
+			 * score affected:
+			 * 4,5,9,10
+			 */
+			for(int i = 0; i < suitTypes.length; i++)//checks suit
+			{
+				if(suitTypes[i] < 3)
 				{
-					continue;
+					//removes all honors
+					return_data[9] = -1;
+					for(int j = i; j < suitTypes.length; j++)
+					{
+						if(suitTypes[i] != suitTypes[j] && suitTypes[j] < 3)
+						{
+							//removes half/full flush if different suit
+							return_data[4] = -1;
+							return_data[5] = -1;
+							break;
+						}
+					}
+					break;
 				}
-				//Checks suit
-				switch(groupInfo[i].charAt(groupInfo[i].length() - 1))
+				else if(suitTypes[i] == 3)
 				{
-					default:
-						if(suit == -1)
-						{
-							for(int k = 0; k < Tile.suit_reference.length; k++) 
-							{
-								//Sets suit to current Group's suit
-								if(Tile.suit_reference[k] == groupInfo[i].charAt(groupInfo[i].length() - 1))
-								{
-									suit = k;
-									break;
-								}
-							}
-						}
-						//Checks if suited Yakus are already invalid (does nothing if is not possible)
-						else if(return_data[4] != -1)
-						{
-							if(Tile.suit_reference[suit] != groupInfo[i].charAt(groupInfo[i].length() - 1))
-							{
-								return_data[4] = -1;
-							}
-						}
-						break;
-					case 'z':
-						break;
+					//Cannot be full flush/all terminal with honor group
+					return_data[5] = -1;
+					return_data[10] = -1;
 				}
+			}
+			
+			/*
+			 * Mainly focuses on groupTiles
+			 * Scores affected:
+			 * 0,1,6,7,8,9,10
+			 */
+			int[] groupTrait = {0,0,0,0,0};	//This allows clearer winds/dragon availability 
+			for(String tileTypeSTR: hasTermHonor)
+			{
+				if(tileTypeSTR != null)
+				{
+					/*
+					 * Group type:
+					 * 0 = all simple (doesn't matter trip or seq)
+					 * 1 = outside seq
+					 * 2 = terminal pung
+					 * 3 = wind pung
+					 * 4 = dragon pung
+					 */
+					int groupType = 0;
+					if(Character.getNumericValue(tileTypeSTR.charAt(0)) >= 2) //wind or dragon can only be pung
+					{
+						groupType = Character.getNumericValue(tileTypeSTR.charAt(0)) + 1;
+					}
+					else
+					{
+						//Since only language is 0,1, add to see amt of term/simples
+						int sum = 0;
+						for(int i = 0; i < tileTypeSTR.length(); i++)
+							sum += Character.getNumericValue(tileTypeSTR.charAt(i));
+						switch(sum)
+						{
+							case 1:
+								groupType = 1;
+								break;
+							case 3:
+								groupType = 2;
+								break;
+						}
+					}
+					groupTrait[groupType]++;
+					switch(groupType)//Determine group type with score availability 
+					{
+						case 0:
+							for(int i = 6; i <= 7; i++) return_data[i] = -1;
+						case 1:
+							for(int i = 8; i <= 10; i++) return_data[i] = -1;
+							break;
+						case 2:
+							return_data[9] = -1;
+							break;
+						case 3:
+						case 4:
+							return_data[7] = -1;
+							return_data[10] = -1;
+							break;
+					}
+				}
+			}
+			//With the amount of groups used, shows which score is impossible
+			switch(totalGroups)
+			{
+				case 4:	//no new groups avail
+					if(groupTrait[3] < 3) return_data[1] = -1;
+					if(groupTrait[4] < 2) return_data[0] = -1;
+					break;
+				case 3:	//1 groups extra
+					if(groupTrait[3] < 2) return_data[1] = -1;
+					if(groupTrait[4] == 0) return_data[0] = -1;
+					break;
+				case 2:
+					if(groupTrait[3] == 0) return_data[1] = -1;
+					break;
 			}
 		}
 	}

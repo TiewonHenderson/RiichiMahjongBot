@@ -1287,7 +1287,7 @@ public class Group_Search extends Group
 	
 	/**
 	 * @note No undeclared quads/triplets will be counted as another pair, it will just be put within Remainder shapes
-	 * @param  in_arraylist ASSUMES this is all in one suit Tiles, index out of bounds if not
+	 * @param  in_arraylist made compatible with multi-suited hands
 	 * @return A String representation of unique pairs, remainder floating tiles, increment minimum, and the suit
 	 * 		   The String representation is called GroupSN = Group String Notation
 	 * 		   Format: (Unique pairs)r={(Remainder Shapes)}[+min]'suitchar'
@@ -1299,52 +1299,60 @@ public class Group_Search extends Group
 			return "";
 		}
 		
-		//Add to final groupSN for pairs
-		int min = MJ_Hand_tools.sortTiles(in_arraylist, false).get(0).getPlayValue();
-		int suit = in_arraylist.get(0).getTileID()/9;
+		String returnSTR = ""; //What would be returned as final groupSN String
+		ArrayList<ArrayList<Tile>> suitDividedHand = MJ_Hand_tools.suitDivide(in_arraylist);
 		
-		//Convert suit to matrix
-		ArrayList<Integer> matrix = MJ_Hand_tools.convert_to_matrix(in_arraylist);
-		
-		//Sort uniquePairs to add for later
-		Queue<String> uniquePairs = new LinkedList<String>();
-		Queue<String> remainders = new LinkedList<String>();
-		
-		//Iterate for any occurence of >= 2
-		for(int i = 0; i < matrix.size(); i++)
+		for(int suit = 0; suit < suitDividedHand.size(); suit++)
 		{
-			switch(matrix.get(i))
+			if(suitDividedHand.get(suit).size() == 0) {continue;}
+			
+			/*
+			 * Algorithm only functions properly on single suited ArrayList
+			 * Add to final groupSN for pairs
+			 */
+			int min = MJ_Hand_tools.sortTiles(in_arraylist, false).get(0).getPlayValue();
+			
+			//Convert suit to matrix
+			ArrayList<Integer> matrix = MJ_Hand_tools.convert_to_matrix(suitDividedHand.get(suit));
+			
+			//Sort uniquePairs to add for later
+			Queue<String> uniquePairs = new LinkedList<String>();
+			Queue<String> remainders = new LinkedList<String>();
+			
+			//Iterate for any occurence of >= 2
+			for(int i = 0; i < matrix.size(); i++)
 			{
-				case 4:
-					remainders.add("(" + (min - 1 + i) + ")");
-				case 3:
-					remainders.add("(" + (min - 1 + i) + ")");
-				case 2:
-					uniquePairs.add(MessageFormat.format("({0}{0})", (min - 1 + i)));
-					break;
-				case 1:
-					remainders.add("(" + (min - 1 + i) + ")");
-					break;
+				switch(matrix.get(i))
+				{
+					case 4:
+						remainders.add("(" + (min - 1 + i) + ")");
+					case 3:
+						remainders.add("(" + (min - 1 + i) + ")");
+					case 2:
+						uniquePairs.add(MessageFormat.format("({0}{0})", (min - 1 + i)));
+						break;
+					case 1:
+						remainders.add("(" + (min - 1 + i) + ")");
+						break;
+				}
 			}
+			
+			//Adds all the pair "Groups" to the final groupSN
+			while(uniquePairs.peek() != null)
+			{
+				returnSTR += uniquePairs.poll();
+			}
+			
+			returnSTR += "r={";
+			
+			//Adds the final remainder Tiles
+			while(remainders.peek() != null)
+			{
+				returnSTR += remainders.poll();
+			}
+			returnSTR += "}[" + min + "]" + Tile.suit_reference[suit];
 		}
-		
-		String returnSTR = "";
-		
-		//Adds all the pair "Groups" to the final groupSN
-		while(uniquePairs.peek() != null)
-		{
-			returnSTR += uniquePairs.poll();
-		}
-		
-		returnSTR += "{";
-		
-		//Adds the final remainder Tiles
-		while(remainders.peek() != null)
-		{
-			returnSTR += remainders.poll();
-		}
-		
-		return returnSTR += "}[" + min + "]" + Tile.suit_reference[suit];
+		return returnSTR;
 	}
 	public static class PlayerHand_Searcher
 	{
@@ -1514,7 +1522,7 @@ public class Group_Search extends Group
 		
 		System.out.println("\n");
 		
-		int[] randTileIDs = {0,0,4,4};
+		int[] randTileIDs = {2,2,3,3,4,4,10,15,16,18,21,22};
 		ArrayList<Tile> randomHand2 = new ArrayList<Tile>();
 		for(int tileID: randTileIDs) randomHand2.add(new Tile(tileID));
 		Visible_hand x2 = new Visible_hand(randomHand2);
@@ -1525,6 +1533,6 @@ public class Group_Search extends Group
 		}
 		
 		String pair_search = listPairsSearch(randomHand2);
-		System.out.println(pair_search);
+		System.out.println("\n" + pair_search);
 	}
 }

@@ -209,7 +209,7 @@ public class MJ_tools
 		 * @info
 		 * This function will display handful of information, including (with respect to their index)
 		 * 0: Suit 				//range = [0,3]
-		 * 1: Play Value		//range = [1,9], -1 to honors
+		 * 1: Play Value		//range = [1,9], [0,6] for honors
 		 * 2: Orphan			//range = [0,1]
 		 * 3: Discard_type		//range = [0,2]
 		 * @return An integer Array that conveys 4 pieces of key information
@@ -218,9 +218,9 @@ public class MJ_tools
 		{
 			int is_orphan = 0;
 			int play_val = this.getPlayValue();
-			if(play_val > 10) 
+			if(this.tile_id_ > 27)
 			{
-				play_val = -1;
+				play_val = this.tile_id_ - 27;
 				is_orphan = 1;
 			}
 			else if(play_val == 0 || play_val == 9)
