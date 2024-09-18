@@ -630,6 +630,8 @@ public class Prediction
 		 * 9: All Honors
 		 * 10: All Terminal
 		 * 
+		 * If a score becomes impossible to attain, it is set to -1
+		 * 
 		 * @return A double Array which represents probability of scores within each index
 		 */
 		public double[] yakuFromMeldedGroups()
@@ -821,85 +823,57 @@ public class Prediction
 	}
 	
 	/**
-	 * This class will be responsible when there are only 0-6 tiles discarded by an opponent
+	 * This class will be responsible for accessing how much Groups would respond with certain percentage of progress
+	 * Progress can correspond to hand progress as a whole (hprogress) or specific score progress (sprogress)
 	 */
-	public static class EarlySearch extends HiddenHandSearch
-	{	
-		/**
-		 * This set of Tiles will represents the discards after a certain opponent is in tenpai
-		 */
-		public HashSet<Tile> genbutsu_;
-		
-		/**
-		 * Minimum constructor requires a valid Mahjong_hand
-		 * @param given_hand A hand that can be searched through
-		 */
-		public EarlySearch(Mahjong_hand given_hand)
-		{
-			this.setMahjong_hand(given_hand);
-		}
-		
-		/**
-		 * Cloning constructor
-		 * @param clone Another instance of Early_search object
-		 */
-		public EarlySearch(EarlySearch clone)
-		{
-			this.probability_map_ = new ArrayList<Double>(clone.getProbability_map());
-			this.setMahjong_hand(clone.getMahjong_hand());
-		}
-		
-		
-	}
-	
-	/**
-	 * This class will be responsible when there are only 7-12 tiles discarded by an opponent
-	 */ 
-	public static class MiddleSearch extends HiddenHandSearch
+	static class ProgressAccessor
 	{
+		private static final String scalars = "15rr127r358r335r135r123r25892475247947994578245035792689235022nn13791249";
+		private static final double[][] declaredGroupProgress = new double[18][4];
+		protected static boolean setGroupProgress = false;
+		
 		/**
-		 * Minimum constructor requires a valid Mahjong_hand
-		 * @param given_hand
+		 * @info
+		 * This will convert the flatten String to progress values by double numbers ranging [0.0,1.0]
+		 * The result will always be consistent and set to a final static variable declaredGroupProgress
 		 */
-		public MiddleSearch(Mahjong_hand given_hand)
+		private static void setGroupProgress()
 		{
-			
+			int scoreIndex = -1;
+			for(int i = 0; i < scalars.length(); i++)
+			{
+				if(i % 4 == 0) {scoreIndex++;}
+				if(scalars.charAt(i) == 'r')
+					declaredGroupProgress[scoreIndex][i%4] = 1.0;
+				else
+					declaredGroupProgress[scoreIndex][i%4] = Character.getNumericValue(scalars.charAt(i));
+			}
+			setGroupProgress = true;
 		}
 		
 		/**
-		 * Cloning constructor
-		 * @param clone Another instance of Early_search object
+		 * @return A 2D double array where 1st index represents the score, the 2nd index represents the scalar
 		 */
-		public MiddleSearch(MiddleSearch clone)
+		public static double[][] getGroupProgress()
 		{
-			
+			if(!setGroupProgress)
+			{
+				setGroupProgress();
+			}
+			return declaredGroupProgress;
 		}
-	}
-	
-	/**
-	 * This class will be responsible when there are only 13+ tiles discarded by an opponent
-	 */
-	public static class LateSearch extends HiddenHandSearch
-	{
 		
-	}
-	
-	
-	public static boolean testPredictionDescendants()
-	{
-		int segment = 0;
-		try
+		/**
+		 * @info
+		 * This return a specific index resulting from function getGroupProgress()
+		 * @param scoreIndex The first dimension index which represents which score
+		 * @param qualifiedGroups The second dimension index 
+		 * 						  which represents the amount of qualified Groups corresponding to the scalar
+		 * @return A double scalar corresponding to the declaredGroupProgress array via parameter values
+		 */
+		public static double specificProgress(int scoreIndex, int qualifiedGroups)
 		{
-			HiddenHandSearch testPrediction = new HiddenHandSearch();
-			
-			
-			
-			return true;
-		}
-		catch(Exception e)
-		{
-			System.out.println("Prediction class failed, code could not pass segment: " + segment);
-			return false;
+			return getGroupProgress()[scoreIndex][qualifiedGroups];
 		}
 	}
 	
