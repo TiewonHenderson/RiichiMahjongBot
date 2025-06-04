@@ -1,8 +1,8 @@
-package bot_package;
+package bot_package.Actual_Gameplay;
 
 import java.util.*;
-import bot_package.Prediction.Numerical_tools;
-import bot_package.MJ_game.MJ_round;
+import bot_package.Prediction.Prediction.Numerical_tools;
+import bot_package.Actual_Gameplay.MJ_game.MJ_round;
 
 public class Compress_input 
 {

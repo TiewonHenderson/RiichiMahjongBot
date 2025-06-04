@@ -1,4 +1,4 @@
-package bot_package;
+package bot_package.Prediction;
 
 import java.util.*;
 import java.io.BufferedReader;
@@ -8,7 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import bot_package.Prediction.Score_probability;
+import bot_package.Prediction.Prediction.Score_probability;
 
 /**
  * This class is an extension to the Prediction class, where algorithmic judgments are made of the opponent

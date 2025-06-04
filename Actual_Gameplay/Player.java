@@ -1,7 +1,9 @@
-package bot_package;
+package bot_package.Actual_Gameplay;
 
 import java.util.*;
-import bot_package.MJ_game.MJ_round;
+
+import bot_package.Test.Test_class;
+import bot_package.Actual_Gameplay.MJ_game.MJ_round;
 
 public class Player
 {
@@ -533,7 +535,7 @@ public class Player
 	 * Used to store currentHand of assigned player
 	 * String representation of current player hand
 	 */
-	protected static class PlayerHand
+	public static class PlayerHand
 	{
 		
 		/*

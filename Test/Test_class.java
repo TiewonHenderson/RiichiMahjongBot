@@ -1,7 +1,9 @@
-package bot_package;
+package bot_package.Test;
 
 import java.util.*;
-import bot_package.Player.PlayerHand;
+
+import bot_package.Actual_Gameplay.Group;
+import bot_package.Actual_Gameplay.Player.PlayerHand;
 
 public class Test_class 
 {

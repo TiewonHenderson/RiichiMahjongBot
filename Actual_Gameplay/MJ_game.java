@@ -1,10 +1,10 @@
-package bot_package;
+package bot_package.Actual_Gameplay;
 
 import java.util.*;
-import bot_package.Compress_input.Command;
-import bot_package.Compress_input.Console_io;
-import bot_package.Group.Hidden_Kan;
-import bot_package.Player.PlayerHand;
+import bot_package.Actual_Gameplay.Compress_input.Command;
+import bot_package.Actual_Gameplay.Compress_input.Console_io;
+import bot_package.Actual_Gameplay.Group.Hidden_Kan;
+import bot_package.Actual_Gameplay.Player.PlayerHand;
 
 public class MJ_game
 {

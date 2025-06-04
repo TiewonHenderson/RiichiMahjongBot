@@ -1,4 +1,4 @@
-package bot_package;
+package bot_package.Actual_Gameplay;
 
 import java.util.*;
 import javax.swing.*;

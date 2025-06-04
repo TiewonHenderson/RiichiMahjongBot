@@ -1,7 +1,10 @@
-package bot_package;
+package bot_package.Prediction;
 
 import java.util.*;
 import java.util.function.*;
+
+import bot_package.Actual_Gameplay.Compress_input;
+import bot_package.Actual_Gameplay.Group;
 
 /**
  * Needed for bot prediction:
@@ -1248,7 +1251,7 @@ public class Prediction
 		return (tile_data[0]) + (tile_data[1] * 9) + (tile_data[2] * 0.5) + red_five_detail;
 	}
 	
-	static class Numerical_tools
+	public static class Numerical_tools
 	{
 		
 		/**

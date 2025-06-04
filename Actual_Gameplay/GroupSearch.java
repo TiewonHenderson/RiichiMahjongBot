@@ -1,8 +1,8 @@
-package bot_package;
+package bot_package.Actual_Gameplay;
 
 import java.util.*;
 
-import bot_package.Player.PlayerHand;
+import bot_package.Actual_Gameplay.Player.PlayerHand;
 
 
 public class GroupSearch extends Group
