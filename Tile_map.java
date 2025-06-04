@@ -189,6 +189,7 @@ public class Tile_map
 		return new ArrayList<Double>();
 	}
 	
+	
 	/**
 	 * 
 	 * @param drop_pile the whole drop_pile ArrayList of this Player
@@ -347,6 +348,17 @@ public class Tile_map
 		}
 	}
 	
+	
+	/**
+	 * @info The purpose of this function is to take into consideration external factors 
+	 * Factors:
+	 * 		1) MJ_round
+	 * @return
+	 */
+	public static double hand_factor_evaluation()
+	{
+		
+	}
 	public static void main(String[] args)
 	{
 		init_call_progress_map(0);

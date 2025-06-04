@@ -799,6 +799,7 @@ public class Group extends Scoring
 		 */
 		
 		ArrayList<Integer> temp_suit = tileID_to_PlayVal(sortArray(in_suitarray));
+		Collections.sort(temp_suit);
 		int min = temp_suit.get(0);
 		int max = temp_suit.get(temp_suit.size() - 1);
 		/*
@@ -1055,7 +1056,7 @@ public class Group extends Scoring
 		System.out.println("search_all_groupSN of Playerhand: " + GroupSearch.search_all_groupSN(example_player.get_PlayerHand()) + "\n\n");
 		
 		//segment 2
-		int[] complex_hand = {0,0,1,3,7,7,15,15,16,16,17,17,27,27};
+		int[] complex_hand = {0,0,0,1,2,3,3,4,5,7,8,8,8};
 		ArrayList<Integer> complex_example = sortArray(createArrayList(complex_hand));
 		example_player.get_PlayerHand().set_current_hand(complex_example);
 		
@@ -1077,7 +1078,7 @@ public class Group extends Scoring
 			System.out.println("Group key: " + key + ", groupSN: " + all_groupSearch.get(key));
 		}
 		
-		int[] completed_groups = {0,0,0,0,1,2,3,4,5,6,7,8,8,8};
+		int[] completed_groups = {0,0,0,1,2,3,3,4,5,6,7,8,8,8};
 		ArrayList<Integer> completeGroup_example = sortArray(createArrayList(completed_groups));
 		example_player.get_PlayerHand().set_current_hand(completeGroup_example);
 		System.out.println("CompleteGroups example: " + completeGroup_example);
